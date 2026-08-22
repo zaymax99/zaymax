@@ -24,6 +24,7 @@ const MAPPING = {
   "play.fill": "play-arrow",
   "arrow.counterclockwise": "refresh",
   "archivebox.fill": "archive",
+  "book.closed.fill": "menu-book",
   "circle": "radio-button-unchecked",
 } as IconMapping;
 
