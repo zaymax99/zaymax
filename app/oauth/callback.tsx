@@ -6,9 +6,11 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useLanguage } from "@/lib/i18n";
 
 export default function OAuthCallback() {
   const router = useRouter();
+  const { t } = useLanguage();
   const params = useLocalSearchParams<{
     code?: string;
     state?: string;
@@ -16,7 +18,9 @@ export default function OAuthCallback() {
     sessionToken?: string;
     user?: string;
   }>();
-  const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
+  const [status, setStatus] = useState<"processing" | "success" | "error">(
+    "processing",
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -60,7 +64,9 @@ export default function OAuthCallback() {
           }
 
           setStatus("success");
-          console.log("[OAuth] Web authentication successful, redirecting to home...");
+          console.log(
+            "[OAuth] Web authentication successful, redirecting to home...",
+          );
           setTimeout(() => {
             router.replace("/(tabs)");
           }, 1000);
@@ -81,7 +87,9 @@ export default function OAuthCallback() {
           url = `?${urlParams.toString()}`;
           console.log("[OAuth] Constructed URL from params:", url);
         } else {
-          console.log("[OAuth] No params found, checking Linking.getInitialURL()...");
+          console.log(
+            "[OAuth] No params found, checking Linking.getInitialURL()...",
+          );
           // Fallback: try to get from Linking
           const initialUrl = await Linking.getInitialURL();
           console.log("[OAuth] Linking.getInitialURL():", initialUrl);
@@ -92,11 +100,14 @@ export default function OAuthCallback() {
 
         // Check for error
         const error =
-          params.error || (url ? new URL(url, "http://dummy").searchParams.get("error") : null);
+          params.error ||
+          (url ? new URL(url, "http://dummy").searchParams.get("error") : null);
         if (error) {
           console.error("[OAuth] Error parameter found:", error);
           setStatus("error");
-          setErrorMessage(error || "OAuth error occurred");
+          setErrorMessage(
+            error || t("OAuth-Fehler aufgetreten", "OAuth error occurred"),
+          );
           return;
         }
 
@@ -124,7 +135,10 @@ export default function OAuthCallback() {
               sessionToken: sessionToken ? "present" : "missing",
             });
           } catch (e) {
-            console.log("[OAuth] Failed to parse as full URL, trying regex:", e);
+            console.log(
+              "[OAuth] Failed to parse as full URL, trying regex:",
+              e,
+            );
             // Try parsing as relative URL with query params
             const match = url.match(/[?&](code|state|sessionToken)=([^&]+)/g);
             if (match) {
@@ -132,7 +146,8 @@ export default function OAuthCallback() {
                 const [key, value] = param.substring(1).split("=");
                 if (key === "code") code = decodeURIComponent(value);
                 if (key === "state") state = decodeURIComponent(value);
-                if (key === "sessionToken") sessionToken = decodeURIComponent(value);
+                if (key === "sessionToken")
+                  sessionToken = decodeURIComponent(value);
               });
               console.log("[OAuth] Extracted from regex:", {
                 code: code?.substring(0, 20) + "...",
@@ -171,7 +186,12 @@ export default function OAuthCallback() {
             hasState: !!state,
           });
           setStatus("error");
-          setErrorMessage("Missing code or state parameter");
+          setErrorMessage(
+            t(
+              "Code- oder Statusparameter fehlt",
+              "Missing code or state parameter",
+            ),
+          );
           return;
         }
 
@@ -210,7 +230,9 @@ export default function OAuthCallback() {
           }
 
           setStatus("success");
-          console.log("[OAuth] Authentication successful, redirecting to home...");
+          console.log(
+            "[OAuth] Authentication successful, redirecting to home...",
+          );
 
           // Redirect to home after a short delay
           setTimeout(() => {
@@ -220,19 +242,34 @@ export default function OAuthCallback() {
         } else {
           console.error("[OAuth] No session token in result:", result);
           setStatus("error");
-          setErrorMessage("No session token received");
+          setErrorMessage(
+            t("Kein Sitzungstoken empfangen", "No session token received"),
+          );
         }
       } catch (error) {
         console.error("[OAuth] Callback error:", error);
         setStatus("error");
         setErrorMessage(
-          error instanceof Error ? error.message : "Failed to complete authentication",
+          error instanceof Error
+            ? error.message
+            : t(
+                "Authentifizierung konnte nicht abgeschlossen werden",
+                "Failed to complete authentication",
+              ),
         );
       }
     };
 
     handleCallback();
-  }, [params.code, params.state, params.error, params.sessionToken, params.user, router]);
+  }, [
+    params.code,
+    params.state,
+    params.error,
+    params.sessionToken,
+    params.user,
+    router,
+    t,
+  ]);
 
   return (
     <SafeAreaView className="flex-1" edges={["top", "bottom", "left", "right"]}>
@@ -241,24 +278,30 @@ export default function OAuthCallback() {
           <>
             <ActivityIndicator size="large" />
             <Text className="mt-4 text-base leading-6 text-center text-foreground">
-              Completing authentication...
+              {t(
+                "Authentifizierung wird abgeschlossen …",
+                "Completing authentication …",
+              )}
             </Text>
           </>
         )}
         {status === "success" && (
           <>
             <Text className="text-base leading-6 text-center text-foreground">
-              Authentication successful!
+              {t(
+                "Authentifizierung erfolgreich!",
+                "Authentication successful!",
+              )}
             </Text>
             <Text className="text-base leading-6 text-center text-foreground">
-              Redirecting...
+              {t("Weiterleitung …", "Redirecting …")}
             </Text>
           </>
         )}
         {status === "error" && (
           <>
             <Text className="mb-2 text-xl font-bold leading-7 text-error">
-              Authentication failed
+              {t("Authentifizierung fehlgeschlagen", "Authentication failed")}
             </Text>
             <Text className="text-base leading-6 text-center text-foreground">
               {errorMessage}

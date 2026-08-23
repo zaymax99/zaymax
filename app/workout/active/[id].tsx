@@ -1,14 +1,32 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from "react-native-reanimated";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import {
   clearActiveSession,
+  completedValuesForTemplate,
+  displayWeight,
   gainsForSet,
   loadActiveSession,
   loadSettings,
@@ -29,16 +47,53 @@ import {
   type WorkoutHistoryEntry,
 } from "@/lib/workouts";
 import { useColors } from "@/hooks/use-colors";
+import { useLanguage } from "@/lib/i18n";
 
 const DEFAULT_REST = 90;
 const GOLD = "#C6A752";
-const EFFORT_OPTIONS: { value: WorkoutEffort; label: string; detail: string }[] = [
-  { value: "leicht", label: "Leicht", detail: "Noch viel Luft" },
-  { value: "gut", label: "Gut", detail: "Genau richtig" },
-  { value: "hart", label: "Hart", detail: "Am Limit" },
+const EFFORT_OPTIONS: {
+  value: WorkoutEffort;
+  deLabel: string;
+  enLabel: string;
+  deDetail: string;
+  enDetail: string;
+}[] = [
+  {
+    value: "leicht",
+    deLabel: "Leicht",
+    enLabel: "Easy",
+    deDetail: "Noch viel Luft",
+    enDetail: "Plenty left",
+  },
+  {
+    value: "gut",
+    deLabel: "Gut",
+    enLabel: "Good",
+    deDetail: "Genau richtig",
+    enDetail: "Just right",
+  },
+  {
+    value: "hart",
+    deLabel: "Hart",
+    enLabel: "Hard",
+    deDetail: "Am Limit",
+    enDetail: "At the limit",
+  },
 ];
 
-type Improvement = SetGains & { exerciseId: string; setIndex: number; sequence: number };
+type Improvement = SetGains & {
+  exerciseId: string;
+  setIndex: number;
+  sequence: number;
+};
+type CompletionSummary = {
+  durationSeconds: number;
+  completedSets: number;
+  totalVolumeKg: number;
+  improvementCount: number;
+  personalBestCount: number;
+  effort: WorkoutEffort;
+};
 
 function displayWeightGain(weightGainKg: number, unit: WeightUnit) {
   const value = unit === "lbs" ? weightGainKg * 2.20462 : weightGainKg;
@@ -47,6 +102,7 @@ function displayWeightGain(weightGainKg: number, unit: WeightUnit) {
 
 export default function ActiveWorkoutScreen() {
   const colors = useColors("dark");
+  const { language, t } = useLanguage();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [workout, setWorkout] = useState<Workout | null>(null);
@@ -55,6 +111,8 @@ export default function ActiveWorkoutScreen() {
   const [weightUnit, setWeightUnit] = useState<WeightUnit>("kg");
   const [effortPromptVisible, setEffortPromptVisible] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [completionSummary, setCompletionSummary] =
+    useState<CompletionSummary | null>(null);
   const [improvement, setImprovement] = useState<Improvement | null>(null);
   const improvementTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const improvementSequence = useRef(0);
@@ -63,30 +121,69 @@ export default function ActiveWorkoutScreen() {
 
   useEffect(() => {
     void (async () => {
-      const found = (await loadWorkouts()).find((item) => item.id === id);
+      const [allWorkouts, existing, settings, history] = await Promise.all([
+        loadWorkouts(),
+        loadActiveSession(),
+        loadSettings(),
+        loadWorkoutHistory(),
+      ]);
+      const found = allWorkouts.find((item) => item.id === id);
       if (!found) return;
-      const existing = await loadActiveSession();
-      const settings = await loadSettings();
       const canResume = existing?.workoutId === id;
+      const previousWorkout = history.find((entry) => entry.workoutId === id);
       const initial: ActiveSession = {
         workoutId: id!,
+        startedAt: canResume
+          ? (existing.startedAt ?? new Date().toISOString())
+          : new Date().toISOString(),
         completedSets: {},
         setValues: {},
         baselineSetValues: {},
         restSeconds: settings.restSeconds || DEFAULT_REST,
-        restRemaining: canResume ? existing.restRemaining ?? 0 : 0,
+        restRemaining: canResume ? (existing.restRemaining ?? 0) : 0,
       };
 
       found.exercises.forEach((exercise) => {
         const templateValues = setValuesForExercise(exercise);
-        const resumedValues = canResume ? existing.setValues?.[exercise.id] : undefined;
-        const values = (resumedValues?.length ? resumedValues : templateValues).map((value) => ({ ...value }));
-        const resumedBaseline = canResume ? existing.baselineSetValues?.[exercise.id] : undefined;
-        const baseline = values.map((value, setIndex) => ({ ...(resumedBaseline?.[setIndex] ?? templateValues[setIndex] ?? value) }));
-        const savedChecks = canResume ? existing.completedSets?.[exercise.id] ?? [] : [];
+        const resumedValues = canResume
+          ? existing.setValues?.[exercise.id]
+          : undefined;
+        const values = (
+          resumedValues?.length ? resumedValues : templateValues
+        ).map((value) => ({ ...value }));
+        const resumedBaseline = canResume
+          ? existing.baselineSetValues?.[exercise.id]
+          : undefined;
+        const previousExercise = previousWorkout?.exercises.find(
+          (item) =>
+            item.exerciseId === exercise.id ||
+            item.name.trim().toLocaleLowerCase("de-DE") ===
+              exercise.name.trim().toLocaleLowerCase("de-DE"),
+        );
+        const baseline = values.map((value, setIndex) => {
+          const historicalSet = previousExercise?.sets.find(
+            (set) => set.setNumber === setIndex + 1,
+          );
+          const historicalValue = historicalSet
+            ? {
+                reps: historicalSet.reps,
+                weightKg: historicalSet.weightKg ?? null,
+              }
+            : undefined;
+          return {
+            ...((canResume ? resumedBaseline?.[setIndex] : historicalValue) ??
+              templateValues[setIndex] ??
+              value),
+          };
+        });
+        const savedChecks = canResume
+          ? (existing.completedSets?.[exercise.id] ?? [])
+          : [];
         initial.setValues[exercise.id] = values;
         initial.baselineSetValues[exercise.id] = baseline;
-        initial.completedSets[exercise.id] = values.map((_, setIndex) => savedChecks[setIndex] ?? false);
+        initial.completedSets[exercise.id] = values.map(
+          (_, setIndex) => savedChecks[setIndex] ?? false,
+        );
       });
 
       setWorkout(found);
@@ -96,20 +193,33 @@ export default function ActiveWorkoutScreen() {
     })();
   }, [id]);
 
-  useEffect(() => () => {
-    if (improvementTimer.current) clearTimeout(improvementTimer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (improvementTimer.current) clearTimeout(improvementTimer.current);
+    },
+    [],
+  );
 
   const restRemaining = session?.restRemaining ?? 0;
   useEffect(() => {
     if (timerRunning && restRemaining === 0) {
       setTimerRunning(false);
-      if (Platform.OS !== "web") void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      if (Platform.OS !== "web")
+        void Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Warning,
+        );
       return;
     }
     if (!timerRunning || !restRemaining) return;
     const interval = setInterval(() => {
-      setSession((current) => current ? { ...current, restRemaining: Math.max(0, current.restRemaining - 1) } : current);
+      setSession((current) =>
+        current
+          ? {
+              ...current,
+              restRemaining: Math.max(0, current.restRemaining - 1),
+            }
+          : current,
+      );
     }, 1000);
     return () => clearInterval(interval);
   }, [timerRunning, restRemaining]);
@@ -119,61 +229,113 @@ export default function ActiveWorkoutScreen() {
   }, [session]);
 
   const completedCount = useMemo(
-    () => session ? Object.values(session.completedSets).flat().filter(Boolean).length : 0,
+    () =>
+      session
+        ? Object.values(session.completedSets).flat().filter(Boolean).length
+        : 0,
     [session],
   );
   const totalSets = useMemo(
-    () => session ? Object.values(session.setValues).reduce((sum, values) => sum + values.length, 0) : 0,
+    () =>
+      session
+        ? Object.values(session.setValues).reduce(
+            (sum, values) => sum + values.length,
+            0,
+          )
+        : 0,
     [session],
   );
-  const progress = Math.min(100, (completedCount / Math.max(1, totalSets)) * 100);
+  const progress = Math.min(
+    100,
+    (completedCount / Math.max(1, totalSets)) * 100,
+  );
   const timerText = session
     ? `${String(Math.floor(session.restRemaining / 60)).padStart(2, "0")}:${String(session.restRemaining % 60).padStart(2, "0")}`
     : "01:30";
 
-  function updateSetValue(exerciseId: string, setIndex: number, patch: Partial<ActiveSetValue>) {
+  function updateSetValue(
+    exerciseId: string,
+    setIndex: number,
+    patch: Partial<ActiveSetValue>,
+  ) {
     setSession((current) => {
       if (!current) return current;
       const values = [...(current.setValues[exerciseId] ?? [])];
       values[setIndex] = { ...values[setIndex], ...patch };
-      return { ...current, setValues: { ...current.setValues, [exerciseId]: values } };
+      return {
+        ...current,
+        setValues: { ...current.setValues, [exerciseId]: values },
+      };
     });
   }
 
-  function announceImprovement(exerciseId: string, setIndex: number, value: ActiveSetValue) {
-    const baseline = session?.baselineSetValues[exerciseId]?.[setIndex] ?? value;
+  function announceImprovement(
+    exerciseId: string,
+    setIndex: number,
+    value: ActiveSetValue,
+  ) {
+    const baseline =
+      session?.baselineSetValues[exerciseId]?.[setIndex] ?? value;
     const gains = gainsForSet(value, baseline);
     if (!gains.repsGain && !gains.weightGainKg) return;
     improvementSequence.current += 1;
-    setImprovement({ exerciseId, setIndex, ...gains, sequence: improvementSequence.current });
+    setImprovement({
+      exerciseId,
+      setIndex,
+      ...gains,
+      sequence: improvementSequence.current,
+    });
     goldFlash.value = withSequence(
       withTiming(1, { duration: 120 }),
       withDelay(520, withTiming(0, { duration: 420 })),
     );
     if (improvementTimer.current) clearTimeout(improvementTimer.current);
     improvementTimer.current = setTimeout(() => setImprovement(null), 1400);
-    if (Platform.OS !== "web") void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (Platform.OS !== "web")
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }
 
   function changeReps(exerciseId: string, setIndex: number, reps: number) {
     const safeReps = Math.max(0, Math.min(999, Math.round(reps)));
-    const currentValue = session?.setValues[exerciseId]?.[setIndex] ?? { reps: 0, weightKg: null };
+    const currentValue = session?.setValues[exerciseId]?.[setIndex] ?? {
+      reps: 0,
+      weightKg: null,
+    };
     const previous = currentValue.reps;
-    const baseline = session?.baselineSetValues[exerciseId]?.[setIndex]?.reps ?? previous;
+    const baseline =
+      session?.baselineSetValues[exerciseId]?.[setIndex]?.reps ?? previous;
     updateSetValue(exerciseId, setIndex, { reps: safeReps });
     const gain = safeReps - baseline;
-    if (safeReps > previous && gain > 0) announceImprovement(exerciseId, setIndex, { ...currentValue, reps: safeReps });
+    if (safeReps > previous && gain > 0)
+      announceImprovement(exerciseId, setIndex, {
+        ...currentValue,
+        reps: safeReps,
+      });
   }
 
-  function changeWeight(exerciseId: string, setIndex: number, displayValue: number) {
+  function changeWeight(
+    exerciseId: string,
+    setIndex: number,
+    displayValue: number,
+  ) {
     const safeValue = Math.max(0, Math.min(5000, displayValue));
     const nextWeightKg = safeValue > 0 ? toKg(safeValue, weightUnit) : null;
-    const currentValue = session?.setValues[exerciseId]?.[setIndex] ?? { reps: 0, weightKg: null };
+    const currentValue = session?.setValues[exerciseId]?.[setIndex] ?? {
+      reps: 0,
+      weightKg: null,
+    };
     const previousWeightKg = currentValue.weightKg ?? 0;
-    const baselineWeightKg = session?.baselineSetValues[exerciseId]?.[setIndex]?.weightKg ?? 0;
+    const baselineWeightKg =
+      session?.baselineSetValues[exerciseId]?.[setIndex]?.weightKg ?? 0;
     updateSetValue(exerciseId, setIndex, { weightKg: nextWeightKg });
-    if ((nextWeightKg ?? 0) > previousWeightKg && (nextWeightKg ?? 0) > baselineWeightKg) {
-      announceImprovement(exerciseId, setIndex, { ...currentValue, weightKg: nextWeightKg });
+    if (
+      (nextWeightKg ?? 0) > previousWeightKg &&
+      (nextWeightKg ?? 0) > baselineWeightKg
+    ) {
+      announceImprovement(exerciseId, setIndex, {
+        ...currentValue,
+        weightKg: nextWeightKg,
+      });
     }
   }
 
@@ -185,29 +347,61 @@ export default function ActiveWorkoutScreen() {
       const nextValue = { ...(values.at(-1) ?? { reps: 10, weightKg: null }) };
       return {
         ...current,
-        setValues: { ...current.setValues, [exerciseId]: [...values, nextValue] },
-        baselineSetValues: { ...current.baselineSetValues, [exerciseId]: [...(current.baselineSetValues[exerciseId] ?? []), { ...nextValue }] },
-        completedSets: { ...current.completedSets, [exerciseId]: [...(current.completedSets[exerciseId] ?? []), false] },
+        setValues: {
+          ...current.setValues,
+          [exerciseId]: [...values, nextValue],
+        },
+        baselineSetValues: {
+          ...current.baselineSetValues,
+          [exerciseId]: [
+            ...(current.baselineSetValues[exerciseId] ?? []),
+            { ...nextValue },
+          ],
+        },
+        completedSets: {
+          ...current.completedSets,
+          [exerciseId]: [...(current.completedSets[exerciseId] ?? []), false],
+        },
       };
     });
-    if (Platform.OS !== "web") void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }
 
   function removeSet(exerciseId: string) {
     setSession((current) => {
-      if (!current || (current.setValues[exerciseId]?.length ?? 0) <= 1) return current;
+      if (!current || (current.setValues[exerciseId]?.length ?? 0) <= 1)
+        return current;
       return {
         ...current,
-        setValues: { ...current.setValues, [exerciseId]: current.setValues[exerciseId].slice(0, -1) },
-        baselineSetValues: { ...current.baselineSetValues, [exerciseId]: (current.baselineSetValues[exerciseId] ?? []).slice(0, -1) },
-        completedSets: { ...current.completedSets, [exerciseId]: (current.completedSets[exerciseId] ?? []).slice(0, -1) },
+        setValues: {
+          ...current.setValues,
+          [exerciseId]: current.setValues[exerciseId].slice(0, -1),
+        },
+        baselineSetValues: {
+          ...current.baselineSetValues,
+          [exerciseId]: (current.baselineSetValues[exerciseId] ?? []).slice(
+            0,
+            -1,
+          ),
+        },
+        completedSets: {
+          ...current.completedSets,
+          [exerciseId]: (current.completedSets[exerciseId] ?? []).slice(0, -1),
+        },
       };
     });
-    if (Platform.OS !== "web") void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }
 
   function toggleSet(exerciseId: string, setIndex: number) {
-    if (Platform.OS !== "web") void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const willBeChecked = !(
+      session?.completedSets[exerciseId]?.[setIndex] ?? false
+    );
+    if (willBeChecked) setTimerRunning(true);
     setSession((current) => {
       if (!current) return current;
       const checks = [...(current.completedSets[exerciseId] ?? [])];
@@ -215,19 +409,25 @@ export default function ActiveWorkoutScreen() {
       return {
         ...current,
         completedSets: { ...current.completedSets, [exerciseId]: checks },
-        restRemaining: checks[setIndex] ? current.restSeconds : current.restRemaining,
+        restRemaining: checks[setIndex]
+          ? current.restSeconds
+          : current.restRemaining,
       };
     });
   }
 
   function startRest() {
-    setSession((current) => current ? { ...current, restRemaining: current.restSeconds } : current);
+    setSession((current) =>
+      current ? { ...current, restRemaining: current.restSeconds } : current,
+    );
     setTimerRunning(true);
   }
 
   function resetRest() {
     setTimerRunning(false);
-    setSession((current) => current ? { ...current, restRemaining: 0 } : current);
+    setSession((current) =>
+      current ? { ...current, restRemaining: 0 } : current,
+    );
   }
 
   function finish() {
@@ -235,11 +435,17 @@ export default function ActiveWorkoutScreen() {
     if (completedCount < totalSets) {
       const missing = totalSets - completedCount;
       Alert.alert(
-        "Workout noch nicht fertig",
-        `Hake noch ${missing} ${missing === 1 ? "Satz" : "Sätze"} ab oder beende das Workout trotzdem.`,
+        t("Workout noch nicht fertig", "Workout is not finished yet"),
+        t(
+          `Hake noch ${missing} ${missing === 1 ? "Satz" : "Sätze"} ab oder beende das Workout trotzdem.`,
+          `Complete ${missing} more ${missing === 1 ? "set" : "sets"}, or finish the workout anyway.`,
+        ),
         [
-          { text: "Weiter trainieren", style: "cancel" },
-          { text: "Trotzdem beenden", onPress: () => setEffortPromptVisible(true) },
+          { text: t("Weiter trainieren", "Keep training"), style: "cancel" },
+          {
+            text: t("Trotzdem beenden", "Finish anyway"),
+            onPress: () => setEffortPromptVisible(true),
+          },
         ],
       );
       return;
@@ -251,33 +457,111 @@ export default function ActiveWorkoutScreen() {
     if (!workout || !session || finishing) return;
     setFinishing(true);
     const completedAt = new Date().toISOString();
-    const historyEntry: WorkoutHistoryEntry = {
-      id: uid(),
-      workoutId: workout.id,
-      workoutTitle: workout.title,
-      completedAt,
-      effort,
-      exercises: workout.exercises.map((exercise) => {
+    const [all, history] = await Promise.all([
+      loadWorkouts(),
+      loadWorkoutHistory(),
+    ]);
+    const historyExercises = workout.exercises
+      .map((exercise) => {
         const values = session.setValues[exercise.id] ?? [];
+        const previousSets = history.flatMap((entry) =>
+          entry.exercises
+            .filter(
+              (item) =>
+                item.exerciseId === exercise.id ||
+                item.name.trim().toLocaleLowerCase("de-DE") ===
+                  exercise.name.trim().toLocaleLowerCase("de-DE"),
+            )
+            .flatMap((item) => item.sets),
+        );
+        const bestReps = Math.max(0, ...previousSets.map((set) => set.reps));
+        const bestWeightKg = Math.max(
+          0,
+          ...previousSets.map((set) => set.weightKg ?? 0),
+        );
+        const completedIndexes = values
+          .map((_, setIndex) => setIndex)
+          .filter((setIndex) => session.completedSets[exercise.id]?.[setIndex]);
+        const currentBestReps = Math.max(
+          0,
+          ...completedIndexes.map((setIndex) => values[setIndex].reps),
+        );
+        const currentBestWeightKg = Math.max(
+          0,
+          ...completedIndexes.map((setIndex) => values[setIndex].weightKg ?? 0),
+        );
+        const repsBestIndex = completedIndexes.find(
+          (setIndex) => values[setIndex].reps === currentBestReps,
+        );
+        const weightBestIndex = completedIndexes.find(
+          (setIndex) =>
+            (values[setIndex].weightKg ?? 0) === currentBestWeightKg,
+        );
         return {
           exerciseId: exercise.id,
           name: exercise.name,
           sets: values.flatMap((value, setIndex) => {
             if (!session.completedSets[exercise.id]?.[setIndex]) return [];
-            const baseline = session.baselineSetValues[exercise.id]?.[setIndex] ?? value;
+            const baseline =
+              session.baselineSetValues[exercise.id]?.[setIndex] ?? value;
             const gains = gainsForSet(value, baseline);
-            return [{
-              setNumber: setIndex + 1,
-              reps: value.reps,
-              weightKg: value.weightKg ?? undefined,
-              repsGain: gains.repsGain || undefined,
-              weightGainKg: gains.weightGainKg || undefined,
-            }];
+            return [
+              {
+                setNumber: setIndex + 1,
+                reps: value.reps,
+                weightKg: value.weightKg ?? undefined,
+                repsGain: gains.repsGain || undefined,
+                weightGainKg: gains.weightGainKg || undefined,
+                repsPersonalBest:
+                  setIndex === repsBestIndex && currentBestReps > bestReps,
+                weightPersonalBest:
+                  setIndex === weightBestIndex &&
+                  currentBestWeightKg > bestWeightKg,
+              },
+            ];
           }),
         };
-      }).filter((exercise) => exercise.sets.length > 0),
+      })
+      .filter((exercise) => exercise.sets.length > 0);
+    const completedHistorySets = historyExercises.flatMap(
+      (exercise) => exercise.sets,
+    );
+    const durationSeconds = Math.max(
+      1,
+      Math.round(
+        (new Date(completedAt).getTime() -
+          new Date(session.startedAt).getTime()) /
+          1000,
+      ),
+    );
+    const totalVolumeKg = completedHistorySets.reduce(
+      (sum, set) => sum + set.reps * (set.weightKg ?? 0),
+      0,
+    );
+    const improvementCount = completedHistorySets.filter(
+      (set) => set.repsGain || set.weightGainKg,
+    ).length;
+    const personalBestCount = completedHistorySets.reduce(
+      (sum, set) =>
+        sum +
+        Number(Boolean(set.repsPersonalBest)) +
+        Number(Boolean(set.weightPersonalBest)),
+      0,
+    );
+    const historyEntry: WorkoutHistoryEntry = {
+      id: uid(),
+      workoutId: workout.id,
+      workoutTitle: workout.title,
+      startedAt: session.startedAt,
+      completedAt,
+      durationSeconds,
+      totalVolumeKg,
+      completedSetCount: completedHistorySets.length,
+      improvementCount,
+      personalBestCount,
+      effort,
+      exercises: historyExercises,
     };
-    const [all, history] = await Promise.all([loadWorkouts(), loadWorkoutHistory()]);
     const updatedWorkouts = all.map((item) => {
       if (item.id !== workout.id) return item;
       return {
@@ -285,14 +569,20 @@ export default function ActiveWorkoutScreen() {
         completedAt,
         updatedAt: completedAt,
         exercises: item.exercises.map((exercise) => {
-          const values = session.setValues[exercise.id] ?? setValuesForExercise(exercise);
+          const values =
+            session.setValues[exercise.id] ?? setValuesForExercise(exercise);
+          const completedValues = completedValuesForTemplate(
+            exercise,
+            values,
+            session.completedSets[exercise.id] ?? [],
+          );
           return {
             ...exercise,
-            sets: values.length,
-            reps: values[0]?.reps ?? exercise.reps,
-            repsPerSet: values.map((value) => value.reps),
-            weightKg: values[0]?.weightKg ?? undefined,
-            weightsPerSetKg: values.map((value) => value.weightKg),
+            sets: completedValues.length,
+            reps: completedValues[0]?.reps ?? exercise.reps,
+            repsPerSet: completedValues.map((value) => value.reps),
+            weightKg: completedValues[0]?.weightKg ?? undefined,
+            weightsPerSetKg: completedValues.map((value) => value.weightKg),
           };
         }),
       };
@@ -303,88 +593,271 @@ export default function ActiveWorkoutScreen() {
     ]);
     await clearActiveSession();
     setEffortPromptVisible(false);
-    router.replace("/");
+    setFinishing(false);
+    setCompletionSummary({
+      durationSeconds,
+      completedSets: completedHistorySets.length,
+      totalVolumeKg,
+      improvementCount,
+      personalBestCount,
+      effort,
+    });
   }
 
   if (!workout || !session) {
-    return <ScreenContainer className="items-center justify-center"><Text className="text-muted">Training wird geladen …</Text></ScreenContainer>;
+    return (
+      <ScreenContainer className="items-center justify-center">
+        <Text className="text-muted">
+          {t("Training wird geladen …", "Loading workout …")}
+        </Text>
+      </ScreenContainer>
+    );
   }
 
   return (
     <ScreenContainer className="px-5" containerClassName="bg-background">
-      <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 38 }}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 38 }}
+      >
         <View className="flex-row items-center pt-3 pb-6">
           <ZaymaxWatermark />
-          <Pressable accessibilityLabel="Zurück" onPress={() => router.back()} style={({ pressed }) => [{ padding: 8, marginRight: 8, opacity: pressed ? 0.6 : 1 }]}>
-            <IconSymbol name="chevron.right" size={22} color={colors.foreground} style={{ transform: [{ rotate: "180deg" }] }} />
+          <Pressable
+            accessibilityLabel={t("Zurück", "Back")}
+            onPress={() => router.back()}
+            style={({ pressed }) => [
+              { padding: 8, marginRight: 8, opacity: pressed ? 0.6 : 1 },
+            ]}
+          >
+            <IconSymbol
+              name="chevron.right"
+              size={22}
+              color={colors.foreground}
+              style={{ transform: [{ rotate: "180deg" }] }}
+            />
           </Pressable>
           <View className="flex-1">
-            <Text className="text-xs font-bold uppercase tracking-[2px] text-muted">AKTIVES TRAINING</Text>
-            <Text className="mt-1 text-3xl font-bold text-foreground">{workout.title}</Text>
+            <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
+              {t("AKTIVES TRAINING", "ACTIVE WORKOUT")}
+            </Text>
+            <Text className="mt-1 text-3xl font-bold text-foreground">
+              {workout.title}
+            </Text>
           </View>
         </View>
 
-        <View className="rounded-md bg-surface/80 p-5" style={{ position: "relative", overflow: "hidden", borderWidth: 1, borderColor: colors.border }}>
-          {improvement?.repsGain && improvement.weightGainKg ? <GoldConfetti burst={improvement.sequence} /> : null}
+        <View
+          className="bg-surface/80 p-5"
+          style={{ borderWidth: 1, borderColor: colors.border }}
+        >
           <View className="flex-row items-end justify-between">
             <View>
-              <Text className="text-xs font-bold uppercase tracking-[2px] text-muted">SÄTZE</Text>
+              <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
+                {t("SÄTZE", "SETS")}
+              </Text>
               <Text className="mt-2 text-3xl font-bold text-foreground">
-                {completedCount}<Text className="text-base font-medium text-muted"> / {totalSets}</Text>
+                {completedCount}
+                <Text className="text-base font-medium text-muted">
+                  {" "}
+                  / {totalSets}
+                </Text>
               </Text>
             </View>
             {improvement ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 9, borderWidth: 1, borderColor: GOLD, borderRadius: 3, paddingHorizontal: 9, paddingVertical: 6 }}>
-                {improvement.repsGain ? <ProgressMark icon="medal.fill" value={`+${improvement.repsGain}`} size={17} /> : null}
-                {improvement.weightGainKg ? <ProgressMark icon="dumbbell.fill" value={`+${displayWeightGain(improvement.weightGainKg, weightUnit)}`} size={17} /> : null}
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 9,
+                  borderWidth: 1,
+                  borderColor: GOLD,
+                  borderRadius: 3,
+                  paddingHorizontal: 9,
+                  paddingVertical: 6,
+                }}
+              >
+                {improvement.repsGain ? (
+                  <ProgressMark
+                    icon="medal.fill"
+                    value={`+${improvement.repsGain}`}
+                    size={17}
+                  />
+                ) : null}
+                {improvement.weightGainKg ? (
+                  <ProgressMark
+                    icon="dumbbell.fill"
+                    value={`+${displayWeightGain(improvement.weightGainKg, weightUnit)}`}
+                    size={17}
+                  />
+                ) : null}
               </View>
-            ) : <Text className="text-sm text-muted">{Math.round(progress)} %</Text>}
+            ) : (
+              <Text className="text-sm text-muted">
+                {Math.round(progress)} %
+              </Text>
+            )}
           </View>
           <View className="mt-4 h-1.5 overflow-hidden bg-background">
-            <View className="h-full bg-foreground" style={{ width: `${progress}%` }} />
-            <Animated.View style={[StyleSheet.absoluteFill, { pointerEvents: "none", backgroundColor: GOLD }, goldStyle]} />
+            <View
+              className="h-full bg-foreground"
+              style={{ width: `${progress}%` }}
+            />
+            <Animated.View
+              style={[
+                StyleSheet.absoluteFill,
+                { pointerEvents: "none", backgroundColor: GOLD },
+                goldStyle,
+              ]}
+            />
           </View>
         </View>
 
-        <View className="mt-4 rounded-md bg-surface/80 p-5" style={{ borderWidth: 1, borderColor: colors.border }}>
+        <View
+          className="mt-4 bg-surface/80 p-5"
+          style={{ borderWidth: 1, borderColor: colors.border }}
+        >
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center">
               <ZaymaxWatermark />
               <View className="ml-3">
-                <Text className="text-xs font-bold uppercase tracking-[2px] text-muted">PAUSENTIMER</Text>
-                <Text className="mt-2 text-4xl font-bold text-foreground">{timerText}</Text>
+                <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
+                  {t("PAUSENTIMER", "REST TIMER")}
+                </Text>
+                <Text className="mt-2 text-4xl font-bold text-foreground">
+                  {timerText}
+                </Text>
               </View>
             </View>
             <View className="flex-row gap-2">
-              <Pressable accessibilityLabel={timerRunning ? "Timer pausieren" : "Timer starten"} onPress={timerRunning ? () => setTimerRunning(false) : startRest} style={({ pressed }) => [{ width: 46, height: 46, alignItems: "center", justifyContent: "center", borderRadius: 4, backgroundColor: colors.primary, opacity: pressed ? 0.7 : 1 }]}>
-                <IconSymbol name={timerRunning ? "pause.fill" : "play.fill"} size={21} color={colors.background} />
+              <Pressable
+                accessibilityLabel={
+                  timerRunning
+                    ? t("Timer pausieren", "Pause timer")
+                    : t("Timer starten", "Start timer")
+                }
+                onPress={
+                  timerRunning ? () => setTimerRunning(false) : startRest
+                }
+                style={({ pressed }) => [
+                  {
+                    width: 46,
+                    height: 46,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 2,
+                    backgroundColor: colors.primary,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+              >
+                <IconSymbol
+                  name={timerRunning ? "pause.fill" : "play.fill"}
+                  size={21}
+                  color={colors.background}
+                />
               </Pressable>
-              <Pressable accessibilityLabel="Timer zurücksetzen" onPress={resetRest} style={({ pressed }) => [{ width: 46, height: 46, alignItems: "center", justifyContent: "center", borderRadius: 4, borderWidth: 1, borderColor: colors.border, opacity: pressed ? 0.65 : 1 }]}>
-                <IconSymbol name="arrow.counterclockwise" size={20} color={colors.foreground} />
+              <Pressable
+                accessibilityLabel={t("Timer zurücksetzen", "Reset timer")}
+                onPress={resetRest}
+                style={({ pressed }) => [
+                  {
+                    width: 46,
+                    height: 46,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 2,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    opacity: pressed ? 0.65 : 1,
+                  },
+                ]}
+              >
+                <IconSymbol
+                  name="arrow.counterclockwise"
+                  size={20}
+                  color={colors.foreground}
+                />
               </Pressable>
             </View>
           </View>
         </View>
 
-        <Text className="mt-8 text-xl font-bold text-foreground">Deine Sätze</Text>
-        <Text className="mt-1 text-sm text-muted">Passe Satzanzahl, Wiederholungen und Gewicht direkt an.</Text>
+        <Text className="mt-8 text-xl font-black uppercase text-foreground">
+          {t("Deine Sätze", "Your sets")}
+        </Text>
+        <Text className="mt-1 text-sm text-muted">
+          {t(
+            "Passe Satzanzahl, Wiederholungen und Gewicht direkt an.",
+            "Adjust sets, repetitions and weight directly.",
+          )}
+        </Text>
 
         {workout.exercises.map((exercise) => {
           const values = session.setValues[exercise.id] ?? [];
           const checkedSets = session.completedSets[exercise.id] ?? [];
           return (
-            <View key={exercise.id} className="mt-3 rounded-md bg-surface/80 p-4" style={{ borderWidth: 1, borderColor: colors.border }}>
+            <View
+              key={exercise.id}
+              className="mt-3 bg-surface/80 p-4"
+              style={{ borderWidth: 1, borderColor: colors.border }}
+            >
               <View className="flex-row items-center justify-between">
                 <View className="flex-1 pr-3">
-                  <Text className="font-bold text-foreground">{exercise.name}</Text>
-                  <Text className="mt-1 text-sm text-muted">{checkedSets.filter(Boolean).length}/{values.length} geschafft</Text>
+                  <Text className="font-bold text-foreground">
+                    {exercise.name}
+                  </Text>
+                  <Text className="mt-1 text-sm text-muted">
+                    {checkedSets.filter(Boolean).length}/{values.length}{" "}
+                    {t("geschafft", "completed")}
+                  </Text>
                 </View>
                 <View className="flex-row gap-2">
-                  <Pressable accessibilityLabel="Satz entfernen" onPress={() => removeSet(exercise.id)} disabled={values.length <= 1} style={({ pressed }) => [{ width: 38, height: 38, alignItems: "center", justifyContent: "center", borderRadius: 3, borderWidth: 1, borderColor: colors.border, opacity: values.length <= 1 ? 0.3 : pressed ? 0.55 : 1 }]}>
-                    <IconSymbol name="minus" size={20} color={colors.foreground} />
+                  <Pressable
+                    accessibilityLabel={t("Satz entfernen", "Remove set")}
+                    onPress={() => removeSet(exercise.id)}
+                    disabled={values.length <= 1}
+                    style={({ pressed }) => [
+                      {
+                        width: 38,
+                        height: 38,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: 2,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        opacity: values.length <= 1 ? 0.3 : pressed ? 0.55 : 1,
+                      },
+                    ]}
+                  >
+                    <IconSymbol
+                      name="minus"
+                      size={20}
+                      color={colors.foreground}
+                    />
                   </Pressable>
-                  <Pressable accessibilityLabel="Satz hinzufügen" onPress={() => addSet(exercise.id)} disabled={values.length >= 20} style={({ pressed }) => [{ width: 38, height: 38, alignItems: "center", justifyContent: "center", borderRadius: 3, borderWidth: 1, borderColor: colors.foreground, opacity: values.length >= 20 ? 0.3 : pressed ? 0.55 : 1 }]}>
-                    <IconSymbol name="plus" size={20} color={colors.foreground} />
+                  <Pressable
+                    accessibilityLabel={t("Satz hinzufügen", "Add set")}
+                    onPress={() => addSet(exercise.id)}
+                    disabled={values.length >= 20}
+                    style={({ pressed }) => [
+                      {
+                        width: 38,
+                        height: 38,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: 2,
+                        borderWidth: 1,
+                        borderColor: colors.foreground,
+                        opacity: values.length >= 20 ? 0.3 : pressed ? 0.55 : 1,
+                      },
+                    ]}
+                  >
+                    <IconSymbol
+                      name="plus"
+                      size={20}
+                      color={colors.foreground}
+                    />
                   </Pressable>
                 </View>
               </View>
@@ -392,86 +865,474 @@ export default function ActiveWorkoutScreen() {
               <View className="mt-4 gap-2">
                 {values.map((value, setIndex) => {
                   const checked = checkedSets[setIndex] ?? false;
-                  const baseline = session.baselineSetValues[exercise.id]?.[setIndex] ?? value;
+                  const baseline =
+                    session.baselineSetValues[exercise.id]?.[setIndex] ?? value;
                   const gains = gainsForSet(value, baseline);
                   const hasGain = gains.repsGain > 0 || gains.weightGainKg > 0;
-                  const displayWeight = value.weightKg === null ? 0 : weightUnit === "lbs" ? value.weightKg * 2.20462 : value.weightKg;
+                  const shownWeight =
+                    value.weightKg === null
+                      ? 0
+                      : weightUnit === "lbs"
+                        ? value.weightKg * 2.20462
+                        : value.weightKg;
                   return (
-                    <View key={setIndex} style={{ borderRadius: 4, borderWidth: 1, borderColor: checked ? colors.foreground : colors.border, backgroundColor: colors.background, padding: 12 }}>
+                    <View
+                      key={setIndex}
+                      style={{
+                        position: "relative",
+                        overflow: "hidden",
+                        borderRadius: 2,
+                        borderWidth: 1,
+                        borderColor: checked
+                          ? colors.foreground
+                          : colors.border,
+                        backgroundColor: colors.background,
+                        padding: 12,
+                      }}
+                    >
+                      {improvement?.exerciseId === exercise.id &&
+                      improvement.setIndex === setIndex &&
+                      improvement.repsGain > 0 &&
+                      improvement.weightGainKg > 0 ? (
+                        <GoldConfetti burst={improvement.sequence} />
+                      ) : null}
                       <View className="flex-row items-center">
-                        <Pressable accessibilityRole="checkbox" accessibilityState={{ checked }} accessibilityLabel={`Satz ${setIndex + 1} abhaken`} onPress={() => toggleSet(exercise.id, setIndex)} style={({ pressed }) => [{ width: 34, height: 34, alignItems: "center", justifyContent: "center", borderRadius: 3, borderWidth: 1, borderColor: checked ? colors.foreground : colors.muted, backgroundColor: checked ? colors.foreground : "transparent", opacity: pressed ? 0.65 : 1 }]}>
-                          {checked ? <Text style={{ color: colors.background, fontWeight: "900" }}>✓</Text> : null}
+                        <Pressable
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked }}
+                          accessibilityLabel={t(
+                            `Satz ${setIndex + 1} abhaken`,
+                            `Complete set ${setIndex + 1}`,
+                          )}
+                          onPress={() => toggleSet(exercise.id, setIndex)}
+                          style={({ pressed }) => [
+                            {
+                              width: 34,
+                              height: 34,
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderRadius: 2,
+                              borderWidth: 1,
+                              borderColor: checked
+                                ? colors.foreground
+                                : colors.muted,
+                              backgroundColor: checked
+                                ? colors.foreground
+                                : "transparent",
+                              opacity: pressed ? 0.65 : 1,
+                            },
+                          ]}
+                        >
+                          {checked ? (
+                            <Text
+                              style={{
+                                color: colors.background,
+                                fontWeight: "900",
+                              }}
+                            >
+                              ✓
+                            </Text>
+                          ) : null}
                         </Pressable>
-                        <Text style={{ marginLeft: 11, flex: 1, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, color: colors.muted }}>SATZ {String(setIndex + 1).padStart(2, "0")}</Text>
+                        <Text
+                          style={{
+                            marginLeft: 11,
+                            flex: 1,
+                            fontSize: 12,
+                            fontWeight: "800",
+                            letterSpacing: 1.2,
+                            color: colors.muted,
+                          }}
+                        >
+                          {t("SATZ", "SET")}{" "}
+                          {String(setIndex + 1).padStart(2, "0")}
+                        </Text>
                         {hasGain ? (
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 7, borderWidth: 1, borderColor: `${GOLD}99`, borderRadius: 3, paddingHorizontal: 7, paddingVertical: 4 }}>
-                            {gains.repsGain ? <ProgressMark icon="medal.fill" value={`+${gains.repsGain}`} size={15} /> : null}
-                            {gains.weightGainKg ? <ProgressMark icon="dumbbell.fill" value={`+${displayWeightGain(gains.weightGainKg, weightUnit)}`} size={15} /> : null}
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 7,
+                              borderWidth: 1,
+                              borderColor: `${GOLD}99`,
+                              borderRadius: 3,
+                              paddingHorizontal: 7,
+                              paddingVertical: 4,
+                            }}
+                          >
+                            {gains.repsGain ? (
+                              <ProgressMark
+                                icon="medal.fill"
+                                value={`+${gains.repsGain}`}
+                                size={15}
+                              />
+                            ) : null}
+                            {gains.weightGainKg ? (
+                              <ProgressMark
+                                icon="dumbbell.fill"
+                                value={`+${displayWeightGain(gains.weightGainKg, weightUnit)}`}
+                                size={15}
+                              />
+                            ) : null}
                           </View>
                         ) : null}
                       </View>
 
                       <View className="mt-3 flex-row gap-2">
                         <NumberField
-                          label="Wiederholungen"
+                          label={t("Wiederholungen", "Repetitions")}
                           value={value.reps}
                           integer
                           colors={colors}
-                          onChange={(nextValue) => changeReps(exercise.id, setIndex, nextValue)}
+                          onDecrease={() =>
+                            changeReps(
+                              exercise.id,
+                              setIndex,
+                              Math.max(0, value.reps - 1),
+                            )
+                          }
+                          onIncrease={() =>
+                            changeReps(exercise.id, setIndex, value.reps + 1)
+                          }
+                          onChange={(nextValue) =>
+                            changeReps(exercise.id, setIndex, nextValue)
+                          }
                         />
                         <NumberField
-                          label={`Gewicht (${weightUnit})`}
-                          value={displayWeight}
+                          label={t(
+                            `Gewicht (${weightUnit})`,
+                            `Weight (${weightUnit})`,
+                          )}
+                          value={shownWeight}
                           colors={colors}
-                          onChange={(nextValue) => changeWeight(exercise.id, setIndex, nextValue)}
+                          onChange={(nextValue) =>
+                            changeWeight(exercise.id, setIndex, nextValue)
+                          }
                         />
                       </View>
+                      <Text
+                        style={{
+                          marginTop: 10,
+                          fontSize: 11,
+                          color: colors.muted,
+                        }}
+                      >
+                        {t("Letztes Mal", "Last time")}: {baseline.reps}{" "}
+                        {t("Wdh.", "reps")} ·{" "}
+                        {baseline.weightKg
+                          ? displayWeight(baseline.weightKg, weightUnit)
+                          : t("ohne Gewicht", "no weight")}
+                      </Text>
                     </View>
                   );
                 })}
               </View>
 
-              <Pressable onPress={startRest} style={({ pressed }) => [{ marginTop: 13, alignSelf: "flex-start", opacity: pressed ? 0.55 : 1 }]}>
-                <Text className="text-sm font-semibold text-muted">Pause starten</Text>
+              <Pressable
+                onPress={startRest}
+                style={({ pressed }) => [
+                  {
+                    marginTop: 13,
+                    alignSelf: "flex-start",
+                    opacity: pressed ? 0.55 : 1,
+                  },
+                ]}
+              >
+                <Text className="text-sm font-semibold text-muted">
+                  {t("Pause starten", "Start rest")}
+                </Text>
               </Pressable>
             </View>
           );
         })}
 
-        <Pressable onPress={finish} style={({ pressed }) => [{ marginTop: 20, borderRadius: 4, backgroundColor: colors.primary, paddingVertical: 16, opacity: pressed ? 0.8 : 1 }]}>
-          <Text className="text-center font-bold text-background">Workout beenden</Text>
+        <Pressable
+          onPress={finish}
+          style={({ pressed }) => [
+            {
+              marginTop: 20,
+              borderRadius: 4,
+              backgroundColor: colors.primary,
+              paddingVertical: 16,
+              opacity: pressed ? 0.8 : 1,
+            },
+          ]}
+        >
+          <Text className="text-center font-black uppercase tracking-[1px] text-background">
+            {t("Workout beenden", "Finish workout")}
+          </Text>
         </Pressable>
       </ScrollView>
 
-      <Modal visible={effortPromptVisible} transparent animationType="fade" onRequestClose={() => !finishing && setEffortPromptVisible(false)}>
-        <View style={{ flex: 1, justifyContent: "center", padding: 22, backgroundColor: "rgba(0,0,0,0.82)" }}>
-          <View style={{ borderRadius: 6, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, padding: 20 }}>
-            <Text className="text-xs font-bold uppercase tracking-[2px] text-muted">TRAINING ABGESCHLOSSEN</Text>
-            <Text className="mt-2 text-3xl font-bold text-foreground">Wie war’s?</Text>
-            <Text className="mt-2 text-sm leading-5 text-muted">Deine Antwort wird in der Historie gespeichert.</Text>
+      <Modal
+        visible={effortPromptVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !finishing && setEffortPromptVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            padding: 22,
+            backgroundColor: "rgba(0,0,0,0.82)",
+          }}
+        >
+          <View
+            style={{
+              borderRadius: 2,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+              padding: 20,
+            }}
+          >
+            <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
+              {t("TRAINING ABGESCHLOSSEN", "WORKOUT COMPLETED")}
+            </Text>
+            <Text className="mt-2 text-3xl font-black uppercase text-foreground">
+              {t("Wie war’s?", "How was it?")}
+            </Text>
+            <Text className="mt-2 text-sm leading-5 text-muted">
+              {t(
+                "Deine Antwort wird in der Historie gespeichert.",
+                "Your answer will be saved in your history.",
+              )}
+            </Text>
             <View className="mt-5 gap-2">
               {EFFORT_OPTIONS.map((option) => (
-                <Pressable key={option.value} disabled={finishing} onPress={() => void completeWorkout(option.value)} style={({ pressed }) => [{ minHeight: 56, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderRadius: 4, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background, paddingHorizontal: 15, opacity: finishing ? 0.45 : pressed ? 0.65 : 1 }]}>
-                  <Text className="font-bold text-foreground">{option.label}</Text>
-                  <Text className="text-sm text-muted">{option.detail}</Text>
+                <Pressable
+                  key={option.value}
+                  disabled={finishing}
+                  onPress={() => void completeWorkout(option.value)}
+                  style={({ pressed }) => [
+                    {
+                      minHeight: 56,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      borderRadius: 4,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      backgroundColor: colors.background,
+                      paddingHorizontal: 15,
+                      opacity: finishing ? 0.45 : pressed ? 0.65 : 1,
+                    },
+                  ]}
+                >
+                  <Text className="font-bold text-foreground">
+                    {t(option.deLabel, option.enLabel)}
+                  </Text>
+                  <Text className="text-sm text-muted">
+                    {t(option.deDetail, option.enDetail)}
+                  </Text>
                 </Pressable>
               ))}
             </View>
-            <Pressable disabled={finishing} onPress={() => setEffortPromptVisible(false)} style={({ pressed }) => [{ marginTop: 14, paddingVertical: 11, opacity: finishing ? 0.35 : pressed ? 0.55 : 1 }]}>
-              <Text className="text-center text-sm font-semibold text-muted">{finishing ? "Wird gespeichert …" : "Zurück zum Training"}</Text>
+            <Pressable
+              disabled={finishing}
+              onPress={() => setEffortPromptVisible(false)}
+              style={({ pressed }) => [
+                {
+                  marginTop: 14,
+                  paddingVertical: 11,
+                  opacity: finishing ? 0.35 : pressed ? 0.55 : 1,
+                },
+              ]}
+            >
+              <Text className="text-center text-sm font-semibold text-muted">
+                {finishing
+                  ? t("Wird gespeichert …", "Saving …")
+                  : t("Zurück zum Training", "Back to workout")}
+              </Text>
             </Pressable>
           </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={Boolean(completionSummary)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            padding: 22,
+            backgroundColor: "rgba(0,0,0,0.9)",
+          }}
+        >
+          {completionSummary ? (
+            <View
+              style={{
+                borderRadius: 2,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+                padding: 20,
+              }}
+            >
+              <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
+                {t("WORKOUT GESPEICHERT", "WORKOUT SAVED")}
+              </Text>
+              <Text className="mt-2 text-3xl font-black uppercase text-foreground">
+                {t("Stark abgeschlossen.", "Strong finish.")}
+              </Text>
+              <Text className="mt-2 text-sm text-muted">
+                {t("Gefühl", "Feeling")} ·{" "}
+                {EFFORT_OPTIONS.find(
+                  (option) => option.value === completionSummary.effort,
+                )
+                  ? t(
+                      EFFORT_OPTIONS.find(
+                        (option) => option.value === completionSummary.effort,
+                      )!.deLabel,
+                      EFFORT_OPTIONS.find(
+                        (option) => option.value === completionSummary.effort,
+                      )!.enLabel,
+                    )
+                  : ""}
+              </Text>
+              <View className="mt-5 flex-row flex-wrap gap-2">
+                <SummaryMetric
+                  label={t("Dauer", "Duration")}
+                  value={formatDuration(
+                    completionSummary.durationSeconds,
+                    language,
+                  )}
+                  colors={colors}
+                />
+                <SummaryMetric
+                  label={t("Sätze", "Sets")}
+                  value={String(completionSummary.completedSets)}
+                  colors={colors}
+                />
+                <SummaryMetric
+                  label={t("Volumen", "Volume")}
+                  value={formatVolume(
+                    completionSummary.totalVolumeKg,
+                    weightUnit,
+                  )}
+                  colors={colors}
+                />
+                <SummaryMetric
+                  label={t("Gesteigert", "Improved")}
+                  value={String(completionSummary.improvementCount)}
+                  colors={colors}
+                />
+                <SummaryMetric
+                  label={t("Bestleistungen", "Personal bests")}
+                  value={String(completionSummary.personalBestCount)}
+                  colors={colors}
+                  wide
+                />
+              </View>
+              <Pressable
+                accessibilityLabel={t(
+                  "Zusammenfassung schließen",
+                  "Close summary",
+                )}
+                onPress={() => router.replace("/")}
+                style={({ pressed }) => [
+                  {
+                    marginTop: 18,
+                    borderRadius: 2,
+                    backgroundColor: colors.primary,
+                    paddingVertical: 15,
+                    opacity: pressed ? 0.75 : 1,
+                  },
+                ]}
+              >
+                <Text className="text-center font-black uppercase tracking-[1px] text-background">
+                  {t("Fertig", "Done")}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
         </View>
       </Modal>
     </ScreenContainer>
   );
 }
 
-function ProgressMark({ icon, value, size }: { icon: "medal.fill" | "dumbbell.fill"; value: string; size: number }) {
+function formatDuration(seconds: number, language: "de" | "en") {
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return minutes
+    ? `${minutes}:${String(rest).padStart(2, "0")} min`
+    : `${rest} ${language === "de" ? "Sek." : "sec"}`;
+}
+
+function formatVolume(volumeKg: number, unit: WeightUnit) {
+  const value = unit === "lbs" ? volumeKg * 2.20462 : volumeKg;
+  return `${Number(value.toFixed(1))} ${unit}`;
+}
+
+function SummaryMetric({
+  label,
+  value,
+  colors,
+  wide = false,
+}: {
+  label: string;
+  value: string;
+  colors: any;
+  wide?: boolean;
+}) {
+  return (
+    <View
+      style={{
+        width: wide ? "100%" : "48.5%",
+        borderRadius: 3,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.background,
+        padding: 13,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 10,
+          fontWeight: "800",
+          letterSpacing: 1.2,
+          color: colors.muted,
+        }}
+      >
+        {label.toUpperCase()}
+      </Text>
+      <Text
+        style={{
+          marginTop: 6,
+          fontSize: 18,
+          fontWeight: "800",
+          color: colors.foreground,
+        }}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function ProgressMark({
+  icon,
+  value,
+  size,
+}: {
+  icon: "medal.fill" | "dumbbell.fill";
+  value: string;
+  size: number;
+}) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center" }}>
       <IconSymbol name={icon} size={size} color={GOLD} />
-      <Text style={{ marginLeft: 4, color: GOLD, fontSize: 12, fontWeight: "800" }}>{value}</Text>
+      <Text
+        style={{ marginLeft: 4, color: GOLD, fontSize: 12, fontWeight: "800" }}
+      >
+        {value}
+      </Text>
     </View>
   );
 }
@@ -489,27 +1350,57 @@ const CONFETTI_PIECES = [
 
 function GoldConfetti({ burst }: { burst: number }) {
   return (
-    <View style={[StyleSheet.absoluteFill, { pointerEvents: "none" }]}>
-      {CONFETTI_PIECES.map((piece, index) => <ConfettiPiece key={`${burst}-${index}`} index={index} {...piece} />)}
+    <View
+      style={[StyleSheet.absoluteFill, { pointerEvents: "none", zIndex: 2 }]}
+    >
+      {CONFETTI_PIECES.map((piece, index) => (
+        <ConfettiPiece key={`${burst}-${index}`} index={index} {...piece} />
+      ))}
     </View>
   );
 }
 
-function ConfettiPiece({ index, x, y, rotate }: { index: number; x: number; y: number; rotate: number }) {
+function ConfettiPiece({
+  index,
+  x,
+  y,
+  rotate,
+}: {
+  index: number;
+  x: number;
+  y: number;
+  rotate: number;
+}) {
   const travel = useSharedValue(0);
   useEffect(() => {
     travel.value = 0;
     travel.value = withDelay(index * 18, withTiming(1, { duration: 720 }));
   }, [index, travel]);
   const style = useAnimatedStyle(() => ({
-    opacity: travel.value < 0.18 ? travel.value * 5.5 : Math.max(0, 1 - travel.value),
+    opacity:
+      travel.value < 0.18 ? travel.value * 5.5 : Math.max(0, 1 - travel.value),
     transform: [
       { translateX: x * travel.value },
       { translateY: y * travel.value },
       { rotate: `${rotate * travel.value}deg` },
     ],
   }));
-  return <Animated.View style={[{ position: "absolute", top: 32, left: "73%", width: 3, height: 8, borderRadius: 1, backgroundColor: index % 2 ? GOLD : "#E2CA79" }, style]} />;
+  return (
+    <Animated.View
+      style={[
+        {
+          position: "absolute",
+          top: 64,
+          left: "50%",
+          width: 3,
+          height: 8,
+          borderRadius: 1,
+          backgroundColor: index % 2 ? GOLD : "#E2CA79",
+        },
+        style,
+      ]}
+    />
+  );
 }
 
 function NumberField({
@@ -517,15 +1408,24 @@ function NumberField({
   value,
   integer = false,
   colors,
+  onDecrease,
+  onIncrease,
   onChange,
 }: {
   label: string;
   value: number;
   integer?: boolean;
   colors: any;
+  onDecrease?: () => void;
+  onIncrease?: () => void;
   onChange: (value: number) => void;
 }) {
-  const formattedValue = integer ? String(Math.round(value)) : value > 0 ? String(Number(value.toFixed(1))) : "";
+  const { t } = useLanguage();
+  const formattedValue = integer
+    ? String(Math.round(value))
+    : value > 0
+      ? String(Number(value.toFixed(1)))
+      : "";
   const [draft, setDraft] = useState(formattedValue);
   const [focused, setFocused] = useState(false);
 
@@ -535,7 +1435,59 @@ function NumberField({
 
   return (
     <View style={{ flex: 1 }}>
-      <Text style={{ marginBottom: 6, fontSize: 11, fontWeight: "700", color: colors.muted }}>{label}</Text>
+      <View
+        style={{
+          marginBottom: 6,
+          minHeight: 26,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Text style={{ fontSize: 11, fontWeight: "700", color: colors.muted }}>
+          {label}
+        </Text>
+        {onDecrease && onIncrease ? (
+          <View style={{ flexDirection: "row", gap: 5 }}>
+            <Pressable
+              accessibilityLabel={`${label} ${t("um eins verringern", "decrease by one")}`}
+              onPress={onDecrease}
+              style={({ pressed }) => [
+                {
+                  width: 26,
+                  height: 26,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 2,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.55 : 1,
+                },
+              ]}
+            >
+              <IconSymbol name="minus" size={15} color={colors.foreground} />
+            </Pressable>
+            <Pressable
+              accessibilityLabel={`${label} ${t("um eins erhöhen", "increase by one")}`}
+              onPress={onIncrease}
+              style={({ pressed }) => [
+                {
+                  width: 26,
+                  height: 26,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 2,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.55 : 1,
+                },
+              ]}
+            >
+              <IconSymbol name="plus" size={15} color={colors.foreground} />
+            </Pressable>
+          </View>
+        ) : null}
+      </View>
       <TextInput
         accessibilityLabel={label}
         value={draft}
@@ -543,15 +1495,30 @@ function NumberField({
         maxLength={integer ? 3 : 6}
         keyboardType={Platform.OS === "ios" ? "decimal-pad" : "numeric"}
         onFocus={() => setFocused(true)}
-        onBlur={() => { setFocused(false); setDraft(formattedValue); }}
+        onBlur={() => {
+          setFocused(false);
+          setDraft(formattedValue);
+        }}
         onChangeText={(text) => {
-          const normalized = text.replace(",", ".").replace(integer ? /\D/g : /[^0-9.]/g, "");
+          const normalized = text
+            .replace(",", ".")
+            .replace(integer ? /\D/g : /[^0-9.]/g, "");
           setDraft(normalized);
           const parsed = Number(normalized);
           if (normalized !== "" && Number.isFinite(parsed)) onChange(parsed);
           if (normalized === "" && !integer) onChange(0);
         }}
-        style={{ height: 46, borderRadius: 3, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, paddingHorizontal: 12, color: colors.foreground, fontSize: 17, fontWeight: "800" }}
+        style={{
+          height: 46,
+          borderRadius: 3,
+          borderWidth: 1,
+          borderColor: colors.border,
+          backgroundColor: colors.surface,
+          paddingHorizontal: 12,
+          color: colors.foreground,
+          fontSize: 17,
+          fontWeight: "800",
+        }}
       />
     </View>
   );

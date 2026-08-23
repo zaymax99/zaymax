@@ -8,7 +8,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import { exerciseSummary, gainsForSet, resizeRepsPerSet, resizeWeightsPerSet, setValuesForExercise, weightForSet, type Exercise } from "../lib/workouts";
+import { completedValuesForTemplate, exerciseSummary, gainsForSet, resizeRepsPerSet, resizeWeightsPerSet, setValuesForExercise, weightForSet, type Exercise } from "../lib/workouts";
 
 const exercise: Exercise = {
   id: "bench-press",
@@ -46,5 +46,17 @@ describe("workout set values", () => {
   it("tracks repetition and weight progress independently", () => {
     expect(gainsForSet({ reps: 11, weightKg: 51 }, { reps: 10, weightKg: 50 })).toEqual({ repsGain: 1, weightGainKg: 1 });
     expect(gainsForSet({ reps: 9, weightKg: 52 }, { reps: 10, weightKg: 50 })).toEqual({ repsGain: 0, weightGainKg: 2 });
+  });
+
+  it("only promotes completed active values into the next template", () => {
+    expect(completedValuesForTemplate(exercise, [
+      { reps: 13, weightKg: 42 },
+      { reps: 11, weightKg: 52 },
+      { reps: 9, weightKg: 47 },
+    ], [true, false, true])).toEqual([
+      { reps: 13, weightKg: 42 },
+      { reps: 10, weightKg: 50 },
+      { reps: 9, weightKg: 47 },
+    ]);
   });
 });
