@@ -21,6 +21,8 @@ import {
 } from "@/lib/i18n";
 import { loadSettings, saveSettings, type WeightUnit } from "@/lib/workouts";
 import { useColors } from "@/hooks/use-colors";
+import { createBackup, pickBackup, restoreBackup } from "@/lib/backup";
+import { BIRTHDAY_CELEBRATION_KEY, PROFILE_STORAGE_KEY } from "@/lib/profile";
 
 const restOptions = [30, 60, 90, 120, 180];
 function formatRest(seconds: number) {
@@ -33,6 +35,7 @@ export default function SettingsScreen() {
   const { language, setLanguage, t } = useLanguage();
   const [restSeconds, setRestSeconds] = useState(90);
   const [weightUnit, setWeightUnit] = useState<WeightUnit>("kg");
+  const [backupBusy, setBackupBusy] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -65,6 +68,87 @@ export default function SettingsScreen() {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }
 
+  async function exportData() {
+    if (backupBusy) return;
+    setBackupBusy(true);
+    try {
+      const fileName = await createBackup();
+      Alert.alert(
+        t("Backup erstellt", "Backup created"),
+        t(
+          `${fileName} enthält deine lokalen Zaymax-Daten. Bewahre die Datei sicher auf.`,
+          `${fileName} contains your local Zaymax data. Keep the file somewhere safe.`,
+        ),
+      );
+    } catch {
+      Alert.alert(
+        t("Backup nicht möglich", "Could not create backup"),
+        t(
+          "Die Backup-Datei konnte nicht gespeichert oder geteilt werden.",
+          "The backup file could not be saved or shared.",
+        ),
+      );
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
+  async function importData() {
+    if (backupBusy) return;
+    setBackupBusy(true);
+    try {
+      const backup = await pickBackup();
+      if (!backup) return;
+      Alert.alert(
+        t("Backup wiederherstellen?", "Restore backup?"),
+        t(
+          "Deine aktuellen lokalen Daten werden durch den Inhalt dieser Datei ersetzt.",
+          "Your current local data will be replaced with the contents of this file.",
+        ),
+        [
+          { text: t("Abbrechen", "Cancel"), style: "cancel" },
+          {
+            text: t("Wiederherstellen", "Restore"),
+            onPress: async () => {
+              try {
+                await restoreBackup(backup);
+                const restoredLanguage =
+                  backup.data[LANGUAGE_STORAGE_KEY] === "en" ? "en" : "de";
+                await setLanguage(restoredLanguage);
+                router.replace("/");
+                Alert.alert(
+                  t("Backup geladen", "Backup restored"),
+                  t(
+                    "Deine lokalen Daten wurden wiederhergestellt.",
+                    "Your local data has been restored.",
+                  ),
+                );
+              } catch {
+                Alert.alert(
+                  t("Wiederherstellung fehlgeschlagen", "Restore failed"),
+                  t(
+                    "Die Daten konnten nicht wiederhergestellt werden.",
+                    "The data could not be restored.",
+                  ),
+                );
+              }
+            },
+          },
+        ],
+      );
+    } catch {
+      Alert.alert(
+        t("Ungültige Backup-Datei", "Invalid backup file"),
+        t(
+          "Bitte wähle eine gültige Zaymax-Backup-Datei aus.",
+          "Please select a valid Zaymax backup file.",
+        ),
+      );
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
   function clearData() {
     Alert.alert(
       t("Alle Daten löschen?", "Delete all data?"),
@@ -86,6 +170,8 @@ export default function SettingsScreen() {
               "zaymax.reminders.v1",
               "zaymax.training-days.v1",
               LANGUAGE_STORAGE_KEY,
+              PROFILE_STORAGE_KEY,
+              BIRTHDAY_CELEBRATION_KEY,
             ]);
             await setLanguage("de");
             Alert.alert(
@@ -139,6 +225,7 @@ export default function SettingsScreen() {
               borderWidth: 1,
               borderColor: colors.border,
               backgroundColor: `${colors.surface}C8`,
+              borderRadius: 999,
               opacity: pressed ? 0.65 : 1,
             },
           ]}
@@ -179,6 +266,7 @@ export default function SettingsScreen() {
                       backgroundColor: active
                         ? colors.primary
                         : colors.background,
+                      borderRadius: 20,
                       opacity: pressed ? 0.7 : 1,
                     },
                   ]}
@@ -237,6 +325,7 @@ export default function SettingsScreen() {
                       backgroundColor: active
                         ? colors.primary
                         : colors.background,
+                      borderRadius: 999,
                       paddingVertical: 13,
                       opacity: pressed ? 0.7 : 1,
                     },
@@ -282,6 +371,7 @@ export default function SettingsScreen() {
                       backgroundColor: active
                         ? colors.primary
                         : colors.background,
+                      borderRadius: 999,
                       paddingVertical: 14,
                       opacity: pressed ? 0.7 : 1,
                     },
@@ -302,6 +392,63 @@ export default function SettingsScreen() {
           </View>
         </SettingsPanel>
 
+        <SettingsPanel
+          eyebrow={t("DATENSICHERUNG", "DATA BACKUP")}
+          title={t("Lokales Backup", "Local backup")}
+          detail={t(
+            "Speichere alle Zaymax-Daten als Datei oder stelle sie auf einem neuen Handy wieder her.",
+            "Save all Zaymax data as a file or restore it on a new phone.",
+          )}
+          colors={colors}
+          style={{ marginTop: 14 }}
+        >
+          <View className="mt-5 gap-2">
+            <Pressable
+              accessibilityLabel={t(
+                "Backup-Datei erstellen",
+                "Create backup file",
+              )}
+              disabled={backupBusy}
+              onPress={() => void exportData()}
+              style={({ pressed }) => [
+                {
+                  minHeight: 50,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 999,
+                  backgroundColor: colors.primary,
+                  opacity: backupBusy ? 0.45 : pressed ? 0.72 : 1,
+                },
+              ]}
+            >
+              <Text className="font-black uppercase tracking-[0.8px] text-background">
+                {t("Backup speichern", "Save backup")}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityLabel={t("Backup-Datei laden", "Load backup file")}
+              disabled={backupBusy}
+              onPress={() => void importData()}
+              style={({ pressed }) => [
+                {
+                  minHeight: 50,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.background,
+                  opacity: backupBusy ? 0.45 : pressed ? 0.62 : 1,
+                },
+              ]}
+            >
+              <Text className="font-black uppercase tracking-[0.8px] text-foreground">
+                {t("Backup laden", "Load backup")}
+              </Text>
+            </Pressable>
+          </View>
+        </SettingsPanel>
+
         <Pressable
           onPress={clearData}
           style={({ pressed }) => [
@@ -311,6 +458,7 @@ export default function SettingsScreen() {
               borderColor: colors.border,
               backgroundColor: `${colors.surface}C8`,
               padding: 20,
+              borderRadius: 22,
               opacity: pressed ? 0.6 : 1,
             },
           ]}
@@ -362,6 +510,7 @@ function SettingsPanel({
           borderColor: colors.border,
           backgroundColor: `${colors.surface}E8`,
           padding: 20,
+          borderRadius: 24,
         },
         style,
       ]}

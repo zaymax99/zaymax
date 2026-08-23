@@ -13,6 +13,8 @@ import { Platform } from "react-native";
 import "@/lib/_core/nativewind-pressable";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { LanguageProvider } from "@/lib/i18n";
+import { KeyboardDismissButton } from "@/components/keyboard-dismiss-button";
+import { AppExperienceOverlay } from "@/components/app-experience-overlay";
 import {
   SafeAreaFrameContext,
   SafeAreaInsetsContext,
@@ -121,6 +123,8 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="oauth/callback" />
             </Stack>
+            <KeyboardDismissButton />
+            <AppExperienceOverlay />
             <StatusBar style="light" backgroundColor={APP_BACKGROUND} />
           </NavigationThemeProvider>
         </QueryClientProvider>

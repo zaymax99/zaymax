@@ -23,6 +23,7 @@ import Animated, {
 import { ScreenContainer } from "@/components/screen-container";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { ProfileBmiCard } from "@/components/profile-bmi-card";
 import { useColors } from "@/hooks/use-colors";
 import { useLanguage } from "@/lib/i18n";
 import {
@@ -236,9 +237,15 @@ export default function JournalScreen() {
               </View>
             </View>
 
+            <ProfileBmiCard />
+
             <View
               className="bg-surface/80 p-5"
-              style={{ borderWidth: 1, borderColor: colors.border }}
+              style={{
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 24,
+              }}
             >
               <View className="flex-row items-start justify-between">
                 <View className="flex-1 pr-3">
@@ -263,7 +270,7 @@ export default function JournalScreen() {
                       key={day.value}
                       style={{
                         minWidth: 37,
-                        borderRadius: 3,
+                        borderRadius: 999,
                         borderWidth: 1,
                         borderColor: selected
                           ? colors.foreground
@@ -306,7 +313,7 @@ export default function JournalScreen() {
                 style={({ pressed }) => [
                   {
                     marginTop: 16,
-                    borderRadius: 2,
+                    borderRadius: 999,
                     borderWidth: 1,
                     borderColor: colors.foreground,
                     paddingVertical: 13,
@@ -327,6 +334,7 @@ export default function JournalScreen() {
                 marginTop: 16,
                 borderWidth: 1,
                 borderColor: colors.border,
+                borderRadius: 24,
               }}
             >
               <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
@@ -358,7 +366,7 @@ export default function JournalScreen() {
                     onPress={cancelEdit}
                     style={({ pressed }) => [
                       {
-                        borderRadius: 2,
+                        borderRadius: 999,
                         borderWidth: 1,
                         borderColor: colors.border,
                         paddingHorizontal: 15,
@@ -381,7 +389,7 @@ export default function JournalScreen() {
                   onPress={() => void saveDraft()}
                   style={({ pressed }) => [
                     {
-                      borderRadius: 2,
+                      borderRadius: 999,
                       backgroundColor: colors.primary,
                       paddingHorizontal: 18,
                       paddingVertical: 11,
@@ -403,7 +411,7 @@ export default function JournalScreen() {
           </>
         }
         ListEmptyComponent={
-          <View className="flex-1 items-center justify-center border border-border bg-surface/40 p-7">
+          <View className="flex-1 items-center justify-center rounded-3xl border border-border bg-surface/40 p-7">
             <IconSymbol name="pencil" size={29} color={colors.foreground} />
             <Text className="mt-4 text-lg font-black uppercase text-foreground">
               {t("Dein Tagebuch ist noch leer", "Your journal is still empty")}
@@ -425,7 +433,7 @@ export default function JournalScreen() {
             <View
               style={{
                 minHeight: 88,
-                borderRadius: 2,
+                borderRadius: 20,
                 borderWidth: 1,
                 borderColor:
                   editingId === item.id ? colors.foreground : colors.border,
@@ -461,6 +469,7 @@ export default function JournalScreen() {
                     right: 8,
                     bottom: 8,
                     padding: 8,
+                    borderRadius: 999,
                     opacity: pressed ? 0.55 : 1,
                   },
                 ]}
@@ -488,7 +497,7 @@ export default function JournalScreen() {
         >
           <View
             style={{
-              borderRadius: 2,
+              borderRadius: 28,
               borderWidth: 1,
               borderColor: colors.border,
               backgroundColor: colors.surface,
@@ -523,7 +532,7 @@ export default function JournalScreen() {
                         flexDirection: "row",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        borderRadius: 2,
+                        borderRadius: 18,
                         borderWidth: 1,
                         borderColor: selected
                           ? colors.foreground
@@ -566,7 +575,7 @@ export default function JournalScreen() {
               style={({ pressed }) => [
                 {
                   marginTop: 16,
-                  borderRadius: 2,
+                  borderRadius: 999,
                   backgroundColor: colors.primary,
                   paddingVertical: 14,
                   opacity: pressed ? 0.7 : 1,
@@ -676,9 +685,9 @@ function WhitePiece({
           position: "absolute",
           left: "50%",
           top: 165,
-          width: index % 3 === 0 ? 8 : 5,
-          height: index % 3 === 0 ? 22 : 15,
-          borderRadius: 1,
+          width: index % 3 === 0 ? 12 : 8,
+          height: index % 3 === 0 ? 12 : 8,
+          borderRadius: 999,
           backgroundColor: index % 2 ? "#FFFFFF" : "#CFCFCF",
         },
         style,

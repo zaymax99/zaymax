@@ -36,6 +36,9 @@ export default function TabLayout() {
           backgroundColor: `${colors.surface}F5`,
           borderTopColor: colors.border,
           borderTopWidth: 1,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          overflow: "hidden",
         },
         tabBarLabelStyle: {
           fontSize: 10,
@@ -54,6 +57,7 @@ export default function TabLayout() {
               style={{
                 width: 42,
                 height: 32,
+                borderRadius: 999,
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: focused ? 1 : 0,
@@ -75,6 +79,7 @@ export default function TabLayout() {
               style={{
                 width: 42,
                 height: 32,
+                borderRadius: 999,
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: focused ? 1 : 0,

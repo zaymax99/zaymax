@@ -115,7 +115,7 @@ export default function HomeScreen() {
           style={{ position: "relative" }}
         >
           <View className="flex-row items-center" style={{ paddingRight: 82 }}>
-            <View className="mr-3 h-12 w-12 overflow-hidden border border-border bg-black">
+            <View className="mr-3 h-12 w-12 overflow-hidden rounded-full border border-border bg-black">
               <Image
                 source={logo}
                 resizeMode="contain"
@@ -165,6 +165,7 @@ export default function HomeScreen() {
             backgroundColor: `${colors.surface}E8`,
             paddingHorizontal: 22,
             paddingVertical: 26,
+            borderRadius: 28,
           }}
         >
           <Text className="text-[10px] font-black uppercase tracking-[3px] text-muted">
@@ -180,6 +181,7 @@ export default function HomeScreen() {
               borderWidth: 2,
               borderColor: colors.border,
               backgroundColor: colors.background,
+              borderRadius: 999,
             }}
           >
             <View
@@ -191,6 +193,7 @@ export default function HomeScreen() {
                 borderWidth: 2,
                 borderColor: colors.foreground,
                 backgroundColor: colors.surface,
+                borderRadius: 999,
               }}
             >
               <IconSymbol name="plus" size={36} color={colors.foreground} />
@@ -221,6 +224,7 @@ export default function HomeScreen() {
                 alignItems: "center",
                 justifyContent: "center",
                 backgroundColor: colors.primary,
+                borderRadius: 999,
                 opacity: pressed ? 0.78 : 1,
               },
             ]}
@@ -284,7 +288,7 @@ export default function HomeScreen() {
             />
           ))
         ) : (
-          <View className="mt-3 border border-border bg-surface/80 p-5">
+          <View className="mt-3 rounded-3xl border border-border bg-surface/80 p-5">
             <Text className="font-black uppercase text-foreground">
               {t("Noch kein eigenes Workout", "No custom workout yet")}
             </Text>
@@ -322,8 +326,10 @@ function HeaderButton({
           height: 40,
           alignItems: "center",
           justifyContent: "center",
-          borderLeftWidth: 1,
+          borderWidth: 1,
           borderColor: colors.border,
+          borderRadius: 999,
+          marginLeft: 6,
           opacity: pressed ? 0.6 : 1,
         },
       ]}
@@ -358,6 +364,7 @@ function QuickCard({
           borderWidth: 1,
           borderColor: colors.border,
           backgroundColor: `${colors.surface}D8`,
+          borderRadius: 24,
           opacity: pressed ? 0.72 : 1,
         },
       ]}
@@ -371,6 +378,7 @@ function QuickCard({
           borderWidth: 1,
           borderColor: colors.foreground,
           backgroundColor: colors.background,
+          borderRadius: 999,
         }}
       >
         <IconSymbol name={icon} size={24} color={colors.foreground} />
@@ -436,6 +444,7 @@ function WorkoutCard({
           borderWidth: 1,
           borderColor: workout.lockedAt ? colors.foreground : colors.border,
           padding: 17,
+          borderRadius: 24,
         }}
       >
         <Pressable
@@ -458,6 +467,7 @@ function WorkoutCard({
               borderWidth: 1,
               borderColor: colors.border,
               backgroundColor: colors.background,
+              borderRadius: 999,
             }}
           >
             <IconSymbol
@@ -503,6 +513,7 @@ function WorkoutCard({
                 alignItems: "center",
                 justifyContent: "center",
                 backgroundColor: colors.primary,
+                borderRadius: 999,
                 opacity: pressed ? 0.75 : 1,
               },
             ]}
@@ -527,6 +538,7 @@ function WorkoutCard({
                 borderColor: workout.lockedAt
                   ? colors.foreground
                   : colors.border,
+                borderRadius: 999,
                 opacity: pressed ? 0.65 : 1,
               },
             ]}
@@ -547,6 +559,7 @@ function WorkoutCard({
                 justifyContent: "center",
                 borderWidth: 1,
                 borderColor: colors.border,
+                borderRadius: 999,
                 opacity: pressed ? 0.65 : 1,
               },
             ]}

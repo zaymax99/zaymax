@@ -2,7 +2,6 @@ import { View, type ViewProps } from "react-native";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 
 import { cn } from "@/lib/utils";
-import { AppBackdrop } from "@/components/app-backdrop";
 
 export interface ScreenContainerProps extends ViewProps {
   /**
@@ -53,7 +52,6 @@ export function ScreenContainer({
       className={cn("flex-1", "bg-background", containerClassName)}
       {...props}
     >
-      <AppBackdrop />
       <SafeAreaView
         edges={edges}
         className={cn("flex-1", safeAreaClassName)}

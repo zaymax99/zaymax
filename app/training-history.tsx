@@ -55,7 +55,12 @@ export default function TrainingHistoryScreen() {
               accessibilityLabel={t("Zurück", "Back")}
               onPress={() => router.back()}
               style={({ pressed }) => [
-                { padding: 8, marginRight: 6, opacity: pressed ? 0.6 : 1 },
+                {
+                  padding: 8,
+                  marginRight: 6,
+                  borderRadius: 999,
+                  opacity: pressed ? 0.6 : 1,
+                },
               ]}
             >
               <IconSymbol
@@ -90,9 +95,13 @@ export default function TrainingHistoryScreen() {
           <Animated.View
             entering={FadeIn.duration(300)}
             className="flex-1 items-center justify-center bg-surface/80 p-7"
-            style={{ borderWidth: 1, borderColor: colors.border }}
+            style={{
+              borderWidth: 1,
+              borderColor: colors.border,
+              borderRadius: 24,
+            }}
           >
-            <View className="h-14 w-14 items-center justify-center rounded-sm bg-background">
+            <View className="h-14 w-14 items-center justify-center rounded-full bg-background">
               <IconSymbol
                 name="book.closed.fill"
                 size={26}
@@ -154,7 +163,11 @@ function HistoryCard({
     <Animated.View
       entering={FadeInDown.delay(index * 60).duration(300)}
       className="mb-4 bg-surface/80 p-5"
-      style={{ borderWidth: 1, borderColor: colors.border }}
+      style={{
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: 24,
+      }}
     >
       <View className="flex-row items-start justify-between">
         <View className="flex-1 pr-3">
@@ -170,7 +183,7 @@ function HistoryCard({
             </Text>
           ) : null}
         </View>
-        <View className="border border-border bg-background px-3 py-2">
+        <View className="rounded-full border border-border bg-background px-3 py-2">
           <Text className="text-xs font-bold text-foreground">
             {totalSets}{" "}
             {totalSets === 1 ? t("Satz", "set") : t("Sätze", "sets")}
@@ -229,7 +242,7 @@ function HistoryCard({
               {exercise.sets.map((set) => (
                 <View
                   key={`${exercise.exerciseId}-${set.setNumber}`}
-                  className="flex-row items-start justify-between rounded-sm border border-border bg-background px-3 py-3"
+                  className="flex-row items-start justify-between rounded-2xl border border-border bg-background px-3 py-3"
                 >
                   <Text className="text-sm font-semibold text-muted">
                     {t("Satz", "Set")} {set.setNumber}

@@ -172,7 +172,7 @@ export default function WorkoutEditorScreen() {
             <Pressable
               accessibilityLabel={t("Zurück", "Back")}
               onPress={() => router.back()}
-              style={{ padding: 8, marginRight: 8 }}
+              style={{ padding: 8, marginRight: 8, borderRadius: 999 }}
             >
               <IconSymbol
                 name="chevron.right"
@@ -195,7 +195,11 @@ export default function WorkoutEditorScreen() {
           <Animated.View
             entering={FadeIn.duration(300)}
             className="bg-surface/80 p-5"
-            style={{ borderWidth: 1, borderColor: colors.border }}
+            style={{
+              borderWidth: 1,
+              borderColor: colors.border,
+              borderRadius: 24,
+            }}
           >
             <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
               {t("Name", "Name")}
@@ -266,7 +270,7 @@ export default function WorkoutEditorScreen() {
             style={({ pressed }) => [
               {
                 marginTop: 14,
-                borderRadius: 2,
+                borderRadius: 999,
                 borderWidth: 1,
                 borderColor: colors.border,
                 paddingVertical: 15,
@@ -283,7 +287,7 @@ export default function WorkoutEditorScreen() {
             style={({ pressed }) => [
               {
                 marginTop: 20,
-                borderRadius: 2,
+                borderRadius: 999,
                 backgroundColor: colors.primary,
                 paddingVertical: 16,
                 opacity: pressed ? 0.8 : 1,
@@ -299,7 +303,7 @@ export default function WorkoutEditorScreen() {
             style={({ pressed }) => [
               {
                 marginTop: 10,
-                borderRadius: 2,
+                borderRadius: 999,
                 backgroundColor: `${colors.surface}CC`,
                 borderWidth: 1,
                 borderColor: colors.border,
@@ -333,6 +337,7 @@ function DropPlaceholder({ colors }: { colors: any }) {
         backgroundColor: colors.background,
         alignItems: "center",
         justifyContent: "center",
+        borderRadius: 20,
       }}
     >
       <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
@@ -424,7 +429,10 @@ function ExerciseCard({
         entering={FadeInDown.delay(index * 55).duration(300)}
         layout={Layout.duration(220)}
         className="mt-3 bg-surface/80 p-4"
-        style={[animatedStyle, { borderWidth: 1, borderColor: colors.border }]}
+        style={[
+          animatedStyle,
+          { borderWidth: 1, borderColor: colors.border, borderRadius: 24 },
+        ]}
       >
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center">
@@ -441,7 +449,7 @@ function ExerciseCard({
             <Pressable
               accessibilityLabel={t("Übung löschen", "Delete exercise")}
               onPress={onRemove}
-              style={{ padding: 6 }}
+              style={{ padding: 6, borderRadius: 999 }}
             >
               <IconSymbol name="trash.fill" size={19} color={colors.muted} />
             </Pressable>
@@ -459,7 +467,7 @@ function ExerciseCard({
             marginTop: 12,
             borderColor: colors.border,
             borderWidth: 1,
-            borderRadius: 2,
+            borderRadius: 16,
             paddingHorizontal: 14,
             paddingVertical: 13,
             color: colors.foreground,
@@ -549,7 +557,7 @@ function NumberField({
         style={{
           borderColor: colors.border,
           borderWidth: 1,
-          borderRadius: 2,
+          borderRadius: 16,
           paddingVertical: 12,
           textAlign: "center",
           color: colors.foreground,
@@ -577,12 +585,12 @@ function SetDetailRow({
   onWeightChange: (value: number) => void;
   colors: any;
 }) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const shownWeight = weightKg
     ? Number((unit === "lbs" ? weightKg * 2.20462 : weightKg).toFixed(1))
     : 0;
   return (
-    <View className="border border-border bg-background p-3">
+    <View className="rounded-[18px] border border-border bg-background p-3">
       <Text className="text-xs font-black uppercase tracking-[1px] text-muted">
         {t("Satz", "Set")} {String(setNumber).padStart(2, "0")}
       </Text>
@@ -602,7 +610,7 @@ function SetDetailRow({
             style={{
               borderColor: colors.border,
               borderWidth: 1,
-              borderRadius: 2,
+              borderRadius: 14,
               paddingVertical: 11,
               textAlign: "center",
               color: colors.foreground,
@@ -616,9 +624,18 @@ function SetDetailRow({
             {unit} · {t("optional", "optional")}
           </Text>
           <TextInput
-            value={shownWeight ? String(shownWeight) : ""}
+            value={
+              shownWeight
+                ? String(shownWeight).replace(
+                    ".",
+                    language === "de" ? "," : ".",
+                  )
+                : ""
+            }
             onChangeText={(text) =>
-              onWeightChange(Number(text.replace(/[^0-9.]/g, "")) || 0)
+              onWeightChange(
+                Number(text.replace(",", ".").replace(/[^0-9.]/g, "")) || 0,
+              )
             }
             keyboardType="decimal-pad"
             placeholder="—"
@@ -626,7 +643,7 @@ function SetDetailRow({
             style={{
               borderColor: colors.border,
               borderWidth: 1,
-              borderRadius: 2,
+              borderRadius: 14,
               paddingVertical: 11,
               textAlign: "center",
               color: colors.foreground,

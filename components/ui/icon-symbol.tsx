@@ -3,7 +3,10 @@ import { SymbolWeight, SymbolViewProps } from "expo-symbols";
 import { ComponentProps } from "react";
 import { OpaqueColorValue, type StyleProp, type TextStyle } from "react-native";
 
-type IconMapping = Record<SymbolViewProps["name"], ComponentProps<typeof MaterialIcons>["name"]>;
+type IconMapping = Record<
+  SymbolViewProps["name"],
+  ComponentProps<typeof MaterialIcons>["name"]
+>;
 type IconSymbolName = keyof typeof MAPPING;
 
 const MAPPING = {
@@ -13,10 +16,10 @@ const MAPPING = {
   "gearshape.fill": "settings",
   "chevron.right": "chevron-right",
   "trash.fill": "delete-outline",
-  "pencil": "edit",
+  pencil: "edit",
   "figure.strengthtraining.traditional": "fitness-center",
-  "calendar": "calendar-today",
-  "timer": "timer",
+  calendar: "calendar-today",
+  timer: "timer",
   "scalemass.fill": "monitor-weight",
   "checkmark.circle.fill": "check-circle",
   "pause.fill": "pause",
@@ -27,9 +30,10 @@ const MAPPING = {
   "lock.open.fill": "lock-open",
   "medal.fill": "workspace-premium",
   "dumbbell.fill": "fitness-center",
-  "plus": "add",
-  "minus": "remove",
-  "circle": "radio-button-unchecked",
+  plus: "add",
+  minus: "remove",
+  circle: "radio-button-unchecked",
+  "keyboard.chevron.compact.down": "keyboard-arrow-down",
 } as IconMapping;
 
 export function IconSymbol({
@@ -44,5 +48,12 @@ export function IconSymbol({
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
 }) {
-  return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
+  return (
+    <MaterialIcons
+      color={color}
+      size={size}
+      name={MAPPING[name]}
+      style={style}
+    />
+  );
 }

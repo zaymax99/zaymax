@@ -627,7 +627,12 @@ export default function ActiveWorkoutScreen() {
             accessibilityLabel={t("Zurück", "Back")}
             onPress={() => router.back()}
             style={({ pressed }) => [
-              { padding: 8, marginRight: 8, opacity: pressed ? 0.6 : 1 },
+              {
+                padding: 8,
+                marginRight: 8,
+                borderRadius: 999,
+                opacity: pressed ? 0.6 : 1,
+              },
             ]}
           >
             <IconSymbol
@@ -649,7 +654,11 @@ export default function ActiveWorkoutScreen() {
 
         <View
           className="bg-surface/80 p-5"
-          style={{ borderWidth: 1, borderColor: colors.border }}
+          style={{
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: 24,
+          }}
         >
           <View className="flex-row items-end justify-between">
             <View>
@@ -672,7 +681,7 @@ export default function ActiveWorkoutScreen() {
                   gap: 9,
                   borderWidth: 1,
                   borderColor: GOLD,
-                  borderRadius: 3,
+                  borderRadius: 999,
                   paddingHorizontal: 9,
                   paddingVertical: 6,
                 }}
@@ -698,7 +707,7 @@ export default function ActiveWorkoutScreen() {
               </Text>
             )}
           </View>
-          <View className="mt-4 h-1.5 overflow-hidden bg-background">
+          <View className="mt-4 h-1.5 overflow-hidden rounded-full bg-background">
             <View
               className="h-full bg-foreground"
               style={{ width: `${progress}%` }}
@@ -715,7 +724,11 @@ export default function ActiveWorkoutScreen() {
 
         <View
           className="mt-4 bg-surface/80 p-5"
-          style={{ borderWidth: 1, borderColor: colors.border }}
+          style={{
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: 24,
+          }}
         >
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center">
@@ -745,7 +758,7 @@ export default function ActiveWorkoutScreen() {
                     height: 46,
                     alignItems: "center",
                     justifyContent: "center",
-                    borderRadius: 2,
+                    borderRadius: 999,
                     backgroundColor: colors.primary,
                     opacity: pressed ? 0.7 : 1,
                   },
@@ -766,7 +779,7 @@ export default function ActiveWorkoutScreen() {
                     height: 46,
                     alignItems: "center",
                     justifyContent: "center",
-                    borderRadius: 2,
+                    borderRadius: 999,
                     borderWidth: 1,
                     borderColor: colors.border,
                     opacity: pressed ? 0.65 : 1,
@@ -800,7 +813,11 @@ export default function ActiveWorkoutScreen() {
             <View
               key={exercise.id}
               className="mt-3 bg-surface/80 p-4"
-              style={{ borderWidth: 1, borderColor: colors.border }}
+              style={{
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 24,
+              }}
             >
               <View className="flex-row items-center justify-between">
                 <View className="flex-1 pr-3">
@@ -823,7 +840,7 @@ export default function ActiveWorkoutScreen() {
                         height: 38,
                         alignItems: "center",
                         justifyContent: "center",
-                        borderRadius: 2,
+                        borderRadius: 999,
                         borderWidth: 1,
                         borderColor: colors.border,
                         opacity: values.length <= 1 ? 0.3 : pressed ? 0.55 : 1,
@@ -846,7 +863,7 @@ export default function ActiveWorkoutScreen() {
                         height: 38,
                         alignItems: "center",
                         justifyContent: "center",
-                        borderRadius: 2,
+                        borderRadius: 999,
                         borderWidth: 1,
                         borderColor: colors.foreground,
                         opacity: values.length >= 20 ? 0.3 : pressed ? 0.55 : 1,
@@ -881,7 +898,7 @@ export default function ActiveWorkoutScreen() {
                       style={{
                         position: "relative",
                         overflow: "hidden",
-                        borderRadius: 2,
+                        borderRadius: 18,
                         borderWidth: 1,
                         borderColor: checked
                           ? colors.foreground
@@ -911,7 +928,7 @@ export default function ActiveWorkoutScreen() {
                               height: 34,
                               alignItems: "center",
                               justifyContent: "center",
-                              borderRadius: 2,
+                              borderRadius: 999,
                               borderWidth: 1,
                               borderColor: checked
                                 ? colors.foreground
@@ -955,7 +972,7 @@ export default function ActiveWorkoutScreen() {
                               gap: 7,
                               borderWidth: 1,
                               borderColor: `${GOLD}99`,
-                              borderRadius: 3,
+                              borderRadius: 999,
                               paddingHorizontal: 7,
                               paddingVertical: 4,
                             }}
@@ -1005,6 +1022,24 @@ export default function ActiveWorkoutScreen() {
                           )}
                           value={shownWeight}
                           colors={colors}
+                          onDecrease={() => {
+                            const step = weightUnit === "kg" ? 0.5 : 1;
+                            changeWeight(
+                              exercise.id,
+                              setIndex,
+                              Number(
+                                Math.max(0, shownWeight - step).toFixed(1),
+                              ),
+                            );
+                          }}
+                          onIncrease={() => {
+                            const step = weightUnit === "kg" ? 0.5 : 1;
+                            changeWeight(
+                              exercise.id,
+                              setIndex,
+                              Number((shownWeight + step).toFixed(1)),
+                            );
+                          }}
                           onChange={(nextValue) =>
                             changeWeight(exercise.id, setIndex, nextValue)
                           }
@@ -1051,7 +1086,7 @@ export default function ActiveWorkoutScreen() {
           style={({ pressed }) => [
             {
               marginTop: 20,
-              borderRadius: 4,
+              borderRadius: 999,
               backgroundColor: colors.primary,
               paddingVertical: 16,
               opacity: pressed ? 0.8 : 1,
@@ -1080,7 +1115,7 @@ export default function ActiveWorkoutScreen() {
         >
           <View
             style={{
-              borderRadius: 2,
+              borderRadius: 28,
               borderWidth: 1,
               borderColor: colors.border,
               backgroundColor: colors.surface,
@@ -1111,7 +1146,7 @@ export default function ActiveWorkoutScreen() {
                       flexDirection: "row",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      borderRadius: 4,
+                      borderRadius: 18,
                       borderWidth: 1,
                       borderColor: colors.border,
                       backgroundColor: colors.background,
@@ -1167,7 +1202,7 @@ export default function ActiveWorkoutScreen() {
           {completionSummary ? (
             <View
               style={{
-                borderRadius: 2,
+                borderRadius: 28,
                 borderWidth: 1,
                 borderColor: colors.border,
                 backgroundColor: colors.surface,
@@ -1238,7 +1273,7 @@ export default function ActiveWorkoutScreen() {
                 style={({ pressed }) => [
                   {
                     marginTop: 18,
-                    borderRadius: 2,
+                    borderRadius: 999,
                     backgroundColor: colors.primary,
                     paddingVertical: 15,
                     opacity: pressed ? 0.75 : 1,
@@ -1285,7 +1320,7 @@ function SummaryMetric({
     <View
       style={{
         width: wide ? "100%" : "48.5%",
-        borderRadius: 3,
+        borderRadius: 18,
         borderWidth: 1,
         borderColor: colors.border,
         backgroundColor: colors.background,
@@ -1392,9 +1427,9 @@ function ConfettiPiece({
           position: "absolute",
           top: 64,
           left: "50%",
-          width: 3,
-          height: 8,
-          borderRadius: 1,
+          width: index % 2 ? 8 : 6,
+          height: index % 2 ? 8 : 6,
+          borderRadius: 999,
           backgroundColor: index % 2 ? GOLD : "#E2CA79",
         },
         style,
@@ -1420,11 +1455,14 @@ function NumberField({
   onIncrease?: () => void;
   onChange: (value: number) => void;
 }) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const formattedValue = integer
     ? String(Math.round(value))
     : value > 0
-      ? String(Number(value.toFixed(1)))
+      ? String(Number(value.toFixed(1))).replace(
+          ".",
+          language === "de" ? "," : ".",
+        )
       : "";
   const [draft, setDraft] = useState(formattedValue);
   const [focused, setFocused] = useState(false);
@@ -1450,7 +1488,7 @@ function NumberField({
         {onDecrease && onIncrease ? (
           <View style={{ flexDirection: "row", gap: 5 }}>
             <Pressable
-              accessibilityLabel={`${label} ${t("um eins verringern", "decrease by one")}`}
+              accessibilityLabel={`${label} ${t("verringern", "decrease")}`}
               onPress={onDecrease}
               style={({ pressed }) => [
                 {
@@ -1458,7 +1496,7 @@ function NumberField({
                   height: 26,
                   alignItems: "center",
                   justifyContent: "center",
-                  borderRadius: 2,
+                  borderRadius: 999,
                   borderWidth: 1,
                   borderColor: colors.border,
                   opacity: pressed ? 0.55 : 1,
@@ -1468,7 +1506,7 @@ function NumberField({
               <IconSymbol name="minus" size={15} color={colors.foreground} />
             </Pressable>
             <Pressable
-              accessibilityLabel={`${label} ${t("um eins erhöhen", "increase by one")}`}
+              accessibilityLabel={`${label} ${t("erhöhen", "increase")}`}
               onPress={onIncrease}
               style={({ pressed }) => [
                 {
@@ -1476,7 +1514,7 @@ function NumberField({
                   height: 26,
                   alignItems: "center",
                   justifyContent: "center",
-                  borderRadius: 2,
+                  borderRadius: 999,
                   borderWidth: 1,
                   borderColor: colors.border,
                   opacity: pressed ? 0.55 : 1,
@@ -1493,24 +1531,28 @@ function NumberField({
         value={draft}
         selectTextOnFocus
         maxLength={integer ? 3 : 6}
-        keyboardType={Platform.OS === "ios" ? "decimal-pad" : "numeric"}
+        keyboardType={integer ? "number-pad" : "decimal-pad"}
         onFocus={() => setFocused(true)}
         onBlur={() => {
           setFocused(false);
           setDraft(formattedValue);
         }}
         onChangeText={(text) => {
-          const normalized = text
-            .replace(",", ".")
-            .replace(integer ? /\D/g : /[^0-9.]/g, "");
-          setDraft(normalized);
+          const normalized = integer
+            ? text.replace(/\D/g, "")
+            : text.replace(",", ".").replace(/[^0-9.]/g, "");
+          setDraft(
+            integer
+              ? normalized
+              : normalized.replace(".", language === "de" ? "," : "."),
+          );
           const parsed = Number(normalized);
           if (normalized !== "" && Number.isFinite(parsed)) onChange(parsed);
           if (normalized === "" && !integer) onChange(0);
         }}
         style={{
           height: 46,
-          borderRadius: 3,
+          borderRadius: 14,
           borderWidth: 1,
           borderColor: colors.border,
           backgroundColor: colors.surface,

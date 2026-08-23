@@ -109,7 +109,12 @@ export default function ExerciseHistoryScreen() {
             accessibilityLabel={t("Zurück", "Back")}
             onPress={() => router.back()}
             style={({ pressed }) => [
-              { padding: 8, marginRight: 6, opacity: pressed ? 0.55 : 1 },
+              {
+                padding: 8,
+                marginRight: 6,
+                borderRadius: 999,
+                opacity: pressed ? 0.55 : 1,
+              },
             ]}
           >
             <IconSymbol
@@ -162,7 +167,11 @@ export default function ExerciseHistoryScreen() {
 
         <View
           className="mt-4 bg-surface/80 p-5"
-          style={{ borderWidth: 1, borderColor: colors.border }}
+          style={{
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: 24,
+          }}
         >
           <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
             {t("ENTWICKLUNG", "DEVELOPMENT")}
@@ -189,7 +198,11 @@ export default function ExerciseHistoryScreen() {
             <View
               key={session.id}
               className="mt-3 bg-surface/80 p-4"
-              style={{ borderWidth: 1, borderColor: colors.border }}
+              style={{
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 22,
+              }}
             >
               <View className="flex-row items-start justify-between">
                 <View>
@@ -244,7 +257,7 @@ export default function ExerciseHistoryScreen() {
             </View>
           ))
         ) : (
-          <View className="mt-3 rounded-md border border-border bg-surface/40 p-6">
+          <View className="mt-3 rounded-3xl border border-border bg-surface/40 p-6">
             <Text className="font-black uppercase text-foreground">
               {t("Noch keine Daten", "No data yet")}
             </Text>
@@ -274,7 +287,7 @@ function StatCard({
     <View
       style={{
         width: "48.5%",
-        borderRadius: 2,
+        borderRadius: 20,
         borderWidth: 1,
         borderColor: colors.border,
         backgroundColor: `${colors.surface}E8`,
