@@ -13,17 +13,20 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      detachInactiveScreens={false}
       screenOptions={{
         headerShown: false,
-        animation: "fade",
+        lazy: false,
+        animation: "shift",
         transitionSpec: {
           animation: "timing",
-          config: { duration: 110 },
+          config: { duration: 180 },
         },
         sceneStyle: { backgroundColor: colors.background },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
         tabBarButton: HapticTab,
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
           height: 64 + bottomPadding,
           paddingTop: 8,

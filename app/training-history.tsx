@@ -10,6 +10,7 @@ import { displayWeight, formatDateTime, loadSettings, loadWorkoutHistory, type W
 import { useColors } from "@/hooks/use-colors";
 
 const effortLabels = { leicht: "Leicht", gut: "Gut", hart: "Hart" } as const;
+const GOLD = "#C6A752";
 
 export default function TrainingHistoryScreen() {
   const colors = useColors("dark");
@@ -81,9 +82,17 @@ function HistoryCard({ entry, index, unit, colors }: { entry: WorkoutHistoryEntr
           <Text className="font-bold text-foreground">{exercise.name}</Text>
           <View className="mt-3 gap-2">
             {exercise.sets.map((set) => (
-              <View key={`${exercise.exerciseId}-${set.setNumber}`} className="flex-row items-center justify-between rounded-sm border border-border bg-background px-3 py-3">
+              <View key={`${exercise.exerciseId}-${set.setNumber}`} className="flex-row items-start justify-between rounded-sm border border-border bg-background px-3 py-3">
                 <Text className="text-sm font-semibold text-muted">Satz {set.setNumber}</Text>
-                <Text className="text-sm font-bold text-foreground">{set.reps} Wdh. · {set.weightKg ? displayWeight(set.weightKg, unit) : "ohne Gewicht"}</Text>
+                <View style={{ alignItems: "flex-end", flexShrink: 1 }}>
+                  <Text className="text-right text-sm font-bold text-foreground">{set.reps} Wdh. · {set.weightKg ? displayWeight(set.weightKg, unit) : "ohne Gewicht"}</Text>
+                  {set.repsGain || set.weightGainKg ? (
+                    <View style={{ marginTop: 7, flexDirection: "row", alignItems: "center", gap: 9 }}>
+                      {set.repsGain ? <HistoryProgressMark icon="medal.fill" value={`+${set.repsGain}`} /> : null}
+                      {set.weightGainKg ? <HistoryProgressMark icon="dumbbell.fill" value={`+${displayWeight(set.weightGainKg, unit)}`} /> : null}
+                    </View>
+                  ) : null}
+                </View>
               </View>
             ))}
           </View>
@@ -92,5 +101,14 @@ function HistoryCard({ entry, index, unit, colors }: { entry: WorkoutHistoryEntr
         <Text className="mt-5 border-t border-border pt-4 text-sm text-muted">Bei diesem Training wurde kein Satz abgehakt.</Text>
       )}
     </Animated.View>
+  );
+}
+
+function HistoryProgressMark({ icon, value }: { icon: "medal.fill" | "dumbbell.fill"; value: string }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center" }}>
+      <IconSymbol name={icon} size={15} color={GOLD} />
+      <Text style={{ marginLeft: 4, color: GOLD, fontSize: 12, fontWeight: "800" }}>{value}</Text>
+    </View>
   );
 }

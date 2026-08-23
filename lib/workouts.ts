@@ -3,8 +3,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export type Exercise = { id: string; name: string; sets: number; reps: number; repsPerSet: number[]; weightKg?: number; weightsPerSetKg: Array<number | null>; note?: string };
 export type Workout = { id: string; title: string; exercises: Exercise[]; createdAt: string; updatedAt: string; completedAt?: string; lockedAt?: string };
 export type ActiveSetValue = { reps: number; weightKg: number | null };
+export type SetGains = { repsGain: number; weightGainKg: number };
 export type ActiveSession = { workoutId: string; completedSets: Record<string, boolean[]>; setValues: Record<string, ActiveSetValue[]>; baselineSetValues: Record<string, ActiveSetValue[]>; restSeconds: number; restRemaining: number };
-export type WorkoutHistorySet = { setNumber: number; reps: number; weightKg?: number };
+export type WorkoutHistorySet = { setNumber: number; reps: number; weightKg?: number; repsGain?: number; weightGainKg?: number };
 export type WorkoutHistoryExercise = { exerciseId: string; name: string; sets: WorkoutHistorySet[] };
 export type WorkoutEffort = "leicht" | "gut" | "hart";
 export type WorkoutHistoryEntry = { id: string; workoutId: string; workoutTitle: string; completedAt: string; effort?: WorkoutEffort; exercises: WorkoutHistoryExercise[] };
@@ -52,6 +53,13 @@ export function setValuesForExercise(exercise: Exercise): ActiveSetValue[] {
     reps: repsForSet(exercise, setIndex),
     weightKg: weightForSet(exercise, setIndex) ?? null,
   }));
+}
+
+export function gainsForSet(value: ActiveSetValue, baseline: ActiveSetValue): SetGains {
+  return {
+    repsGain: Math.max(0, value.reps - baseline.reps),
+    weightGainKg: Math.max(0, (value.weightKg ?? 0) - (baseline.weightKg ?? 0)),
+  };
 }
 
 export async function loadWorkouts(): Promise<Workout[]> { const raw = await AsyncStorage.getItem(STORAGE_KEY); if (!raw) return []; try { const parsed = JSON.parse(raw) as Workout[]; return Array.isArray(parsed) ? parsed.map((workout) => ({ ...workout, exercises: workout.exercises.map(normalizeExercise) })).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) : []; } catch { return []; } }

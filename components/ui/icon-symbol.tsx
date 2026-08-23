@@ -26,6 +26,7 @@ const MAPPING = {
   "lock.fill": "lock",
   "lock.open.fill": "lock-open",
   "medal.fill": "workspace-premium",
+  "dumbbell.fill": "fitness-center",
   "plus": "add",
   "minus": "remove",
   "circle": "radio-button-unchecked",

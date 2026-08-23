@@ -9,6 +9,7 @@ import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import {
   clearActiveSession,
+  gainsForSet,
   loadActiveSession,
   loadSettings,
   loadWorkoutHistory,
@@ -21,6 +22,7 @@ import {
   uid,
   type ActiveSession,
   type ActiveSetValue,
+  type SetGains,
   type WeightUnit,
   type Workout,
   type WorkoutEffort,
@@ -36,7 +38,12 @@ const EFFORT_OPTIONS: { value: WorkoutEffort; label: string; detail: string }[] 
   { value: "hart", label: "Hart", detail: "Am Limit" },
 ];
 
-type Improvement = { exerciseId: string; setIndex: number; gain: number };
+type Improvement = SetGains & { exerciseId: string; setIndex: number; sequence: number };
+
+function displayWeightGain(weightGainKg: number, unit: WeightUnit) {
+  const value = unit === "lbs" ? weightGainKg * 2.20462 : weightGainKg;
+  return Number(value.toFixed(1));
+}
 
 export default function ActiveWorkoutScreen() {
   const colors = useColors("dark");
@@ -50,6 +57,7 @@ export default function ActiveWorkoutScreen() {
   const [finishing, setFinishing] = useState(false);
   const [improvement, setImprovement] = useState<Improvement | null>(null);
   const improvementTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const improvementSequence = useRef(0);
   const goldFlash = useSharedValue(0);
   const goldStyle = useAnimatedStyle(() => ({ opacity: goldFlash.value }));
 
@@ -132,8 +140,12 @@ export default function ActiveWorkoutScreen() {
     });
   }
 
-  function announceImprovement(exerciseId: string, setIndex: number, gain: number) {
-    setImprovement({ exerciseId, setIndex, gain });
+  function announceImprovement(exerciseId: string, setIndex: number, value: ActiveSetValue) {
+    const baseline = session?.baselineSetValues[exerciseId]?.[setIndex] ?? value;
+    const gains = gainsForSet(value, baseline);
+    if (!gains.repsGain && !gains.weightGainKg) return;
+    improvementSequence.current += 1;
+    setImprovement({ exerciseId, setIndex, ...gains, sequence: improvementSequence.current });
     goldFlash.value = withSequence(
       withTiming(1, { duration: 120 }),
       withDelay(520, withTiming(0, { duration: 420 })),
@@ -145,16 +157,24 @@ export default function ActiveWorkoutScreen() {
 
   function changeReps(exerciseId: string, setIndex: number, reps: number) {
     const safeReps = Math.max(0, Math.min(999, Math.round(reps)));
-    const previous = session?.setValues[exerciseId]?.[setIndex]?.reps ?? 0;
+    const currentValue = session?.setValues[exerciseId]?.[setIndex] ?? { reps: 0, weightKg: null };
+    const previous = currentValue.reps;
     const baseline = session?.baselineSetValues[exerciseId]?.[setIndex]?.reps ?? previous;
     updateSetValue(exerciseId, setIndex, { reps: safeReps });
     const gain = safeReps - baseline;
-    if (safeReps > previous && gain > 0) announceImprovement(exerciseId, setIndex, gain);
+    if (safeReps > previous && gain > 0) announceImprovement(exerciseId, setIndex, { ...currentValue, reps: safeReps });
   }
 
   function changeWeight(exerciseId: string, setIndex: number, displayValue: number) {
     const safeValue = Math.max(0, Math.min(5000, displayValue));
-    updateSetValue(exerciseId, setIndex, { weightKg: safeValue > 0 ? toKg(safeValue, weightUnit) : null });
+    const nextWeightKg = safeValue > 0 ? toKg(safeValue, weightUnit) : null;
+    const currentValue = session?.setValues[exerciseId]?.[setIndex] ?? { reps: 0, weightKg: null };
+    const previousWeightKg = currentValue.weightKg ?? 0;
+    const baselineWeightKg = session?.baselineSetValues[exerciseId]?.[setIndex]?.weightKg ?? 0;
+    updateSetValue(exerciseId, setIndex, { weightKg: nextWeightKg });
+    if ((nextWeightKg ?? 0) > previousWeightKg && (nextWeightKg ?? 0) > baselineWeightKg) {
+      announceImprovement(exerciseId, setIndex, { ...currentValue, weightKg: nextWeightKg });
+    }
   }
 
   function addSet(exerciseId: string) {
@@ -242,11 +262,18 @@ export default function ActiveWorkoutScreen() {
         return {
           exerciseId: exercise.id,
           name: exercise.name,
-          sets: values.flatMap((value, setIndex) =>
-            session.completedSets[exercise.id]?.[setIndex]
-              ? [{ setNumber: setIndex + 1, reps: value.reps, weightKg: value.weightKg ?? undefined }]
-              : [],
-          ),
+          sets: values.flatMap((value, setIndex) => {
+            if (!session.completedSets[exercise.id]?.[setIndex]) return [];
+            const baseline = session.baselineSetValues[exercise.id]?.[setIndex] ?? value;
+            const gains = gainsForSet(value, baseline);
+            return [{
+              setNumber: setIndex + 1,
+              reps: value.reps,
+              weightKg: value.weightKg ?? undefined,
+              repsGain: gains.repsGain || undefined,
+              weightGainKg: gains.weightGainKg || undefined,
+            }];
+          }),
         };
       }).filter((exercise) => exercise.sets.length > 0),
     };
@@ -297,7 +324,8 @@ export default function ActiveWorkoutScreen() {
           </View>
         </View>
 
-        <View className="rounded-md bg-surface/80 p-5" style={{ borderWidth: 1, borderColor: colors.border }}>
+        <View className="rounded-md bg-surface/80 p-5" style={{ position: "relative", overflow: "hidden", borderWidth: 1, borderColor: colors.border }}>
+          {improvement?.repsGain && improvement.weightGainKg ? <GoldConfetti burst={improvement.sequence} /> : null}
           <View className="flex-row items-end justify-between">
             <View>
               <Text className="text-xs font-bold uppercase tracking-[2px] text-muted">SÄTZE</Text>
@@ -306,9 +334,9 @@ export default function ActiveWorkoutScreen() {
               </Text>
             </View>
             {improvement ? (
-              <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: GOLD, borderRadius: 3, paddingHorizontal: 9, paddingVertical: 6 }}>
-                <IconSymbol name="medal.fill" size={17} color={GOLD} />
-                <Text style={{ marginLeft: 5, color: GOLD, fontSize: 13, fontWeight: "800" }}>+{improvement.gain}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 9, borderWidth: 1, borderColor: GOLD, borderRadius: 3, paddingHorizontal: 9, paddingVertical: 6 }}>
+                {improvement.repsGain ? <ProgressMark icon="medal.fill" value={`+${improvement.repsGain}`} size={17} /> : null}
+                {improvement.weightGainKg ? <ProgressMark icon="dumbbell.fill" value={`+${displayWeightGain(improvement.weightGainKg, weightUnit)}`} size={17} /> : null}
               </View>
             ) : <Text className="text-sm text-muted">{Math.round(progress)} %</Text>}
           </View>
@@ -364,8 +392,9 @@ export default function ActiveWorkoutScreen() {
               <View className="mt-4 gap-2">
                 {values.map((value, setIndex) => {
                   const checked = checkedSets[setIndex] ?? false;
-                  const baseline = session.baselineSetValues[exercise.id]?.[setIndex]?.reps ?? value.reps;
-                  const gain = Math.max(0, value.reps - baseline);
+                  const baseline = session.baselineSetValues[exercise.id]?.[setIndex] ?? value;
+                  const gains = gainsForSet(value, baseline);
+                  const hasGain = gains.repsGain > 0 || gains.weightGainKg > 0;
                   const displayWeight = value.weightKg === null ? 0 : weightUnit === "lbs" ? value.weightKg * 2.20462 : value.weightKg;
                   return (
                     <View key={setIndex} style={{ borderRadius: 4, borderWidth: 1, borderColor: checked ? colors.foreground : colors.border, backgroundColor: colors.background, padding: 12 }}>
@@ -374,10 +403,10 @@ export default function ActiveWorkoutScreen() {
                           {checked ? <Text style={{ color: colors.background, fontWeight: "900" }}>✓</Text> : null}
                         </Pressable>
                         <Text style={{ marginLeft: 11, flex: 1, fontSize: 12, fontWeight: "800", letterSpacing: 1.2, color: colors.muted }}>SATZ {String(setIndex + 1).padStart(2, "0")}</Text>
-                        {gain > 0 ? (
-                          <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: `${GOLD}99`, borderRadius: 3, paddingHorizontal: 7, paddingVertical: 4 }}>
-                            <IconSymbol name="medal.fill" size={15} color={GOLD} />
-                            <Text style={{ marginLeft: 4, color: GOLD, fontSize: 12, fontWeight: "800" }}>+{gain}</Text>
+                        {hasGain ? (
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 7, borderWidth: 1, borderColor: `${GOLD}99`, borderRadius: 3, paddingHorizontal: 7, paddingVertical: 4 }}>
+                            {gains.repsGain ? <ProgressMark icon="medal.fill" value={`+${gains.repsGain}`} size={15} /> : null}
+                            {gains.weightGainKg ? <ProgressMark icon="dumbbell.fill" value={`+${displayWeightGain(gains.weightGainKg, weightUnit)}`} size={15} /> : null}
                           </View>
                         ) : null}
                       </View>
@@ -436,6 +465,51 @@ export default function ActiveWorkoutScreen() {
       </Modal>
     </ScreenContainer>
   );
+}
+
+function ProgressMark({ icon, value, size }: { icon: "medal.fill" | "dumbbell.fill"; value: string; size: number }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center" }}>
+      <IconSymbol name={icon} size={size} color={GOLD} />
+      <Text style={{ marginLeft: 4, color: GOLD, fontSize: 12, fontWeight: "800" }}>{value}</Text>
+    </View>
+  );
+}
+
+const CONFETTI_PIECES = [
+  { x: -76, y: 46, rotate: -105 },
+  { x: -54, y: 64, rotate: 80 },
+  { x: -31, y: 40, rotate: -55 },
+  { x: -10, y: 70, rotate: 120 },
+  { x: 18, y: 48, rotate: -90 },
+  { x: 40, y: 67, rotate: 65 },
+  { x: 62, y: 43, rotate: -125 },
+  { x: 82, y: 59, rotate: 100 },
+] as const;
+
+function GoldConfetti({ burst }: { burst: number }) {
+  return (
+    <View style={[StyleSheet.absoluteFill, { pointerEvents: "none" }]}>
+      {CONFETTI_PIECES.map((piece, index) => <ConfettiPiece key={`${burst}-${index}`} index={index} {...piece} />)}
+    </View>
+  );
+}
+
+function ConfettiPiece({ index, x, y, rotate }: { index: number; x: number; y: number; rotate: number }) {
+  const travel = useSharedValue(0);
+  useEffect(() => {
+    travel.value = 0;
+    travel.value = withDelay(index * 18, withTiming(1, { duration: 720 }));
+  }, [index, travel]);
+  const style = useAnimatedStyle(() => ({
+    opacity: travel.value < 0.18 ? travel.value * 5.5 : Math.max(0, 1 - travel.value),
+    transform: [
+      { translateX: x * travel.value },
+      { translateY: y * travel.value },
+      { rotate: `${rotate * travel.value}deg` },
+    ],
+  }));
+  return <Animated.View style={[{ position: "absolute", top: 32, left: "73%", width: 3, height: 8, borderRadius: 1, backgroundColor: index % 2 ? GOLD : "#E2CA79" }, style]} />;
 }
 
 function NumberField({
