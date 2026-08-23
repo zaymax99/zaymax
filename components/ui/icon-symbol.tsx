@@ -15,6 +15,7 @@ const MAPPING = {
   "plus.circle.fill": "add-circle",
   "gearshape.fill": "settings",
   "chevron.right": "chevron-right",
+  "chevron.left": "chevron-left",
   "trash.fill": "delete-outline",
   pencil: "edit",
   "figure.strengthtraining.traditional": "fitness-center",

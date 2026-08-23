@@ -194,8 +194,8 @@ export function ProfileBmiCard() {
               }}
             >
               {t(
-                `Geburtstag: ${formatBirthDate(profile.birthDate, locale)} · Der BMI ist ein grober Richtwert.`,
-                `Birthday: ${formatBirthDate(profile.birthDate, locale)} · BMI is a general guide.`,
+                `Geburtstag: ${formatBirthDate(profile.birthDate, locale)} · Der BMI ist ein grober Richtwert, keine medizinische Beratung oder Diagnose.`,
+                `Birthday: ${formatBirthDate(profile.birthDate, locale)} · BMI is a general guide, not medical advice or a diagnosis.`,
               )}
             </Text>
           </>

@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useRouter, type Href } from "expo-router";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -23,7 +23,6 @@ import {
 import { loadSettings, saveSettings, type WeightUnit } from "@/lib/workouts";
 import { useColors } from "@/hooks/use-colors";
 import { createBackup, pickBackup, restoreBackup } from "@/lib/backup";
-import { BIRTHDAY_CELEBRATION_KEY, PROFILE_STORAGE_KEY } from "@/lib/profile";
 
 const restOptions = [30, 60, 90, 120, 180];
 function formatRest(seconds: number) {
@@ -163,17 +162,11 @@ export default function SettingsScreen() {
           text: t("Löschen", "Delete"),
           style: "destructive",
           onPress: async () => {
-            await AsyncStorage.multiRemove([
-              "zaymax.workouts.builder.v1",
-              "zaymax.active-session.v1",
-              "zaymax.settings.v1",
-              "zaymax.workout-history.v1",
-              "zaymax.reminders.v1",
-              "zaymax.training-days.v1",
-              LANGUAGE_STORAGE_KEY,
-              PROFILE_STORAGE_KEY,
-              BIRTHDAY_CELEBRATION_KEY,
-            ]);
+            const allKeys = await AsyncStorage.getAllKeys();
+            const zaymaxKeys = allKeys.filter((key) =>
+              key.startsWith("zaymax."),
+            );
+            if (zaymaxKeys.length) await AsyncStorage.multiRemove(zaymaxKeys);
             await setLanguage("de");
             Alert.alert(
               t("Erledigt", "Done"),
@@ -449,6 +442,54 @@ export default function SettingsScreen() {
             </Pressable>
           </View>
         </SettingsPanel>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t(
+            "Datenschutz und Hilfe öffnen",
+            "Open privacy and help",
+          )}
+          onPress={() => router.push("/privacy" as Href)}
+          style={({ pressed }) => [
+            {
+              marginTop: 14,
+              minHeight: 82,
+              flexDirection: "row",
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+              padding: 20,
+              borderRadius: ZAYMAX_DESIGN.radius.card,
+              opacity: pressed ? 0.65 : 1,
+            },
+          ]}
+        >
+          <View
+            style={{
+              width: 46,
+              height: 46,
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: ZAYMAX_DESIGN.radius.round,
+              backgroundColor: colors.background,
+            }}
+          >
+            <IconSymbol name="lock.fill" size={21} color={colors.foreground} />
+          </View>
+          <View className="ml-4 flex-1">
+            <Text className="text-lg font-black text-foreground">
+              {t("Datenschutz & Hilfe", "Privacy & help")}
+            </Text>
+            <Text className="mt-1 text-sm leading-5 text-muted">
+              {t(
+                "Lokale Daten, Löschung, Backup und Gesundheitshinweise.",
+                "Local data, deletion, backup and health notices.",
+              )}
+            </Text>
+          </View>
+          <IconSymbol name="chevron.right" size={22} color={colors.muted} />
+        </Pressable>
 
         <Pressable
           onPress={clearData}

@@ -1,47 +1,34 @@
 import "@/global.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   DarkTheme,
   ThemeProvider as NavigationThemeProvider,
 } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
-import { Platform } from "react-native";
 import "@/lib/_core/nativewind-pressable";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { LanguageProvider } from "@/lib/i18n";
 import { KeyboardDismissButton } from "@/components/keyboard-dismiss-button";
 import { AppExperienceOverlay } from "@/components/app-experience-overlay";
 import {
-  SafeAreaFrameContext,
-  SafeAreaInsetsContext,
   SafeAreaProvider,
   initialWindowMetrics,
 } from "react-native-safe-area-context";
-import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 
-import { trpc, createTRPCClient } from "@/lib/trpc";
-import {
-  initManusRuntime,
-  subscribeSafeAreaInsets,
-} from "@/lib/_core/manus-runtime";
-
-const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
-const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
-const APP_BACKGROUND = "#0E0E0F";
+const APP_BACKGROUND = "#0C0D0F";
 const NAVIGATION_THEME = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    primary: "#EEEEF0",
+    primary: "#F4F4F5",
     background: APP_BACKGROUND,
-    card: "#1A1A1C",
-    text: "#E8E8EA",
-    border: "#323236",
-    notification: "#EEEEF0",
+    card: "#18191C",
+    text: "#F4F4F5",
+    border: "#2A2C30",
+    notification: "#F4F4F5",
   },
 };
 
@@ -50,105 +37,38 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-  const initialInsets = initialWindowMetrics?.insets ?? DEFAULT_WEB_INSETS;
-  const initialFrame = initialWindowMetrics?.frame ?? DEFAULT_WEB_FRAME;
-
-  const [insets, setInsets] = useState<EdgeInsets>(initialInsets);
-  const [frame, setFrame] = useState<Rect>(initialFrame);
-
-  // Initialize Manus runtime for cookie injection from parent container
-  useEffect(() => {
-    initManusRuntime();
-  }, []);
-
-  const handleSafeAreaUpdate = useCallback((metrics: Metrics) => {
-    setInsets(metrics.insets);
-    setFrame(metrics.frame);
-  }, []);
-
-  useEffect(() => {
-    if (Platform.OS !== "web") return;
-    const unsubscribe = subscribeSafeAreaInsets(handleSafeAreaUpdate);
-    return () => unsubscribe();
-  }, [handleSafeAreaUpdate]);
-
-  // Create clients once and reuse them
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            // Disable automatic refetching on window focus for mobile
-            refetchOnWindowFocus: false,
-            // Retry failed requests once
-            retry: 1,
-          },
-        },
-      }),
-  );
-  const [trpcClient] = useState(() => createTRPCClient());
-
-  // Ensure minimum 8px padding for top and bottom on mobile
   const providerInitialMetrics = useMemo(() => {
-    const metrics = initialWindowMetrics ?? {
-      insets: initialInsets,
-      frame: initialFrame,
-    };
+    if (!initialWindowMetrics) return undefined;
     return {
-      ...metrics,
+      ...initialWindowMetrics,
       insets: {
-        ...metrics.insets,
-        top: Math.max(metrics.insets.top, 16),
-        bottom: Math.max(metrics.insets.bottom, 12),
+        ...initialWindowMetrics.insets,
+        top: Math.max(initialWindowMetrics.insets.top, 16),
+        bottom: Math.max(initialWindowMetrics.insets.bottom, 12),
       },
     };
-  }, [initialInsets, initialFrame]);
+  }, []);
 
   const content = (
     <GestureHandlerRootView
       style={{ flex: 1, backgroundColor: APP_BACKGROUND }}
     >
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
-          <NavigationThemeProvider value={NAVIGATION_THEME}>
-            {/* Default to hiding native headers so raw route segments don't appear (e.g. "(tabs)", "products/[id]"). */}
-            {/* If a screen needs the native header, explicitly enable it and set a human title via Stack.Screen options. */}
-            {/* in order for ios apps tab switching to work properly, use presentation: "fullScreenModal" for login page, whenever you decide to use presentation: "modal*/}
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: APP_BACKGROUND },
-              }}
-            >
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="oauth/callback" />
-            </Stack>
-            <KeyboardDismissButton />
-            <AppExperienceOverlay />
-            <StatusBar style="light" backgroundColor={APP_BACKGROUND} />
-          </NavigationThemeProvider>
-        </QueryClientProvider>
-      </trpc.Provider>
+      <NavigationThemeProvider value={NAVIGATION_THEME}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: APP_BACKGROUND },
+          }}
+        >
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="privacy" />
+        </Stack>
+        <KeyboardDismissButton />
+        <AppExperienceOverlay />
+        <StatusBar style="light" backgroundColor={APP_BACKGROUND} />
+      </NavigationThemeProvider>
     </GestureHandlerRootView>
   );
-
-  const shouldOverrideSafeArea = Platform.OS === "web";
-
-  if (shouldOverrideSafeArea) {
-    return (
-      <ThemeProvider>
-        <LanguageProvider>
-          <SafeAreaProvider initialMetrics={providerInitialMetrics}>
-            <SafeAreaFrameContext.Provider value={frame}>
-              <SafeAreaInsetsContext.Provider value={insets}>
-                {content}
-              </SafeAreaInsetsContext.Provider>
-            </SafeAreaFrameContext.Provider>
-          </SafeAreaProvider>
-        </LanguageProvider>
-      </ThemeProvider>
-    );
-  }
 
   return (
     <ThemeProvider>
