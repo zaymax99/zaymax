@@ -24,6 +24,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ProfileBmiCard } from "@/components/profile-bmi-card";
+import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { useColors } from "@/hooks/use-colors";
 import { useLanguage } from "@/lib/i18n";
 import {
@@ -225,7 +226,7 @@ export default function JournalScreen() {
                 <Text className="text-xs font-bold uppercase tracking-[2px] text-muted">
                   ZAYMAX
                 </Text>
-                <Text className="mt-1 text-3xl font-black uppercase text-foreground">
+                <Text className="mt-1 text-3xl font-black text-foreground">
                   {t("Tagebuch", "Journal")}
                 </Text>
                 <Text className="mt-2 text-base leading-6 text-muted">
@@ -240,11 +241,11 @@ export default function JournalScreen() {
             <ProfileBmiCard />
 
             <View
-              className="bg-surface/80 p-5"
+              className="bg-surface p-5"
               style={{
                 borderWidth: 1,
                 borderColor: colors.border,
-                borderRadius: 24,
+                borderRadius: ZAYMAX_DESIGN.radius.card,
               }}
             >
               <View className="flex-row items-start justify-between">
@@ -252,7 +253,7 @@ export default function JournalScreen() {
                   <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
                     {t("TRAININGSWOCHE", "TRAINING WEEK")}
                   </Text>
-                  <Text className="mt-2 text-xl font-black uppercase text-foreground">
+                  <Text className="mt-2 text-xl font-black text-foreground">
                     {t("Deine Trainingstage", "Your training days")}
                   </Text>
                 </View>
@@ -270,7 +271,7 @@ export default function JournalScreen() {
                       key={day.value}
                       style={{
                         minWidth: 37,
-                        borderRadius: 999,
+                        borderRadius: ZAYMAX_DESIGN.radius.round,
                         borderWidth: 1,
                         borderColor: selected
                           ? colors.foreground
@@ -313,7 +314,7 @@ export default function JournalScreen() {
                 style={({ pressed }) => [
                   {
                     marginTop: 16,
-                    borderRadius: 999,
+                    borderRadius: ZAYMAX_DESIGN.radius.round,
                     borderWidth: 1,
                     borderColor: colors.foreground,
                     paddingVertical: 13,
@@ -321,20 +322,20 @@ export default function JournalScreen() {
                   },
                 ]}
               >
-                <Text className="text-center font-black uppercase tracking-[1px] text-foreground">
+                <Text className="text-center font-black tracking-[0.4px] text-foreground">
                   {t("Tage auswählen", "Select days")}
                 </Text>
               </Pressable>
             </View>
 
             <Animated.View
-              entering={FadeIn.duration(180)}
-              className="bg-surface/80 p-4"
+              entering={FadeIn.duration(ZAYMAX_DESIGN.motion.quick)}
+              className="bg-surface p-4"
               style={{
                 marginTop: 16,
                 borderWidth: 1,
                 borderColor: colors.border,
-                borderRadius: 24,
+                borderRadius: ZAYMAX_DESIGN.radius.card,
               }}
             >
               <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
@@ -366,7 +367,7 @@ export default function JournalScreen() {
                     onPress={cancelEdit}
                     style={({ pressed }) => [
                       {
-                        borderRadius: 999,
+                        borderRadius: ZAYMAX_DESIGN.radius.round,
                         borderWidth: 1,
                         borderColor: colors.border,
                         paddingHorizontal: 15,
@@ -389,7 +390,7 @@ export default function JournalScreen() {
                   onPress={() => void saveDraft()}
                   style={({ pressed }) => [
                     {
-                      borderRadius: 999,
+                      borderRadius: ZAYMAX_DESIGN.radius.round,
                       backgroundColor: colors.primary,
                       paddingHorizontal: 18,
                       paddingVertical: 11,
@@ -397,7 +398,7 @@ export default function JournalScreen() {
                     },
                   ]}
                 >
-                  <Text className="font-black uppercase text-background">
+                  <Text className="font-black text-background">
                     {editingId
                       ? t("Speichern", "Save")
                       : t("Hinzufügen", "Add")}
@@ -405,7 +406,7 @@ export default function JournalScreen() {
                 </Pressable>
               </View>
             </Animated.View>
-            <Text className="mt-8 mb-3 text-xl font-black uppercase text-foreground">
+            <Text className="mt-8 mb-3 text-xl font-black text-foreground">
               {t("Meine Einträge", "My entries")}
             </Text>
           </>
@@ -413,7 +414,7 @@ export default function JournalScreen() {
         ListEmptyComponent={
           <View className="flex-1 items-center justify-center rounded-3xl border border-border bg-surface/40 p-7">
             <IconSymbol name="pencil" size={29} color={colors.foreground} />
-            <Text className="mt-4 text-lg font-black uppercase text-foreground">
+            <Text className="mt-4 text-lg font-black text-foreground">
               {t("Dein Tagebuch ist noch leer", "Your journal is still empty")}
             </Text>
             <Text className="mt-2 text-center leading-5 text-muted">
@@ -433,11 +434,11 @@ export default function JournalScreen() {
             <View
               style={{
                 minHeight: 88,
-                borderRadius: 20,
+                borderRadius: ZAYMAX_DESIGN.radius.nested,
                 borderWidth: 1,
                 borderColor:
                   editingId === item.id ? colors.foreground : colors.border,
-                backgroundColor: colors.surface + "A8",
+                backgroundColor: colors.surface,
                 padding: 16,
               }}
             >
@@ -469,7 +470,7 @@ export default function JournalScreen() {
                     right: 8,
                     bottom: 8,
                     padding: 8,
-                    borderRadius: 999,
+                    borderRadius: ZAYMAX_DESIGN.radius.round,
                     opacity: pressed ? 0.55 : 1,
                   },
                 ]}
@@ -497,7 +498,7 @@ export default function JournalScreen() {
         >
           <View
             style={{
-              borderRadius: 28,
+              borderRadius: ZAYMAX_DESIGN.radius.hero,
               borderWidth: 1,
               borderColor: colors.border,
               backgroundColor: colors.surface,
@@ -507,7 +508,7 @@ export default function JournalScreen() {
             <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
               {t("TRAININGSWOCHE", "TRAINING WEEK")}
             </Text>
-            <Text className="mt-2 text-3xl font-black uppercase text-foreground">
+            <Text className="mt-2 text-3xl font-black text-foreground">
               {t("Tage auswählen", "Select days")}
             </Text>
             <Text className="mt-2 text-sm leading-5 text-muted">
@@ -532,7 +533,7 @@ export default function JournalScreen() {
                         flexDirection: "row",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        borderRadius: 18,
+                        borderRadius: ZAYMAX_DESIGN.radius.nested,
                         borderWidth: 1,
                         borderColor: selected
                           ? colors.foreground
@@ -575,14 +576,14 @@ export default function JournalScreen() {
               style={({ pressed }) => [
                 {
                   marginTop: 16,
-                  borderRadius: 999,
+                  borderRadius: ZAYMAX_DESIGN.radius.round,
                   backgroundColor: colors.primary,
                   paddingVertical: 14,
                   opacity: pressed ? 0.7 : 1,
                 },
               ]}
             >
-              <Text className="text-center font-black uppercase tracking-[1px] text-background">
+              <Text className="text-center font-black tracking-[0.4px] text-background">
                 {t("Auswählen", "Select")}
               </Text>
             </Pressable>

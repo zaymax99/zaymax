@@ -13,6 +13,8 @@ import {
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Animated, {
+  FadeInDown,
+  Layout,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -23,6 +25,7 @@ import Animated, {
 import { ScreenContainer } from "@/components/screen-container";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import {
   clearActiveSession,
   completedValuesForTemplate,
@@ -50,7 +53,7 @@ import { useColors } from "@/hooks/use-colors";
 import { useLanguage } from "@/lib/i18n";
 
 const DEFAULT_REST = 90;
-const GOLD = "#C6A752";
+const GOLD = ZAYMAX_DESIGN.colors.gold;
 const EFFORT_OPTIONS: {
   value: WorkoutEffort;
   deLabel: string;
@@ -118,6 +121,10 @@ export default function ActiveWorkoutScreen() {
   const improvementSequence = useRef(0);
   const goldFlash = useSharedValue(0);
   const goldStyle = useAnimatedStyle(() => ({ opacity: goldFlash.value }));
+  const progressFill = useSharedValue(0);
+  const progressStyle = useAnimatedStyle(() => ({
+    width: `${progressFill.value}%` as `${number}%`,
+  }));
 
   useEffect(() => {
     void (async () => {
@@ -252,6 +259,12 @@ export default function ActiveWorkoutScreen() {
   const timerText = session
     ? `${String(Math.floor(session.restRemaining / 60)).padStart(2, "0")}:${String(session.restRemaining % 60).padStart(2, "0")}`
     : "01:30";
+
+  useEffect(() => {
+    progressFill.value = withTiming(progress, {
+      duration: ZAYMAX_DESIGN.motion.standard,
+    });
+  }, [progress, progressFill]);
 
   function updateSetValue(
     exerciseId: string,
@@ -653,19 +666,19 @@ export default function ActiveWorkoutScreen() {
         </View>
 
         <View
-          className="bg-surface/80 p-5"
+          className="bg-surface p-5"
           style={{
             borderWidth: 1,
             borderColor: colors.border,
-            borderRadius: 24,
+            borderRadius: ZAYMAX_DESIGN.radius.card,
           }}
         >
           <View className="flex-row items-end justify-between">
             <View>
               <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
-                {t("SÄTZE", "SETS")}
+                {t("FORTSCHRITT", "PROGRESS")}
               </Text>
-              <Text className="mt-2 text-3xl font-bold text-foreground">
+              <Text className="mt-2 text-4xl font-black text-foreground">
                 {completedCount}
                 <Text className="text-base font-medium text-muted">
                   {" "}
@@ -681,7 +694,8 @@ export default function ActiveWorkoutScreen() {
                   gap: 9,
                   borderWidth: 1,
                   borderColor: GOLD,
-                  borderRadius: 999,
+                  backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
+                  borderRadius: ZAYMAX_DESIGN.radius.round,
                   paddingHorizontal: 9,
                   paddingVertical: 6,
                 }}
@@ -708,9 +722,17 @@ export default function ActiveWorkoutScreen() {
             )}
           </View>
           <View className="mt-4 h-1.5 overflow-hidden rounded-full bg-background">
-            <View
-              className="h-full bg-foreground"
-              style={{ width: `${progress}%` }}
+            <Animated.View
+              style={[
+                {
+                  height: "100%",
+                  backgroundColor:
+                    progress === 100
+                      ? ZAYMAX_DESIGN.colors.success
+                      : colors.foreground,
+                },
+                progressStyle,
+              ]}
             />
             <Animated.View
               style={[
@@ -723,11 +745,11 @@ export default function ActiveWorkoutScreen() {
         </View>
 
         <View
-          className="mt-4 bg-surface/80 p-5"
+          className="mt-4 bg-surface p-5"
           style={{
             borderWidth: 1,
             borderColor: colors.border,
-            borderRadius: 24,
+            borderRadius: ZAYMAX_DESIGN.radius.card,
           }}
         >
           <View className="flex-row items-center justify-between">
@@ -758,7 +780,7 @@ export default function ActiveWorkoutScreen() {
                     height: 46,
                     alignItems: "center",
                     justifyContent: "center",
-                    borderRadius: 999,
+                    borderRadius: ZAYMAX_DESIGN.radius.round,
                     backgroundColor: colors.primary,
                     opacity: pressed ? 0.7 : 1,
                   },
@@ -779,7 +801,7 @@ export default function ActiveWorkoutScreen() {
                     height: 46,
                     alignItems: "center",
                     justifyContent: "center",
-                    borderRadius: 999,
+                    borderRadius: ZAYMAX_DESIGN.radius.round,
                     borderWidth: 1,
                     borderColor: colors.border,
                     opacity: pressed ? 0.65 : 1,
@@ -806,22 +828,26 @@ export default function ActiveWorkoutScreen() {
           )}
         </Text>
 
-        {workout.exercises.map((exercise) => {
+        {workout.exercises.map((exercise, exerciseIndex) => {
           const values = session.setValues[exercise.id] ?? [];
           const checkedSets = session.completedSets[exercise.id] ?? [];
           return (
-            <View
+            <Animated.View
               key={exercise.id}
-              className="mt-3 bg-surface/80 p-4"
+              entering={FadeInDown.delay(
+                Math.min(exerciseIndex * 35, 140),
+              ).duration(ZAYMAX_DESIGN.motion.standard)}
+              layout={Layout.duration(ZAYMAX_DESIGN.motion.quick)}
+              className="mt-3 bg-surface p-4"
               style={{
                 borderWidth: 1,
                 borderColor: colors.border,
-                borderRadius: 24,
+                borderRadius: ZAYMAX_DESIGN.radius.card,
               }}
             >
               <View className="flex-row items-center justify-between">
                 <View className="flex-1 pr-3">
-                  <Text className="font-bold text-foreground">
+                  <Text className="text-lg font-black text-foreground">
                     {exercise.name}
                   </Text>
                   <Text className="mt-1 text-sm text-muted">
@@ -840,7 +866,7 @@ export default function ActiveWorkoutScreen() {
                         height: 38,
                         alignItems: "center",
                         justifyContent: "center",
-                        borderRadius: 999,
+                        borderRadius: ZAYMAX_DESIGN.radius.round,
                         borderWidth: 1,
                         borderColor: colors.border,
                         opacity: values.length <= 1 ? 0.3 : pressed ? 0.55 : 1,
@@ -863,7 +889,7 @@ export default function ActiveWorkoutScreen() {
                         height: 38,
                         alignItems: "center",
                         justifyContent: "center",
-                        borderRadius: 999,
+                        borderRadius: ZAYMAX_DESIGN.radius.round,
                         borderWidth: 1,
                         borderColor: colors.foreground,
                         opacity: values.length >= 20 ? 0.3 : pressed ? 0.55 : 1,
@@ -898,12 +924,14 @@ export default function ActiveWorkoutScreen() {
                       style={{
                         position: "relative",
                         overflow: "hidden",
-                        borderRadius: 18,
+                        borderRadius: ZAYMAX_DESIGN.radius.nested,
                         borderWidth: 1,
                         borderColor: checked
-                          ? colors.foreground
+                          ? "rgba(120, 201, 145, 0.42)"
                           : colors.border,
-                        backgroundColor: colors.background,
+                        backgroundColor: checked
+                          ? ZAYMAX_DESIGN.colors.successSoft
+                          : colors.background,
                         padding: 12,
                       }}
                     >
@@ -928,13 +956,13 @@ export default function ActiveWorkoutScreen() {
                               height: 34,
                               alignItems: "center",
                               justifyContent: "center",
-                              borderRadius: 999,
+                              borderRadius: ZAYMAX_DESIGN.radius.round,
                               borderWidth: 1,
                               borderColor: checked
-                                ? colors.foreground
+                                ? ZAYMAX_DESIGN.colors.success
                                 : colors.muted,
                               backgroundColor: checked
-                                ? colors.foreground
+                                ? ZAYMAX_DESIGN.colors.success
                                 : "transparent",
                               opacity: pressed ? 0.65 : 1,
                             },
@@ -972,7 +1000,8 @@ export default function ActiveWorkoutScreen() {
                               gap: 7,
                               borderWidth: 1,
                               borderColor: `${GOLD}99`,
-                              borderRadius: 999,
+                              backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
+                              borderRadius: ZAYMAX_DESIGN.radius.round,
                               paddingHorizontal: 7,
                               paddingVertical: 4,
                             }}
@@ -1077,7 +1106,7 @@ export default function ActiveWorkoutScreen() {
                   {t("Pause starten", "Start rest")}
                 </Text>
               </Pressable>
-            </View>
+            </Animated.View>
           );
         })}
 
@@ -1086,14 +1115,14 @@ export default function ActiveWorkoutScreen() {
           style={({ pressed }) => [
             {
               marginTop: 20,
-              borderRadius: 999,
+              borderRadius: ZAYMAX_DESIGN.radius.round,
               backgroundColor: colors.primary,
               paddingVertical: 16,
               opacity: pressed ? 0.8 : 1,
             },
           ]}
         >
-          <Text className="text-center font-black uppercase tracking-[1px] text-background">
+          <Text className="text-center font-black tracking-[0.4px] text-background">
             {t("Workout beenden", "Finish workout")}
           </Text>
         </Pressable>
@@ -1115,7 +1144,7 @@ export default function ActiveWorkoutScreen() {
         >
           <View
             style={{
-              borderRadius: 28,
+              borderRadius: ZAYMAX_DESIGN.radius.hero,
               borderWidth: 1,
               borderColor: colors.border,
               backgroundColor: colors.surface,
@@ -1146,7 +1175,7 @@ export default function ActiveWorkoutScreen() {
                       flexDirection: "row",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      borderRadius: 18,
+                      borderRadius: ZAYMAX_DESIGN.radius.nested,
                       borderWidth: 1,
                       borderColor: colors.border,
                       backgroundColor: colors.background,
@@ -1202,7 +1231,7 @@ export default function ActiveWorkoutScreen() {
           {completionSummary ? (
             <View
               style={{
-                borderRadius: 28,
+                borderRadius: ZAYMAX_DESIGN.radius.hero,
                 borderWidth: 1,
                 borderColor: colors.border,
                 backgroundColor: colors.surface,
@@ -1256,11 +1285,13 @@ export default function ActiveWorkoutScreen() {
                   label={t("Gesteigert", "Improved")}
                   value={String(completionSummary.improvementCount)}
                   colors={colors}
+                  accent={completionSummary.improvementCount > 0}
                 />
                 <SummaryMetric
                   label={t("Bestleistungen", "Personal bests")}
                   value={String(completionSummary.personalBestCount)}
                   colors={colors}
+                  accent={completionSummary.personalBestCount > 0}
                   wide
                 />
               </View>
@@ -1273,14 +1304,14 @@ export default function ActiveWorkoutScreen() {
                 style={({ pressed }) => [
                   {
                     marginTop: 18,
-                    borderRadius: 999,
+                    borderRadius: ZAYMAX_DESIGN.radius.round,
                     backgroundColor: colors.primary,
                     paddingVertical: 15,
                     opacity: pressed ? 0.75 : 1,
                   },
                 ]}
               >
-                <Text className="text-center font-black uppercase tracking-[1px] text-background">
+                <Text className="text-center font-black tracking-[0.4px] text-background">
                   {t("Fertig", "Done")}
                 </Text>
               </Pressable>
@@ -1310,17 +1341,19 @@ function SummaryMetric({
   value,
   colors,
   wide = false,
+  accent = false,
 }: {
   label: string;
   value: string;
   colors: any;
   wide?: boolean;
+  accent?: boolean;
 }) {
   return (
     <View
       style={{
         width: wide ? "100%" : "48.5%",
-        borderRadius: 18,
+        borderRadius: ZAYMAX_DESIGN.radius.nested,
         borderWidth: 1,
         borderColor: colors.border,
         backgroundColor: colors.background,
@@ -1342,7 +1375,7 @@ function SummaryMetric({
           marginTop: 6,
           fontSize: 18,
           fontWeight: "800",
-          color: colors.foreground,
+          color: accent ? GOLD : colors.foreground,
         }}
       >
         {value}
@@ -1492,11 +1525,11 @@ function NumberField({
               onPress={onDecrease}
               style={({ pressed }) => [
                 {
-                  width: 26,
-                  height: 26,
+                  width: 30,
+                  height: 30,
                   alignItems: "center",
                   justifyContent: "center",
-                  borderRadius: 999,
+                  borderRadius: ZAYMAX_DESIGN.radius.round,
                   borderWidth: 1,
                   borderColor: colors.border,
                   opacity: pressed ? 0.55 : 1,
@@ -1510,11 +1543,11 @@ function NumberField({
               onPress={onIncrease}
               style={({ pressed }) => [
                 {
-                  width: 26,
-                  height: 26,
+                  width: 30,
+                  height: 30,
                   alignItems: "center",
                   justifyContent: "center",
-                  borderRadius: 999,
+                  borderRadius: ZAYMAX_DESIGN.radius.round,
                   borderWidth: 1,
                   borderColor: colors.border,
                   opacity: pressed ? 0.55 : 1,
@@ -1551,15 +1584,16 @@ function NumberField({
           if (normalized === "" && !integer) onChange(0);
         }}
         style={{
-          height: 46,
-          borderRadius: 14,
+          height: 58,
+          borderRadius: ZAYMAX_DESIGN.radius.input,
           borderWidth: 1,
           borderColor: colors.border,
           backgroundColor: colors.surface,
-          paddingHorizontal: 12,
+          paddingHorizontal: 10,
+          textAlign: "center",
           color: colors.foreground,
-          fontSize: 17,
-          fontWeight: "800",
+          fontSize: 22,
+          fontWeight: "900",
         }}
       />
     </View>

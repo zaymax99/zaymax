@@ -6,6 +6,7 @@ import Svg, { Circle, Line, Polyline } from "react-native-svg";
 import { ScreenContainer } from "@/components/screen-container";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import {
   displayWeight,
   formatDateTime,
@@ -18,7 +19,7 @@ import {
 import { useColors } from "@/hooks/use-colors";
 import { useLanguage } from "@/lib/i18n";
 
-const GOLD = "#C6A752";
+const GOLD = ZAYMAX_DESIGN.colors.gold;
 
 type ExerciseSession = {
   id: string;
@@ -112,7 +113,7 @@ export default function ExerciseHistoryScreen() {
               {
                 padding: 8,
                 marginRight: 6,
-                borderRadius: 999,
+                borderRadius: ZAYMAX_DESIGN.radius.round,
                 opacity: pressed ? 0.55 : 1,
               },
             ]}
@@ -128,7 +129,7 @@ export default function ExerciseHistoryScreen() {
             <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
               {t("ÜBUNGSFORTSCHRITT", "EXERCISE PROGRESS")}
             </Text>
-            <Text className="mt-1 text-3xl font-black uppercase text-foreground">
+            <Text className="mt-1 text-3xl font-black text-foreground">
               {name}
             </Text>
           </View>
@@ -166,11 +167,11 @@ export default function ExerciseHistoryScreen() {
         </View>
 
         <View
-          className="mt-4 bg-surface/80 p-5"
+          className="mt-4 bg-surface p-5"
           style={{
             borderWidth: 1,
             borderColor: colors.border,
-            borderRadius: 24,
+            borderRadius: ZAYMAX_DESIGN.radius.card,
           }}
         >
           <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
@@ -197,11 +198,11 @@ export default function ExerciseHistoryScreen() {
           sessions.map((session) => (
             <View
               key={session.id}
-              className="mt-3 bg-surface/80 p-4"
+              className="mt-3 bg-surface p-4"
               style={{
                 borderWidth: 1,
                 borderColor: colors.border,
-                borderRadius: 22,
+                borderRadius: ZAYMAX_DESIGN.radius.card,
               }}
             >
               <View className="flex-row items-start justify-between">
@@ -287,10 +288,10 @@ function StatCard({
     <View
       style={{
         width: "48.5%",
-        borderRadius: 20,
+        borderRadius: ZAYMAX_DESIGN.radius.nested,
         borderWidth: 1,
         borderColor: colors.border,
-        backgroundColor: `${colors.surface}E8`,
+        backgroundColor: colors.surface,
         padding: 14,
       }}
     >
@@ -307,8 +308,8 @@ function StatCard({
       <Text
         style={{
           marginTop: 7,
-          fontSize: 18,
-          fontWeight: "800",
+          fontSize: 20,
+          fontWeight: "900",
           color: colors.foreground,
         }}
       >

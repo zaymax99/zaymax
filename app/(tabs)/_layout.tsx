@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { useColors } from "@/hooks/use-colors";
 import { useLanguage } from "@/lib/i18n";
 
@@ -22,7 +23,7 @@ export default function TabLayout() {
         animation: "fade",
         transitionSpec: {
           animation: "timing",
-          config: { duration: 180 },
+          config: { duration: ZAYMAX_DESIGN.motion.quick },
         },
         sceneStyle: { backgroundColor: colors.background },
         tabBarActiveTintColor: colors.primary,
@@ -30,21 +31,20 @@ export default function TabLayout() {
         tabBarButton: HapticTab,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          height: 64 + bottomPadding,
-          paddingTop: 8,
+          height: 66 + bottomPadding,
+          paddingTop: 7,
           paddingBottom: bottomPadding,
-          backgroundColor: `${colors.surface}F5`,
+          backgroundColor: colors.surface,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
+          borderTopLeftRadius: ZAYMAX_DESIGN.radius.card,
+          borderTopRightRadius: ZAYMAX_DESIGN.radius.card,
           overflow: "hidden",
         },
         tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: "800",
-          letterSpacing: 0.7,
-          textTransform: "uppercase",
+          fontSize: 11,
+          fontWeight: "700",
+          letterSpacing: 0.2,
         },
       }}
     >
@@ -55,13 +55,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View
               style={{
-                width: 42,
-                height: 32,
-                borderRadius: 999,
+                width: 38,
+                height: 38,
+                borderRadius: ZAYMAX_DESIGN.radius.round,
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: focused ? 1 : 0,
-                borderColor: colors.border,
+                borderColor: focused ? colors.foreground : "transparent",
                 backgroundColor: focused ? colors.background : "transparent",
               }}
             >
@@ -77,13 +77,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View
               style={{
-                width: 42,
-                height: 32,
-                borderRadius: 999,
+                width: 38,
+                height: 38,
+                borderRadius: ZAYMAX_DESIGN.radius.round,
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: focused ? 1 : 0,
-                borderColor: colors.border,
+                borderColor: focused ? colors.foreground : "transparent",
                 backgroundColor: focused ? colors.background : "transparent",
               }}
             >

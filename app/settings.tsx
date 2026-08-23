@@ -14,6 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ScreenContainer } from "@/components/screen-container";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import {
   LANGUAGE_STORAGE_KEY,
   useLanguage,
@@ -200,7 +201,7 @@ export default function SettingsScreen() {
             <Text className="text-xs font-black uppercase tracking-[3px] text-muted">
               ZAYMAX / SYSTEM
             </Text>
-            <Text className="mt-1 text-3xl font-black uppercase text-foreground">
+            <Text className="mt-1 text-3xl font-black text-foreground">
               {t("Einstellungen", "Settings")}
             </Text>
             <Text className="mt-2 text-base text-muted">
@@ -224,14 +225,14 @@ export default function SettingsScreen() {
               justifyContent: "center",
               borderWidth: 1,
               borderColor: colors.border,
-              backgroundColor: `${colors.surface}C8`,
-              borderRadius: 999,
+              backgroundColor: colors.surface,
+              borderRadius: ZAYMAX_DESIGN.radius.round,
               opacity: pressed ? 0.65 : 1,
             },
           ]}
         >
           <IconSymbol name="house.fill" size={18} color={colors.foreground} />
-          <Text className="ml-2 font-black uppercase tracking-[1px] text-foreground">
+          <Text className="ml-2 font-black tracking-[0.4px] text-foreground">
             {t("Zurück zu Heute", "Back to Today")}
           </Text>
         </Pressable>
@@ -266,7 +267,7 @@ export default function SettingsScreen() {
                       backgroundColor: active
                         ? colors.primary
                         : colors.background,
-                      borderRadius: 20,
+                      borderRadius: ZAYMAX_DESIGN.radius.nested,
                       opacity: pressed ? 0.7 : 1,
                     },
                   ]}
@@ -325,7 +326,7 @@ export default function SettingsScreen() {
                       backgroundColor: active
                         ? colors.primary
                         : colors.background,
-                      borderRadius: 999,
+                      borderRadius: ZAYMAX_DESIGN.radius.round,
                       paddingVertical: 13,
                       opacity: pressed ? 0.7 : 1,
                     },
@@ -371,7 +372,7 @@ export default function SettingsScreen() {
                       backgroundColor: active
                         ? colors.primary
                         : colors.background,
-                      borderRadius: 999,
+                      borderRadius: ZAYMAX_DESIGN.radius.round,
                       paddingVertical: 14,
                       opacity: pressed ? 0.7 : 1,
                     },
@@ -415,13 +416,13 @@ export default function SettingsScreen() {
                   minHeight: 50,
                   alignItems: "center",
                   justifyContent: "center",
-                  borderRadius: 999,
+                  borderRadius: ZAYMAX_DESIGN.radius.round,
                   backgroundColor: colors.primary,
                   opacity: backupBusy ? 0.45 : pressed ? 0.72 : 1,
                 },
               ]}
             >
-              <Text className="font-black uppercase tracking-[0.8px] text-background">
+              <Text className="font-black tracking-[0.4px] text-background">
                 {t("Backup speichern", "Save backup")}
               </Text>
             </Pressable>
@@ -434,7 +435,7 @@ export default function SettingsScreen() {
                   minHeight: 50,
                   alignItems: "center",
                   justifyContent: "center",
-                  borderRadius: 999,
+                  borderRadius: ZAYMAX_DESIGN.radius.round,
                   borderWidth: 1,
                   borderColor: colors.border,
                   backgroundColor: colors.background,
@@ -442,7 +443,7 @@ export default function SettingsScreen() {
                 },
               ]}
             >
-              <Text className="font-black uppercase tracking-[0.8px] text-foreground">
+              <Text className="font-black tracking-[0.4px] text-foreground">
                 {t("Backup laden", "Load backup")}
               </Text>
             </Pressable>
@@ -455,10 +456,10 @@ export default function SettingsScreen() {
             {
               marginTop: 14,
               borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: `${colors.surface}C8`,
+              borderColor: `${colors.error}66`,
+              backgroundColor: "rgba(223, 133, 133, 0.04)",
               padding: 20,
-              borderRadius: 22,
+              borderRadius: ZAYMAX_DESIGN.radius.card,
               opacity: pressed ? 0.6 : 1,
             },
           ]}
@@ -508,9 +509,9 @@ function SettingsPanel({
         {
           borderWidth: 1,
           borderColor: colors.border,
-          backgroundColor: `${colors.surface}E8`,
+          backgroundColor: colors.surface,
           padding: 20,
-          borderRadius: 24,
+          borderRadius: ZAYMAX_DESIGN.radius.card,
         },
         style,
       ]}
@@ -527,9 +528,7 @@ function SettingsPanel({
       </Text>
       <View className="mt-2 flex-row items-start justify-between">
         <View className="flex-1 pr-3">
-          <Text className="text-xl font-black uppercase text-foreground">
-            {title}
-          </Text>
+          <Text className="text-xl font-black text-foreground">{title}</Text>
           <Text className="mt-2 text-sm leading-5 text-muted">{detail}</Text>
         </View>
         {value ? (

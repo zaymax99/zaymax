@@ -3,7 +3,9 @@ import { Modal, Pressable, Text, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 
 import { ProfileForm } from "@/components/profile-form";
+import { KeyboardDismissButton } from "@/components/keyboard-dismiss-button";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { useColors } from "@/hooks/use-colors";
 import { useLanguage } from "@/lib/i18n";
 import {
@@ -19,10 +21,10 @@ import {
 } from "@/lib/profile";
 
 const BMI_COLORS: Record<BmiLevel, string> = {
-  low: "#E16868",
-  healthy: "#50C878",
-  elevated: "#E7B95A",
-  high: "#E16868",
+  low: ZAYMAX_DESIGN.colors.danger,
+  healthy: ZAYMAX_DESIGN.colors.success,
+  elevated: ZAYMAX_DESIGN.colors.gold,
+  high: ZAYMAX_DESIGN.colors.danger,
 };
 
 export function ProfileBmiCard() {
@@ -61,10 +63,10 @@ export function ProfileBmiCard() {
       <View
         style={{
           marginBottom: 16,
-          borderRadius: 24,
+          borderRadius: ZAYMAX_DESIGN.radius.card,
           borderWidth: 1,
           borderColor: colors.border,
-          backgroundColor: `${colors.surface}E8`,
+          backgroundColor: colors.surface,
           padding: 20,
         }}
       >
@@ -86,7 +88,6 @@ export function ProfileBmiCard() {
                 color: colors.foreground,
                 fontSize: 21,
                 fontWeight: "900",
-                textTransform: "uppercase",
               }}
             >
               {t("Deine Übersicht", "Your overview")}
@@ -100,7 +101,7 @@ export function ProfileBmiCard() {
               height: 42,
               alignItems: "center",
               justifyContent: "center",
-              borderRadius: 999,
+              borderRadius: ZAYMAX_DESIGN.radius.round,
               borderWidth: 1,
               borderColor: colors.border,
               opacity: pressed ? 0.6 : 1,
@@ -133,7 +134,7 @@ export function ProfileBmiCard() {
             <View
               style={{
                 marginTop: 16,
-                borderRadius: 20,
+                borderRadius: ZAYMAX_DESIGN.radius.nested,
                 backgroundColor: colors.background,
                 padding: 16,
               }}
@@ -213,7 +214,7 @@ export function ProfileBmiCard() {
                 marginTop: 15,
                 alignItems: "center",
                 justifyContent: "center",
-                borderRadius: 999,
+                borderRadius: ZAYMAX_DESIGN.radius.round,
                 backgroundColor: colors.primary,
                 opacity: pressed ? 0.7 : 1,
               })}
@@ -222,7 +223,6 @@ export function ProfileBmiCard() {
                 style={{
                   color: colors.background,
                   fontWeight: "900",
-                  textTransform: "uppercase",
                 }}
               >
                 {t("Daten eintragen", "Add data")}
@@ -248,7 +248,7 @@ export function ProfileBmiCard() {
         >
           <View
             style={{
-              borderRadius: 28,
+              borderRadius: ZAYMAX_DESIGN.radius.hero,
               borderWidth: 1,
               borderColor: colors.border,
               backgroundColor: colors.surface,
@@ -282,6 +282,7 @@ export function ProfileBmiCard() {
               onCancel={() => setEditVisible(false)}
             />
           </View>
+          <KeyboardDismissButton />
         </View>
       </Modal>
     </>
@@ -303,7 +304,7 @@ function ProfileMetric({
         flex: 1,
         minHeight: 66,
         justifyContent: "center",
-        borderRadius: 17,
+        borderRadius: ZAYMAX_DESIGN.radius.input,
         backgroundColor: colors.background,
         paddingHorizontal: 10,
       }}
@@ -337,13 +338,21 @@ function BmiScale({ bmi, colors }: { bmi: number; colors: any }) {
             height: 11,
             flexDirection: "row",
             overflow: "hidden",
-            borderRadius: 999,
+            borderRadius: ZAYMAX_DESIGN.radius.round,
           }}
         >
-          <View style={{ flex: 4.5, backgroundColor: "#E16868" }} />
-          <View style={{ flex: 6.5, backgroundColor: "#50C878" }} />
-          <View style={{ flex: 5, backgroundColor: "#E7B95A" }} />
-          <View style={{ flex: 10, backgroundColor: "#E16868" }} />
+          <View
+            style={{ flex: 4.5, backgroundColor: ZAYMAX_DESIGN.colors.danger }}
+          />
+          <View
+            style={{ flex: 6.5, backgroundColor: ZAYMAX_DESIGN.colors.success }}
+          />
+          <View
+            style={{ flex: 5, backgroundColor: ZAYMAX_DESIGN.colors.gold }}
+          />
+          <View
+            style={{ flex: 10, backgroundColor: ZAYMAX_DESIGN.colors.danger }}
+          />
         </View>
         <View
           style={{

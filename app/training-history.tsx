@@ -1,11 +1,13 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FlatList, Pressable, Text, View } from "react-native";
 import { useFocusEffect, useRouter, type Href } from "expo-router";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import Svg, { Circle, Line, Polyline } from "react-native-svg";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import {
   displayWeight,
   formatDateTime,
@@ -17,7 +19,7 @@ import {
 import { useColors } from "@/hooks/use-colors";
 import { useLanguage } from "@/lib/i18n";
 
-const GOLD = "#C6A752";
+const GOLD = ZAYMAX_DESIGN.colors.gold;
 
 export default function TrainingHistoryScreen() {
   const colors = useColors("dark");
@@ -41,6 +43,20 @@ export default function TrainingHistoryScreen() {
     }, [refresh]),
   );
 
+  const overview = useMemo(
+    () => ({
+      totalVolumeKg: history.reduce(
+        (sum, entry) => sum + (entry.totalVolumeKg ?? 0),
+        0,
+      ),
+      personalBests: history.reduce(
+        (sum, entry) => sum + (entry.personalBestCount ?? 0),
+        0,
+      ),
+    }),
+    [history],
+  );
+
   return (
     <ScreenContainer className="px-5" containerClassName="bg-background">
       <FlatList
@@ -49,46 +65,62 @@ export default function TrainingHistoryScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 36, flexGrow: 1 }}
         ListHeaderComponent={
-          <View className="flex-row items-center pt-3 pb-7">
-            <ZaymaxWatermark />
-            <Pressable
-              accessibilityLabel={t("Zurück", "Back")}
-              onPress={() => router.back()}
-              style={({ pressed }) => [
-                {
-                  padding: 8,
-                  marginRight: 6,
-                  borderRadius: 999,
-                  opacity: pressed ? 0.6 : 1,
-                },
-              ]}
-            >
+          <View>
+            <View className="flex-row items-center pt-3 pb-7">
+              <ZaymaxWatermark />
+              <Pressable
+                accessibilityLabel={t("Zurück", "Back")}
+                onPress={() => router.back()}
+                style={({ pressed }) => [
+                  {
+                    padding: 8,
+                    marginRight: 6,
+                    borderRadius: ZAYMAX_DESIGN.radius.round,
+                    opacity: pressed ? 0.6 : 1,
+                  },
+                ]}
+              >
+                <IconSymbol
+                  name="chevron.right"
+                  size={22}
+                  color={colors.foreground}
+                  style={{ transform: [{ rotate: "180deg" }] }}
+                />
+              </Pressable>
+              <View className="flex-1">
+                <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
+                  {t("DEINE LEISTUNG", "YOUR PERFORMANCE")}
+                </Text>
+                <Text className="mt-1 text-3xl font-black text-foreground">
+                  {t("Historie", "History")}
+                </Text>
+                <Text className="mt-2 text-base text-muted">
+                  {t(
+                    "Deine Entwicklung auf einen Blick.",
+                    "Your development at a glance.",
+                  )}
+                </Text>
+              </View>
               <IconSymbol
-                name="chevron.right"
-                size={22}
+                name="book.closed.fill"
+                size={24}
                 color={colors.foreground}
-                style={{ transform: [{ rotate: "180deg" }] }}
               />
-            </Pressable>
-            <View className="flex-1">
-              <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
-                {t("DEINE LEISTUNG", "YOUR PERFORMANCE")}
-              </Text>
-              <Text className="mt-1 text-3xl font-black uppercase text-foreground">
-                {t("Historie", "History")}
-              </Text>
-              <Text className="mt-2 text-base text-muted">
-                {t(
-                  "Deine zuletzt abgeschlossenen Sätze.",
-                  "Your recently completed sets.",
-                )}
-              </Text>
             </View>
-            <IconSymbol
-              name="book.closed.fill"
-              size={24}
-              color={colors.foreground}
-            />
+            {history.length ? (
+              <HistoryOverview
+                history={history}
+                totalVolumeKg={overview.totalVolumeKg}
+                personalBests={overview.personalBests}
+                unit={weightUnit}
+                colors={colors}
+              />
+            ) : null}
+            {history.length ? (
+              <Text className="mt-8 mb-3 text-xl font-black text-foreground">
+                {t("Letzte Trainings", "Recent workouts")}
+              </Text>
+            ) : null}
           </View>
         }
         ListEmptyComponent={
@@ -98,7 +130,7 @@ export default function TrainingHistoryScreen() {
             style={{
               borderWidth: 1,
               borderColor: colors.border,
-              borderRadius: 24,
+              borderRadius: ZAYMAX_DESIGN.radius.card,
             }}
           >
             <View className="h-14 w-14 items-center justify-center rounded-full bg-background">
@@ -108,7 +140,7 @@ export default function TrainingHistoryScreen() {
                 color={colors.foreground}
               />
             </View>
-            <Text className="mt-4 text-center text-lg font-black uppercase text-foreground">
+            <Text className="mt-4 text-center text-lg font-black text-foreground">
               {t("Noch keine Einträge", "No entries yet")}
             </Text>
             <Text className="mt-2 text-center leading-5 text-muted">
@@ -139,6 +171,165 @@ export default function TrainingHistoryScreen() {
   );
 }
 
+function HistoryOverview({
+  history,
+  totalVolumeKg,
+  personalBests,
+  unit,
+  colors,
+}: {
+  history: WorkoutHistoryEntry[];
+  totalVolumeKg: number;
+  personalBests: number;
+  unit: WeightUnit;
+  colors: any;
+}) {
+  const { t } = useLanguage();
+  const recent = history.slice(0, 7).reverse();
+  const values = recent.map((entry) => entry.totalVolumeKg ?? 0);
+  const max = Math.max(1, ...values);
+  const width = 320;
+  const height = 84;
+  const horizontalPadding = 10;
+  const verticalPadding = 12;
+  const step =
+    values.length > 1
+      ? (width - horizontalPadding * 2) / (values.length - 1)
+      : 0;
+  const points = values
+    .map(
+      (value, index) =>
+        `${horizontalPadding + index * step},${height - verticalPadding - (value / max) * (height - verticalPadding * 2)}`,
+    )
+    .join(" ");
+
+  return (
+    <Animated.View
+      entering={FadeIn.duration(ZAYMAX_DESIGN.motion.standard)}
+      style={{
+        borderRadius: ZAYMAX_DESIGN.radius.hero,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+        padding: 18,
+      }}
+    >
+      <Text className="text-[10px] font-black uppercase tracking-[2.5px] text-muted">
+        {t("ÜBERSICHT", "OVERVIEW")}
+      </Text>
+      <View className="mt-4 flex-row gap-2">
+        <HistoryMetric
+          label={t("Trainings", "Workouts")}
+          value={String(history.length)}
+          colors={colors}
+        />
+        <HistoryMetric
+          label={t("Volumen", "Volume")}
+          value={displayWeight(totalVolumeKg, unit)}
+          colors={colors}
+        />
+        <HistoryMetric
+          label={t("Bestleistungen", "Personal bests")}
+          value={String(personalBests)}
+          colors={colors}
+          accent
+        />
+      </View>
+      <View
+        style={{
+          marginTop: 17,
+          height: 92,
+          borderRadius: ZAYMAX_DESIGN.radius.nested,
+          backgroundColor: colors.background,
+          overflow: "hidden",
+          paddingHorizontal: 6,
+        }}
+      >
+        <Svg width="100%" height="92" viewBox={`0 0 ${width} 92`}>
+          {[24, 56].map((y) => (
+            <Line
+              key={y}
+              x1="0"
+              x2={width}
+              y1={y}
+              y2={y}
+              stroke={colors.border}
+              strokeWidth="1"
+            />
+          ))}
+          {values.length > 1 ? (
+            <Polyline
+              points={points}
+              fill="none"
+              stroke={colors.foreground}
+              strokeWidth="2.5"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          ) : null}
+          {values.map((value, index) => {
+            const x = horizontalPadding + index * step;
+            const y =
+              height -
+              verticalPadding -
+              (value / max) * (height - verticalPadding * 2);
+            return (
+              <Circle
+                key={`${value}-${index}`}
+                cx={x}
+                cy={y}
+                r={index === values.length - 1 ? 4.5 : 3.5}
+                fill={index === values.length - 1 ? GOLD : colors.foreground}
+              />
+            );
+          })}
+        </Svg>
+      </View>
+      <Text className="mt-3 text-xs text-muted">
+        {t(
+          "Volumen der letzten sieben Trainings",
+          "Volume across your last seven workouts",
+        )}
+      </Text>
+    </Animated.View>
+  );
+}
+
+function HistoryMetric({
+  label,
+  value,
+  colors,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  colors: any;
+  accent?: boolean;
+}) {
+  return (
+    <View style={{ flex: 1, minWidth: 0 }}>
+      <Text
+        numberOfLines={1}
+        style={{ color: colors.muted, fontSize: 9, fontWeight: "800" }}
+      >
+        {label.toUpperCase()}
+      </Text>
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        style={{
+          marginTop: 6,
+          color: accent ? GOLD : colors.foreground,
+          fontSize: 18,
+          fontWeight: "900",
+        }}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 function HistoryCard({
   entry,
   index,
@@ -161,17 +352,19 @@ function HistoryCard({
   );
   return (
     <Animated.View
-      entering={FadeInDown.delay(index * 60).duration(300)}
-      className="mb-4 bg-surface/80 p-5"
+      entering={FadeInDown.delay(Math.min(index * 35, 140)).duration(
+        ZAYMAX_DESIGN.motion.standard,
+      )}
+      className="mb-4 bg-surface p-5"
       style={{
         borderWidth: 1,
         borderColor: colors.border,
-        borderRadius: 24,
+        borderRadius: ZAYMAX_DESIGN.radius.card,
       }}
     >
       <View className="flex-row items-start justify-between">
         <View className="flex-1 pr-3">
-          <Text className="text-xl font-black uppercase text-foreground">
+          <Text className="text-xl font-black text-foreground">
             {entry.workoutTitle}
           </Text>
           <Text className="mt-1 text-sm text-muted">
@@ -183,7 +376,16 @@ function HistoryCard({
             </Text>
           ) : null}
         </View>
-        <View className="rounded-full border border-border bg-background px-3 py-2">
+        <View
+          style={{
+            borderRadius: ZAYMAX_DESIGN.radius.round,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.background,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+          }}
+        >
           <Text className="text-xs font-bold text-foreground">
             {totalSets}{" "}
             {totalSets === 1 ? t("Satz", "set") : t("Sätze", "sets")}
@@ -242,7 +444,8 @@ function HistoryCard({
               {exercise.sets.map((set) => (
                 <View
                   key={`${exercise.exerciseId}-${set.setNumber}`}
-                  className="flex-row items-start justify-between rounded-2xl border border-border bg-background px-3 py-3"
+                  className="flex-row items-start justify-between border border-border bg-background px-3 py-3"
+                  style={{ borderRadius: ZAYMAX_DESIGN.radius.nested }}
                 >
                   <Text className="text-sm font-semibold text-muted">
                     {t("Satz", "Set")} {set.setNumber}

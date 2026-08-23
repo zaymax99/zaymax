@@ -25,6 +25,7 @@ import Animated, {
 import { ScreenContainer } from "@/components/screen-container";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import {
   emptyExercise,
   loadSettings,
@@ -172,7 +173,11 @@ export default function WorkoutEditorScreen() {
             <Pressable
               accessibilityLabel={t("Zurück", "Back")}
               onPress={() => router.back()}
-              style={{ padding: 8, marginRight: 8, borderRadius: 999 }}
+              style={{
+                padding: 8,
+                marginRight: 8,
+                borderRadius: ZAYMAX_DESIGN.radius.round,
+              }}
             >
               <IconSymbol
                 name="chevron.right"
@@ -185,7 +190,7 @@ export default function WorkoutEditorScreen() {
               <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
                 {t("WORKOUT-EDITOR", "WORKOUT BUILDER")}
               </Text>
-              <Text className="mt-1 text-3xl font-black uppercase text-foreground">
+              <Text className="mt-1 text-3xl font-black text-foreground">
                 {isNew
                   ? t("Neues Workout", "New workout")
                   : t("Workout bearbeiten", "Edit workout")}
@@ -194,11 +199,11 @@ export default function WorkoutEditorScreen() {
           </View>
           <Animated.View
             entering={FadeIn.duration(300)}
-            className="bg-surface/80 p-5"
+            className="bg-surface p-5"
             style={{
               borderWidth: 1,
               borderColor: colors.border,
-              borderRadius: 24,
+              borderRadius: ZAYMAX_DESIGN.radius.card,
             }}
           >
             <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
@@ -219,7 +224,7 @@ export default function WorkoutEditorScreen() {
           </Animated.View>
           <View className="mt-5 flex-row items-center justify-between">
             <View>
-              <Text className="text-xl font-black uppercase text-foreground">
+              <Text className="text-xl font-black text-foreground">
                 {t("Übungen", "Exercises")}
               </Text>
               <Text className="mt-1 text-sm text-muted">
@@ -270,7 +275,7 @@ export default function WorkoutEditorScreen() {
             style={({ pressed }) => [
               {
                 marginTop: 14,
-                borderRadius: 999,
+                borderRadius: ZAYMAX_DESIGN.radius.round,
                 borderWidth: 1,
                 borderColor: colors.border,
                 paddingVertical: 15,
@@ -278,7 +283,7 @@ export default function WorkoutEditorScreen() {
               },
             ]}
           >
-            <Text className="text-center font-black uppercase tracking-[1px] text-foreground">
+            <Text className="text-center font-black tracking-[0.4px] text-foreground">
               + {t("Übung hinzufügen", "Add exercise")}
             </Text>
           </Pressable>
@@ -287,14 +292,14 @@ export default function WorkoutEditorScreen() {
             style={({ pressed }) => [
               {
                 marginTop: 20,
-                borderRadius: 999,
+                borderRadius: ZAYMAX_DESIGN.radius.round,
                 backgroundColor: colors.primary,
                 paddingVertical: 16,
                 opacity: pressed ? 0.8 : 1,
               },
             ]}
           >
-            <Text className="text-center font-black uppercase tracking-[1px] text-background">
+            <Text className="text-center font-black tracking-[0.4px] text-background">
               {t("Workout speichern", "Save workout")}
             </Text>
           </Pressable>
@@ -303,7 +308,7 @@ export default function WorkoutEditorScreen() {
             style={({ pressed }) => [
               {
                 marginTop: 10,
-                borderRadius: 999,
+                borderRadius: ZAYMAX_DESIGN.radius.round,
                 backgroundColor: `${colors.surface}CC`,
                 borderWidth: 1,
                 borderColor: colors.border,
@@ -312,7 +317,7 @@ export default function WorkoutEditorScreen() {
               },
             ]}
           >
-            <Text className="text-center font-black uppercase tracking-[1px] text-foreground">
+            <Text className="text-center font-black tracking-[0.4px] text-foreground">
               {t("Als abgeschlossen markieren", "Mark as completed")}
             </Text>
           </Pressable>
@@ -337,7 +342,7 @@ function DropPlaceholder({ colors }: { colors: any }) {
         backgroundColor: colors.background,
         alignItems: "center",
         justifyContent: "center",
-        borderRadius: 20,
+        borderRadius: ZAYMAX_DESIGN.radius.nested,
       }}
     >
       <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
@@ -428,10 +433,14 @@ function ExerciseCard({
       <Animated.View
         entering={FadeInDown.delay(index * 55).duration(300)}
         layout={Layout.duration(220)}
-        className="mt-3 bg-surface/80 p-4"
+        className="mt-3 bg-surface p-4"
         style={[
           animatedStyle,
-          { borderWidth: 1, borderColor: colors.border, borderRadius: 24 },
+          {
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: ZAYMAX_DESIGN.radius.card,
+          },
         ]}
       >
         <View className="flex-row items-center justify-between">
@@ -449,7 +458,10 @@ function ExerciseCard({
             <Pressable
               accessibilityLabel={t("Übung löschen", "Delete exercise")}
               onPress={onRemove}
-              style={{ padding: 6, borderRadius: 999 }}
+              style={{
+                padding: 6,
+                borderRadius: ZAYMAX_DESIGN.radius.round,
+              }}
             >
               <IconSymbol name="trash.fill" size={19} color={colors.muted} />
             </Pressable>
@@ -467,7 +479,7 @@ function ExerciseCard({
             marginTop: 12,
             borderColor: colors.border,
             borderWidth: 1,
-            borderRadius: 16,
+            borderRadius: ZAYMAX_DESIGN.radius.input,
             paddingHorizontal: 14,
             paddingVertical: 13,
             color: colors.foreground,
@@ -557,7 +569,7 @@ function NumberField({
         style={{
           borderColor: colors.border,
           borderWidth: 1,
-          borderRadius: 16,
+          borderRadius: ZAYMAX_DESIGN.radius.input,
           paddingVertical: 12,
           textAlign: "center",
           color: colors.foreground,
@@ -585,7 +597,7 @@ function SetDetailRow({
   onWeightChange: (value: number) => void;
   colors: any;
 }) {
-  const { language, t } = useLanguage();
+  const { t } = useLanguage();
   const shownWeight = weightKg
     ? Number((unit === "lbs" ? weightKg * 2.20462 : weightKg).toFixed(1))
     : 0;
@@ -610,7 +622,7 @@ function SetDetailRow({
             style={{
               borderColor: colors.border,
               borderWidth: 1,
-              borderRadius: 14,
+              borderRadius: ZAYMAX_DESIGN.radius.input,
               paddingVertical: 11,
               textAlign: "center",
               color: colors.foreground,
@@ -623,36 +635,82 @@ function SetDetailRow({
           <Text className="mb-1 text-[10px] font-bold uppercase tracking-[1px] text-muted">
             {unit} · {t("optional", "optional")}
           </Text>
-          <TextInput
-            value={
-              shownWeight
-                ? String(shownWeight).replace(
-                    ".",
-                    language === "de" ? "," : ".",
-                  )
-                : ""
-            }
-            onChangeText={(text) =>
-              onWeightChange(
-                Number(text.replace(",", ".").replace(/[^0-9.]/g, "")) || 0,
-              )
-            }
-            keyboardType="decimal-pad"
-            placeholder="—"
-            placeholderTextColor={colors.muted}
-            style={{
-              borderColor: colors.border,
-              borderWidth: 1,
-              borderRadius: 14,
-              paddingVertical: 11,
-              textAlign: "center",
-              color: colors.foreground,
-              backgroundColor: colors.surface,
-              fontWeight: "700",
-            }}
+          <DecimalWeightInput
+            value={shownWeight}
+            onChange={onWeightChange}
+            colors={colors}
           />
         </View>
       </View>
     </View>
   );
+}
+
+function DecimalWeightInput({
+  value,
+  onChange,
+  colors,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  colors: any;
+}) {
+  const { language } = useLanguage();
+  const [draft, setDraft] = useState(() =>
+    formatDecimalWeight(value, language),
+  );
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) setDraft(formatDecimalWeight(value, language));
+  }, [focused, language, value]);
+
+  return (
+    <TextInput
+      value={draft}
+      selectTextOnFocus
+      maxLength={7}
+      onFocus={() => setFocused(true)}
+      onBlur={() => {
+        setFocused(false);
+        setDraft(formatDecimalWeight(value, language));
+      }}
+      onChangeText={(text) => {
+        const sanitized = text.replace(",", ".").replace(/[^0-9.]/g, "");
+        const [whole = "", ...decimalParts] = sanitized.split(".");
+        const normalized = decimalParts.length
+          ? `${whole}.${decimalParts.join("").slice(0, 2)}`
+          : whole;
+        setDraft(normalized.replace(".", language === "de" ? "," : "."));
+        if (!normalized) {
+          onChange(0);
+          return;
+        }
+        const parsed = Number(normalized);
+        if (Number.isFinite(parsed)) onChange(parsed);
+      }}
+      keyboardType="decimal-pad"
+      placeholder="—"
+      placeholderTextColor={colors.muted}
+      style={{
+        borderColor: colors.border,
+        borderWidth: 1,
+        borderRadius: ZAYMAX_DESIGN.radius.input,
+        paddingVertical: 11,
+        textAlign: "center",
+        color: colors.foreground,
+        backgroundColor: colors.surface,
+        fontWeight: "700",
+      }}
+    />
+  );
+}
+
+function formatDecimalWeight(value: number, language: "de" | "en") {
+  return value
+    ? String(Number(value.toFixed(1))).replace(
+        ".",
+        language === "de" ? "," : ".",
+      )
+    : "";
 }

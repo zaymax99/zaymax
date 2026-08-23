@@ -15,6 +15,30 @@ export function KeyboardDismissButton() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const isTextField = (target: EventTarget | null) => {
+        const element = target as HTMLElement | null;
+        return Boolean(
+          element &&
+          (element.tagName === "INPUT" || element.tagName === "TEXTAREA"),
+        );
+      };
+      const handleFocusIn = (event: FocusEvent) => {
+        if (isTextField(event.target)) setIsVisible(true);
+      };
+      const handleFocusOut = () => {
+        window.setTimeout(() => {
+          if (!isTextField(document.activeElement)) setIsVisible(false);
+        }, 120);
+      };
+      window.addEventListener("focusin", handleFocusIn);
+      window.addEventListener("focusout", handleFocusOut);
+      return () => {
+        window.removeEventListener("focusin", handleFocusIn);
+        window.removeEventListener("focusout", handleFocusOut);
+      };
+    }
+
     const showEvent =
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
     const hideEvent =
@@ -57,7 +81,15 @@ export function KeyboardDismissButton() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t("Tastatur ausblenden", "Hide keyboard")}
-        onPress={Keyboard.dismiss}
+        onPress={() => {
+          Keyboard.dismiss();
+          if (
+            Platform.OS === "web" &&
+            document.activeElement instanceof HTMLElement
+          ) {
+            document.activeElement.blur();
+          }
+        }}
         style={({ pressed }) => ({
           minHeight: 42,
           flexDirection: "row",

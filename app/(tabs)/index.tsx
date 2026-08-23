@@ -6,6 +6,7 @@ import Animated, { FadeIn, FadeInDown, Layout } from "react-native-reanimated";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { useLanguage } from "@/lib/i18n";
 import {
   exerciseSummary,
@@ -41,6 +42,16 @@ export default function HomeScreen() {
     () => workouts.filter((item) => item.completedAt).length,
     [workouts],
   );
+  const nextWorkout = useMemo(
+    () => workouts.find((item) => !item.completedAt) ?? workouts[0],
+    [workouts],
+  );
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return t("Guten Morgen", "Good morning");
+    if (hour < 18) return t("Guten Tag", "Good afternoon");
+    return t("Guten Abend", "Good evening");
+  }, [t]);
 
   async function toggleLock(workout: Workout) {
     const all = await loadWorkouts();
@@ -111,7 +122,7 @@ export default function HomeScreen() {
       >
         <Animated.View
           entering={FadeIn.duration(180)}
-          className="flex-row items-center justify-between pt-4 pb-7"
+          className="flex-row items-center justify-between pt-4 pb-6"
           style={{ position: "relative" }}
         >
           <View className="flex-row items-center" style={{ paddingRight: 82 }}>
@@ -123,11 +134,11 @@ export default function HomeScreen() {
               />
             </View>
             <View>
-              <Text className="text-xs font-black tracking-[3px] text-muted">
-                ZAYMAX / 01
+              <Text className="text-[10px] font-black tracking-[3px] text-muted">
+                ZAYMAX
               </Text>
-              <Text className="mt-1 text-xl font-black uppercase text-foreground">
-                {t("Meine Workouts", "My workouts")}
+              <Text className="mt-1 text-xl font-black text-foreground">
+                {greeting}
               </Text>
             </View>
           </View>
@@ -155,85 +166,114 @@ export default function HomeScreen() {
           </View>
         </Animated.View>
 
-        <View
+        <Animated.View
+          entering={FadeInDown.duration(ZAYMAX_DESIGN.motion.standard)}
           style={{
-            minHeight: 286,
-            alignItems: "center",
-            justifyContent: "center",
+            minHeight: 272,
             borderWidth: 1,
             borderColor: colors.border,
-            backgroundColor: `${colors.surface}E8`,
-            paddingHorizontal: 22,
-            paddingVertical: 26,
-            borderRadius: 28,
+            backgroundColor: colors.surface,
+            paddingHorizontal: 21,
+            paddingVertical: 22,
+            borderRadius: ZAYMAX_DESIGN.radius.hero,
           }}
         >
-          <Text className="text-[10px] font-black uppercase tracking-[3px] text-muted">
-            {t("DEIN SYSTEM", "YOUR SYSTEM")}
-          </Text>
-          <View
-            style={{
-              marginTop: 19,
-              width: 82,
-              height: 82,
-              alignItems: "center",
-              justifyContent: "center",
-              borderWidth: 2,
-              borderColor: colors.border,
-              backgroundColor: colors.background,
-              borderRadius: 999,
-            }}
-          >
+          <View className="flex-row items-start justify-between">
             <View
               style={{
-                width: 56,
-                height: 56,
+                width: 58,
+                height: 58,
                 alignItems: "center",
                 justifyContent: "center",
-                borderWidth: 2,
-                borderColor: colors.foreground,
-                backgroundColor: colors.surface,
-                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.background,
+                borderRadius: ZAYMAX_DESIGN.radius.round,
               }}
             >
-              <IconSymbol name="plus" size={36} color={colors.foreground} />
+              <IconSymbol
+                name={
+                  nextWorkout ? "figure.strengthtraining.traditional" : "plus"
+                }
+                size={27}
+                color={colors.foreground}
+              />
             </View>
+            <Text className="pt-1 text-[10px] font-black uppercase tracking-[3px] text-muted">
+              {t("HEUTE", "TODAY")}
+            </Text>
           </View>
-          <Text className="mt-5 text-center text-2xl font-black uppercase tracking-[0.5px] text-foreground">
-            {t("Workout selbst erstellen", "Build your own workout")}
+          <Text className="mt-6 text-[28px] font-black leading-8 text-foreground">
+            {t("Bereit fürs Training?", "Ready to train?")}
           </Text>
-          <Text className="mt-2 text-center text-sm leading-5 text-muted">
-            {t(
-              "Übungen, Sätze, Wiederholungen und Gewicht – exakt nach deinen Regeln.",
-              "Exercises, sets, reps and weight — built around your rules.",
-            )}
+          <Text className="mt-2 text-sm leading-5 text-muted">
+            {nextWorkout
+              ? t(
+                  `${nextWorkout.title} · ${nextWorkout.exercises.length} ${nextWorkout.exercises.length === 1 ? "Übung wartet" : "Übungen warten"} auf dich.`,
+                  `${nextWorkout.title} · ${nextWorkout.exercises.length} ${nextWorkout.exercises.length === 1 ? "exercise is" : "exercises are"} waiting.`,
+                )
+              : t(
+                  "Erstelle deinen ersten Plan und trainiere genau nach deinen Regeln.",
+                  "Create your first plan and train by your own rules.",
+                )}
           </Text>
           <Pressable
-            accessibilityLabel={t(
-              "Neues Workout erstellen",
-              "Create new workout",
-            )}
+            accessibilityLabel={
+              nextWorkout
+                ? t("Training jetzt starten", "Start workout now")
+                : t("Neues Workout erstellen", "Create new workout")
+            }
             onPress={() =>
-              router.push({ pathname: "/workout/[id]", params: { id: "new" } })
+              nextWorkout
+                ? router.push({
+                    pathname: "/workout/active/[id]",
+                    params: { id: nextWorkout.id },
+                  })
+                : router.push({
+                    pathname: "/workout/[id]",
+                    params: { id: "new" },
+                  })
             }
             style={({ pressed }) => [
               {
-                marginTop: 21,
+                marginTop: 22,
                 width: "100%",
-                minHeight: 50,
+                minHeight: 52,
                 alignItems: "center",
                 justifyContent: "center",
                 backgroundColor: colors.primary,
-                borderRadius: 999,
+                borderRadius: ZAYMAX_DESIGN.radius.round,
                 opacity: pressed ? 0.78 : 1,
               },
             ]}
           >
-            <Text className="font-black uppercase tracking-[1px] text-background">
-              {t("Neues Workout erstellen", "Create new workout")}
+            <Text className="font-black tracking-[0.4px] text-background">
+              {nextWorkout
+                ? t("Training starten", "Start workout")
+                : t("Workout erstellen", "Create workout")}
             </Text>
           </Pressable>
-        </View>
+          {nextWorkout ? (
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: "/workout/[id]",
+                  params: { id: "new" },
+                })
+              }
+              style={({ pressed }) => ({
+                alignSelf: "center",
+                paddingTop: 14,
+                paddingHorizontal: 12,
+                opacity: pressed ? 0.55 : 1,
+              })}
+            >
+              <Text className="text-sm font-bold text-muted">
+                + {t("Neues Workout", "New workout")}
+              </Text>
+            </Pressable>
+          ) : null}
+        </Animated.View>
 
         <View className="mt-3 flex-row gap-3">
           <QuickCard
@@ -257,7 +297,7 @@ export default function HomeScreen() {
             <Text className="text-[10px] font-black uppercase tracking-[2.5px] text-muted">
               {t("BIBLIOTHEK", "LIBRARY")}
             </Text>
-            <Text className="mt-2 text-xl font-black uppercase text-foreground">
+            <Text className="mt-2 text-xl font-black text-foreground">
               {t("Deine Pläne", "Your plans")}
             </Text>
           </View>
@@ -328,7 +368,8 @@ function HeaderButton({
           justifyContent: "center",
           borderWidth: 1,
           borderColor: colors.border,
-          borderRadius: 999,
+          backgroundColor: colors.surface,
+          borderRadius: ZAYMAX_DESIGN.radius.round,
           marginLeft: 6,
           opacity: pressed ? 0.6 : 1,
         },
@@ -358,13 +399,13 @@ function QuickCard({
       style={({ pressed }) => [
         {
           flex: 1,
-          minHeight: 144,
+          minHeight: 134,
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 1,
           borderColor: colors.border,
-          backgroundColor: `${colors.surface}D8`,
-          borderRadius: 24,
+          backgroundColor: colors.surface,
+          borderRadius: ZAYMAX_DESIGN.radius.card,
           opacity: pressed ? 0.72 : 1,
         },
       ]}
@@ -378,7 +419,7 @@ function QuickCard({
           borderWidth: 1,
           borderColor: colors.foreground,
           backgroundColor: colors.background,
-          borderRadius: 999,
+          borderRadius: ZAYMAX_DESIGN.radius.round,
         }}
       >
         <IconSymbol name={icon} size={24} color={colors.foreground} />
@@ -400,7 +441,6 @@ function QuickCard({
           color: colors.foreground,
           fontSize: 17,
           fontWeight: "900",
-          textTransform: "uppercase",
         }}
       >
         {title}
@@ -439,12 +479,12 @@ function WorkoutCard({
       <View
         style={{
           marginTop: 12,
-          minHeight: 200,
-          backgroundColor: `${colors.surface}E8`,
+          minHeight: 194,
+          backgroundColor: colors.surface,
           borderWidth: 1,
           borderColor: workout.lockedAt ? colors.foreground : colors.border,
           padding: 17,
-          borderRadius: 24,
+          borderRadius: ZAYMAX_DESIGN.radius.card,
         }}
       >
         <Pressable
@@ -467,7 +507,7 @@ function WorkoutCard({
               borderWidth: 1,
               borderColor: colors.border,
               backgroundColor: colors.background,
-              borderRadius: 999,
+              borderRadius: ZAYMAX_DESIGN.radius.round,
             }}
           >
             <IconSymbol
@@ -481,7 +521,7 @@ function WorkoutCard({
             />
           </View>
           <View className="flex-1">
-            <Text className="text-lg font-black uppercase text-foreground">
+            <Text className="text-lg font-black text-foreground">
               {workout.title}
             </Text>
             <Text className="mt-1 text-sm text-muted">
@@ -492,12 +532,19 @@ function WorkoutCard({
               · {exerciseSummary(workout.exercises[0], unit, language)}
             </Text>
             {workout.lockedAt ? (
-              <Text className="mt-2 text-xs font-black uppercase tracking-[1px] text-foreground">
+              <Text className="mt-2 text-xs font-black tracking-[0.5px] text-foreground">
                 {t("Geschützt · bleibt auf Home", "Protected · stays on Home")}
               </Text>
             ) : workout.completedAt ? (
-              <Text className="mt-2 text-xs font-bold text-muted">
-                {t("Zuletzt abgeschlossen", "Recently completed")}
+              <Text
+                style={{
+                  marginTop: 8,
+                  color: ZAYMAX_DESIGN.colors.success,
+                  fontSize: 12,
+                  fontWeight: "800",
+                }}
+              >
+                ✓ {t("Zuletzt abgeschlossen", "Recently completed")}
               </Text>
             ) : null}
           </View>
@@ -513,12 +560,12 @@ function WorkoutCard({
                 alignItems: "center",
                 justifyContent: "center",
                 backgroundColor: colors.primary,
-                borderRadius: 999,
+                borderRadius: ZAYMAX_DESIGN.radius.round,
                 opacity: pressed ? 0.75 : 1,
               },
             ]}
           >
-            <Text className="text-center text-sm font-black uppercase tracking-[0.8px] text-background">
+            <Text className="text-center text-sm font-black tracking-[0.4px] text-background">
               {t("Training starten", "Start workout")}
             </Text>
           </Pressable>
@@ -538,7 +585,7 @@ function WorkoutCard({
                 borderColor: workout.lockedAt
                   ? colors.foreground
                   : colors.border,
-                borderRadius: 999,
+                borderRadius: ZAYMAX_DESIGN.radius.round,
                 opacity: pressed ? 0.65 : 1,
               },
             ]}
@@ -559,7 +606,7 @@ function WorkoutCard({
                 justifyContent: "center",
                 borderWidth: 1,
                 borderColor: colors.border,
-                borderRadius: 999,
+                borderRadius: ZAYMAX_DESIGN.radius.round,
                 opacity: pressed ? 0.65 : 1,
               },
             ]}

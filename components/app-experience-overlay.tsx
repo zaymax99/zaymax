@@ -19,6 +19,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { ProfileForm } from "@/components/profile-form";
+import { KeyboardDismissButton } from "@/components/keyboard-dismiss-button";
 import { useColors } from "@/hooks/use-colors";
 import { useLanguage } from "@/lib/i18n";
 import {
@@ -156,6 +157,7 @@ export function AppExperienceOverlay() {
               </Text>
             </Pressable>
           </Animated.View>
+          <KeyboardDismissButton />
         </View>
       </Modal>
 
