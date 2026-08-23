@@ -1,11 +1,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type Exercise = { id: string; name: string; sets: number; reps: number; repsPerSet: number[]; weightKg?: number; weightsPerSetKg: Array<number | null>; note?: string };
-export type Workout = { id: string; title: string; exercises: Exercise[]; createdAt: string; updatedAt: string; completedAt?: string; archivedAt?: string };
-export type ActiveSession = { workoutId: string; completedSets: Record<string, boolean[]>; restSeconds: number; restRemaining: number };
+export type Workout = { id: string; title: string; exercises: Exercise[]; createdAt: string; updatedAt: string; completedAt?: string; lockedAt?: string };
+export type ActiveSetValue = { reps: number; weightKg: number | null };
+export type ActiveSession = { workoutId: string; completedSets: Record<string, boolean[]>; setValues: Record<string, ActiveSetValue[]>; baselineSetValues: Record<string, ActiveSetValue[]>; restSeconds: number; restRemaining: number };
 export type WorkoutHistorySet = { setNumber: number; reps: number; weightKg?: number };
 export type WorkoutHistoryExercise = { exerciseId: string; name: string; sets: WorkoutHistorySet[] };
-export type WorkoutHistoryEntry = { id: string; workoutId: string; workoutTitle: string; completedAt: string; exercises: WorkoutHistoryExercise[] };
+export type WorkoutEffort = "leicht" | "gut" | "hart";
+export type WorkoutHistoryEntry = { id: string; workoutId: string; workoutTitle: string; completedAt: string; effort?: WorkoutEffort; exercises: WorkoutHistoryExercise[] };
 export type WeightUnit = "kg" | "lbs";
 export type AppSettings = { restSeconds: number; weightUnit: WeightUnit };
 
@@ -43,6 +45,13 @@ function normalizeExercise(exercise: Exercise): Exercise {
   const repsPerSet = resizeRepsPerSet(exercise, sets);
   const weightsPerSetKg = resizeWeightsPerSet(exercise, sets);
   return { ...exercise, sets, reps: repsPerSet[0] ?? (Number(exercise.reps) || 0), repsPerSet, weightKg: weightsPerSetKg[0] ?? undefined, weightsPerSetKg };
+}
+
+export function setValuesForExercise(exercise: Exercise): ActiveSetValue[] {
+  return Array.from({ length: exercise.sets }, (_, setIndex) => ({
+    reps: repsForSet(exercise, setIndex),
+    weightKg: weightForSet(exercise, setIndex) ?? null,
+  }));
 }
 
 export async function loadWorkouts(): Promise<Workout[]> { const raw = await AsyncStorage.getItem(STORAGE_KEY); if (!raw) return []; try { const parsed = JSON.parse(raw) as Workout[]; return Array.isArray(parsed) ? parsed.map((workout) => ({ ...workout, exercises: workout.exercises.map(normalizeExercise) })).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) : []; } catch { return []; } }

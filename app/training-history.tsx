@@ -9,6 +9,8 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { displayWeight, formatDateTime, loadSettings, loadWorkoutHistory, type WeightUnit, type WorkoutHistoryEntry } from "@/lib/workouts";
 import { useColors } from "@/hooks/use-colors";
 
+const effortLabels = { leicht: "Leicht", gut: "Gut", hart: "Hart" } as const;
+
 export default function TrainingHistoryScreen() {
   const colors = useColors("dark");
   const router = useRouter();
@@ -67,6 +69,7 @@ function HistoryCard({ entry, index, unit, colors }: { entry: WorkoutHistoryEntr
         <View className="flex-1 pr-3">
           <Text className="text-xl font-bold text-foreground">{entry.workoutTitle}</Text>
           <Text className="mt-1 text-sm text-muted">{formatDateTime(entry.completedAt)}</Text>
+          {entry.effort ? <Text className="mt-2 text-xs font-bold uppercase tracking-[1.5px] text-foreground">Gefühl · {effortLabels[entry.effort]}</Text> : null}
         </View>
         <View className="rounded-sm border border-border bg-background px-3 py-2">
           <Text className="text-xs font-bold text-foreground">{totalSets} {totalSets === 1 ? "Satz" : "Sätze"}</Text>

@@ -8,7 +8,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
-import { exerciseSummary, resizeRepsPerSet, resizeWeightsPerSet, weightForSet, type Exercise } from "../lib/workouts";
+import { exerciseSummary, resizeRepsPerSet, resizeWeightsPerSet, setValuesForExercise, weightForSet, type Exercise } from "../lib/workouts";
 
 const exercise: Exercise = {
   id: "bench-press",
@@ -33,5 +33,13 @@ describe("workout set values", () => {
 
   it("summarizes varying set values", () => {
     expect(exerciseSummary(exercise, "kg")).toBe("3 Sätze · 12/10/8 Wdh. · 40/50/45 kg");
+  });
+
+  it("creates editable active values from every configured set", () => {
+    expect(setValuesForExercise(exercise)).toEqual([
+      { reps: 12, weightKg: 40 },
+      { reps: 10, weightKg: 50 },
+      { reps: 8, weightKg: 45 },
+    ]);
   });
 });

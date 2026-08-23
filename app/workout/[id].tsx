@@ -47,7 +47,7 @@ export default function WorkoutEditorScreen() {
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
       completedAt: completed ? now : existing?.completedAt,
-      archivedAt: existing?.archivedAt,
+      lockedAt: existing?.lockedAt,
     };
     await saveWorkouts(isNew ? [next, ...all] : all.map((item) => item.id === next.id ? next : item));
     router.replace("/");

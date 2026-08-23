@@ -15,7 +15,11 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        animation: "none",
+        animation: "fade",
+        transitionSpec: {
+          animation: "timing",
+          config: { duration: 110 },
+        },
         sceneStyle: { backgroundColor: colors.background },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
@@ -33,7 +37,6 @@ export default function TabLayout() {
     >
       <Tabs.Screen name="index" options={{ title: "Heute", tabBarIcon: ({ color }) => <IconSymbol name="house.fill" size={23} color={color} /> }} />
       <Tabs.Screen name="reminders" options={{ title: "Erinnerungen", tabBarIcon: ({ color }) => <IconSymbol name="bell.fill" size={23} color={color} /> }} />
-      <Tabs.Screen name="history" options={{ title: "Archiv", tabBarIcon: ({ color }) => <IconSymbol name="clock.fill" size={23} color={color} /> }} />
     </Tabs>
   );
 }

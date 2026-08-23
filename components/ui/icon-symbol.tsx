@@ -8,7 +8,6 @@ type IconSymbolName = keyof typeof MAPPING;
 
 const MAPPING = {
   "house.fill": "home",
-  "clock.fill": "history",
   "bell.fill": "notifications-none",
   "plus.circle.fill": "add-circle",
   "gearshape.fill": "settings",
@@ -23,8 +22,12 @@ const MAPPING = {
   "pause.fill": "pause",
   "play.fill": "play-arrow",
   "arrow.counterclockwise": "refresh",
-  "archivebox.fill": "archive",
   "book.closed.fill": "menu-book",
+  "lock.fill": "lock",
+  "lock.open.fill": "lock-open",
+  "medal.fill": "workspace-premium",
+  "plus": "add",
+  "minus": "remove",
   "circle": "radio-button-unchecked",
 } as IconMapping;
 
