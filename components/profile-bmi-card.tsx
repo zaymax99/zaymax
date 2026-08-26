@@ -196,6 +196,7 @@ export function ProfileBmiCard() {
               {t(
                 `Geburtstag: ${formatBirthDate(profile.birthDate, locale)} · Der BMI ist ein grober Richtwert, keine medizinische Beratung oder Diagnose.`,
                 `Birthday: ${formatBirthDate(profile.birthDate, locale)} · BMI is a general guide, not medical advice or a diagnosis.`,
+                `Data urodzenia: ${formatBirthDate(profile.birthDate, locale)} · BMI jest wartością orientacyjną, a nie poradą medyczną ani diagnozą.`,
               )}
             </Text>
           </>
@@ -407,12 +408,15 @@ function formatProfileNumber(value: number, locale: string) {
   );
 }
 
-function bmiLabel(level: BmiLevel, t: (de: string, en: string) => string) {
-  const labels: Record<BmiLevel, [string, string]> = {
-    low: ["Niedriger Bereich", "Low range"],
-    healthy: ["Guter Bereich", "Healthy range"],
-    elevated: ["Mittlerer Bereich", "Medium range"],
-    high: ["Hoher Bereich", "High range"],
+function bmiLabel(
+  level: BmiLevel,
+  t: (de: string, en: string, pl?: string) => string,
+) {
+  const labels: Record<BmiLevel, [string, string, string]> = {
+    low: ["Niedriger Bereich", "Low range", "Niski zakres"],
+    healthy: ["Guter Bereich", "Healthy range", "Dobry zakres"],
+    elevated: ["Mittlerer Bereich", "Medium range", "Średni zakres"],
+    high: ["Hoher Bereich", "High range", "Wysoki zakres"],
   };
   return t(...labels[level]);
 }

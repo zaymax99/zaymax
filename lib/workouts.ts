@@ -1,5 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import type { AppLanguage } from "@/lib/i18n";
+
 export type Exercise = {
   id: string;
   name: string;
@@ -261,9 +263,12 @@ export function formatDateTime(date: string, locale = "de-DE") {
 export function exerciseSummary(
   exercise?: Exercise,
   unit: WeightUnit = "kg",
-  language: "de" | "en" = "de",
+  language: AppLanguage = "de",
 ) {
-  if (!exercise) return language === "de" ? "Keine Übung" : "No exercise";
+  if (!exercise) {
+    if (language === "de") return "Keine Übung";
+    return language === "pl" ? "Brak ćwiczenia" : "No exercise";
+  }
   const weights = resizeWeightsPerSet(exercise, exercise.sets);
   const hasWeight = weights.some(
     (weight) => typeof weight === "number" && weight > 0,
@@ -275,7 +280,9 @@ export function exerciseSummary(
     exercise.repsPerSet.length && new Set(exercise.repsPerSet).size > 1
       ? exercise.repsPerSet.join("/")
       : String(repsForSet(exercise, 0));
-  const setsLabel = language === "de" ? "Sätze" : "sets";
-  const repsLabel = language === "de" ? "Wdh." : "reps";
+  const setsLabel =
+    language === "de" ? "Sätze" : language === "pl" ? "serie" : "sets";
+  const repsLabel =
+    language === "de" ? "Wdh." : language === "pl" ? "powt." : "reps";
   return `${exercise.sets} ${setsLabel} · ${reps} ${repsLabel}${weight}`;
 }

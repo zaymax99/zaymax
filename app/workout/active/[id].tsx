@@ -50,7 +50,12 @@ import {
   type WorkoutHistoryEntry,
 } from "@/lib/workouts";
 import { useColors } from "@/hooks/use-colors";
-import { useLanguage } from "@/lib/i18n";
+import { useLanguage, usesDecimalComma } from "@/lib/i18n";
+import {
+  calculateWorkoutDurationSeconds,
+  formatWorkoutDuration,
+  normalizeWorkoutStartedAt,
+} from "@/lib/workout-duration";
 
 const DEFAULT_REST = 90;
 const GOLD = ZAYMAX_DESIGN.colors.gold;
@@ -58,29 +63,37 @@ const EFFORT_OPTIONS: {
   value: WorkoutEffort;
   deLabel: string;
   enLabel: string;
+  plLabel: string;
   deDetail: string;
   enDetail: string;
+  plDetail: string;
 }[] = [
   {
     value: "leicht",
     deLabel: "Leicht",
     enLabel: "Easy",
+    plLabel: "Lekko",
     deDetail: "Noch viel Luft",
     enDetail: "Plenty left",
+    plDetail: "Duży zapas",
   },
   {
     value: "gut",
     deLabel: "Gut",
     enLabel: "Good",
+    plLabel: "Dobrze",
     deDetail: "Genau richtig",
     enDetail: "Just right",
+    plDetail: "W sam raz",
   },
   {
     value: "hart",
     deLabel: "Hart",
     enLabel: "Hard",
+    plLabel: "Ciężko",
     deDetail: "Am Limit",
     enDetail: "At the limit",
+    plDetail: "Na granicy",
   },
 ];
 
@@ -137,12 +150,13 @@ export default function ActiveWorkoutScreen() {
       const found = allWorkouts.find((item) => item.id === id);
       if (!found) return;
       const canResume = existing?.workoutId === id;
+      const openedAt = new Date().toISOString();
       const previousWorkout = history.find((entry) => entry.workoutId === id);
       const initial: ActiveSession = {
         workoutId: id!,
         startedAt: canResume
-          ? (existing.startedAt ?? new Date().toISOString())
-          : new Date().toISOString(),
+          ? normalizeWorkoutStartedAt(existing.startedAt, openedAt)
+          : openedAt,
         completedSets: {},
         setValues: {},
         baselineSetValues: {},
@@ -452,6 +466,7 @@ export default function ActiveWorkoutScreen() {
         t(
           `Hake noch ${missing} ${missing === 1 ? "Satz" : "Sätze"} ab oder beende das Workout trotzdem.`,
           `Complete ${missing} more ${missing === 1 ? "set" : "sets"}, or finish the workout anyway.`,
+          `Oznacz jeszcze ${missing} ${missing === 1 ? "serię" : "serie"} lub zakończ trening mimo to.`,
         ),
         [
           { text: t("Weiter trainieren", "Keep training"), style: "cancel" },
@@ -539,13 +554,9 @@ export default function ActiveWorkoutScreen() {
     const completedHistorySets = historyExercises.flatMap(
       (exercise) => exercise.sets,
     );
-    const durationSeconds = Math.max(
-      1,
-      Math.round(
-        (new Date(completedAt).getTime() -
-          new Date(session.startedAt).getTime()) /
-          1000,
-      ),
+    const durationSeconds = calculateWorkoutDurationSeconds(
+      session.startedAt,
+      completedAt,
     );
     const totalVolumeKg = completedHistorySets.reduce(
       (sum, set) => sum + set.reps * (set.weightKg ?? 0),
@@ -948,6 +959,7 @@ export default function ActiveWorkoutScreen() {
                           accessibilityLabel={t(
                             `Satz ${setIndex + 1} abhaken`,
                             `Complete set ${setIndex + 1}`,
+                            `Oznacz serię ${setIndex + 1} jako ukończoną`,
                           )}
                           onPress={() => toggleSet(exercise.id, setIndex)}
                           style={({ pressed }) => [
@@ -1048,6 +1060,7 @@ export default function ActiveWorkoutScreen() {
                           label={t(
                             `Gewicht (${weightUnit})`,
                             `Weight (${weightUnit})`,
+                            `Ciężar (${weightUnit})`,
                           )}
                           value={shownWeight}
                           colors={colors}
@@ -1185,10 +1198,10 @@ export default function ActiveWorkoutScreen() {
                   ]}
                 >
                   <Text className="font-bold text-foreground">
-                    {t(option.deLabel, option.enLabel)}
+                    {t(option.deLabel, option.enLabel, option.plLabel)}
                   </Text>
                   <Text className="text-sm text-muted">
-                    {t(option.deDetail, option.enDetail)}
+                    {t(option.deDetail, option.enDetail, option.plDetail)}
                   </Text>
                 </Pressable>
               ))}
@@ -1256,13 +1269,16 @@ export default function ActiveWorkoutScreen() {
                       EFFORT_OPTIONS.find(
                         (option) => option.value === completionSummary.effort,
                       )!.enLabel,
+                      EFFORT_OPTIONS.find(
+                        (option) => option.value === completionSummary.effort,
+                      )!.plLabel,
                     )
                   : ""}
               </Text>
               <View className="mt-5 flex-row flex-wrap gap-2">
                 <SummaryMetric
                   label={t("Dauer", "Duration")}
-                  value={formatDuration(
+                  value={formatWorkoutDuration(
                     completionSummary.durationSeconds,
                     language,
                   )}
@@ -1282,18 +1298,41 @@ export default function ActiveWorkoutScreen() {
                   colors={colors}
                 />
                 <SummaryMetric
-                  label={t("Gesteigert", "Improved")}
+                  label={t("Sätze verbessert", "Sets improved")}
                   value={String(completionSummary.improvementCount)}
                   colors={colors}
                   accent={completionSummary.improvementCount > 0}
                 />
                 <SummaryMetric
-                  label={t("Bestleistungen", "Personal bests")}
+                  label={t("Neue Übungsrekorde", "New exercise records")}
                   value={String(completionSummary.personalBestCount)}
                   colors={colors}
                   accent={completionSummary.personalBestCount > 0}
                   wide
                 />
+              </View>
+              <View
+                style={{
+                  marginTop: 10,
+                  borderRadius: ZAYMAX_DESIGN.radius.nested,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.background,
+                  padding: 13,
+                }}
+              >
+                <Text className="text-xs font-bold leading-5 text-muted">
+                  {t(
+                    "Sätze verbessert: mehr Wiederholungen oder Gewicht als beim letzten Training.",
+                    "Sets improved: more repetitions or weight than in your last workout.",
+                  )}
+                </Text>
+                <Text className="mt-1 text-xs font-bold leading-5 text-muted">
+                  {t(
+                    "Neue Übungsrekorde: dein bisher höchster Wert bei Wiederholungen oder Gewicht.",
+                    "New exercise records: your highest repetition or weight value so far.",
+                  )}
+                </Text>
               </View>
               <Pressable
                 accessibilityLabel={t(
@@ -1321,14 +1360,6 @@ export default function ActiveWorkoutScreen() {
       </Modal>
     </ScreenContainer>
   );
-}
-
-function formatDuration(seconds: number, language: "de" | "en") {
-  const minutes = Math.floor(seconds / 60);
-  const rest = seconds % 60;
-  return minutes
-    ? `${minutes}:${String(rest).padStart(2, "0")} min`
-    : `${rest} ${language === "de" ? "Sek." : "sec"}`;
 }
 
 function formatVolume(volumeKg: number, unit: WeightUnit) {
@@ -1494,7 +1525,7 @@ function NumberField({
     : value > 0
       ? String(Number(value.toFixed(1))).replace(
           ".",
-          language === "de" ? "," : ".",
+          usesDecimalComma(language) ? "," : ".",
         )
       : "";
   const [draft, setDraft] = useState(formattedValue);
@@ -1577,7 +1608,7 @@ function NumberField({
           setDraft(
             integer
               ? normalized
-              : normalized.replace(".", language === "de" ? "," : "."),
+              : normalized.replace(".", usesDecimalComma(language) ? "," : "."),
           );
           const parsed = Number(normalized);
           if (normalized !== "" && Number.isFinite(parsed)) onChange(parsed);

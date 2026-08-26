@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Keyboard, Pressable, Text, TextInput, View } from "react-native";
 
 import { useColors } from "@/hooks/use-colors";
-import { useLanguage } from "@/lib/i18n";
+import { useLanguage, usesDecimalComma } from "@/lib/i18n";
 import {
   formatBirthDate,
   parseBirthDateInput,
@@ -35,7 +35,7 @@ export function ProfileForm({
       initialProfile?.weightKg
         ? String(initialProfile.weightKg).replace(
             ".",
-            language === "de" ? "," : ".",
+            usesDecimalComma(language) ? "," : ".",
           )
         : "",
     );
@@ -43,7 +43,7 @@ export function ProfileForm({
       initialProfile?.heightCm
         ? String(initialProfile.heightCm).replace(
             ".",
-            language === "de" ? "," : ".",
+            usesDecimalComma(language) ? "," : ".",
           )
         : "",
     );

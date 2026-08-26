@@ -8,7 +8,7 @@ import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { useColors } from "@/hooks/use-colors";
 import { useLanguage } from "@/lib/i18n";
 
-const POLICY_VERSION = "23.08.2026";
+const POLICY_VERSION = "26.08.2026";
 
 export default function PrivacyScreen() {
   const colors = useColors("dark");
@@ -106,8 +106,21 @@ export default function PrivacyScreen() {
           </Bullet>
           <BodyText colors={colors} style={{ marginTop: 12 }}>
             {t(
-              "Diese Daten liegen ausschließlich im lokalen App-Speicher deines Geräts. Zaymax greift nicht auf HealthKit, Standort, Kontakte, Kamera oder Mikrofon zu.",
-              "This data is stored only in the app's local storage on your device. Zaymax does not access HealthKit, location, contacts, camera or microphone.",
+              "Diese Daten liegen ausschließlich im lokalen App-Speicher deines Geräts. Zaymax greift nicht auf Standort, Kontakte, Kamera oder Mikrofon zu.",
+              "This data is stored only in the app's local storage on your device. Zaymax does not access location, contacts, camera or microphone.",
+            )}
+          </BodyText>
+        </PrivacyCard>
+
+        <PrivacyCard
+          eyebrow="APPLE HEALTH"
+          title={t("Schritte nur mit Erlaubnis", "Steps only with permission")}
+          colors={colors}
+        >
+          <BodyText colors={colors}>
+            {t(
+              "Wenn du die Verbindung im Tab Schritte selbst aktivierst, liest Zaymax ausschließlich deine Schrittzahlen aus Apple Health, um Tages- und Wochenwerte anzuzeigen. Die Verarbeitung erfolgt nur auf deinem Gerät. Zaymax schreibt keine Daten in Apple Health, überträgt keine Schrittzahlen an den Entwickler oder externe Server und nimmt sie nicht in das JSON-Backup auf. Du kannst den Zugriff jederzeit in den iOS-Einstellungen für Health ändern oder widerrufen.",
+              "When you activate the connection yourself in the Steps tab, Zaymax reads only your step counts from Apple Health to display daily and weekly values. Processing happens only on your device. Zaymax does not write data to Apple Health, transmit step counts to the developer or external servers, or include them in the JSON backup. You can change or revoke access at any time in the iOS Health settings.",
             )}
           </BodyText>
         </PrivacyCard>

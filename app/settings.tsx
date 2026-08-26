@@ -25,6 +25,16 @@ import { useColors } from "@/hooks/use-colors";
 import { createBackup, pickBackup, restoreBackup } from "@/lib/backup";
 
 const restOptions = [30, 60, 90, 120, 180];
+const languageOptions: {
+  value: AppLanguage;
+  label: string;
+  accessibilityLabel: string;
+}[] = [
+  { value: "de", label: "DEUTSCH", accessibilityLabel: "Deutsch" },
+  { value: "en", label: "ENGLISH", accessibilityLabel: "English" },
+  { value: "pl", label: "POLSKI", accessibilityLabel: "Polski" },
+];
+
 function formatRest(seconds: number) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")} min`;
 }
@@ -78,6 +88,7 @@ export default function SettingsScreen() {
         t(
           `${fileName} enthält deine lokalen Zaymax-Daten. Bewahre die Datei sicher auf.`,
           `${fileName} contains your local Zaymax data. Keep the file somewhere safe.`,
+          `${fileName} zawiera Twoje lokalne dane Zaymax. Przechowuj plik w bezpiecznym miejscu.`,
         ),
       );
     } catch {
@@ -112,8 +123,11 @@ export default function SettingsScreen() {
             onPress: async () => {
               try {
                 await restoreBackup(backup);
-                const restoredLanguage =
-                  backup.data[LANGUAGE_STORAGE_KEY] === "en" ? "en" : "de";
+                const savedLanguage = backup.data[LANGUAGE_STORAGE_KEY];
+                const restoredLanguage: AppLanguage =
+                  savedLanguage === "en" || savedLanguage === "pl"
+                    ? savedLanguage
+                    : "de";
                 await setLanguage(restoredLanguage);
                 router.replace("/");
                 Alert.alert(
@@ -240,15 +254,15 @@ export default function SettingsScreen() {
           colors={colors}
         >
           <View className="mt-5 flex-row gap-2">
-            {(["de", "en"] as AppLanguage[]).map((option) => {
-              const active = language === option;
+            {languageOptions.map((option) => {
+              const active = language === option.value;
               return (
                 <Pressable
-                  key={option}
+                  key={option.value}
                   accessibilityRole="radio"
                   accessibilityState={{ checked: active }}
-                  accessibilityLabel={option === "de" ? "Deutsch" : "English"}
-                  onPress={() => void chooseLanguage(option)}
+                  accessibilityLabel={option.accessibilityLabel}
+                  onPress={() => void chooseLanguage(option.value)}
                   style={({ pressed }) => [
                     {
                       flex: 1,
@@ -273,7 +287,7 @@ export default function SettingsScreen() {
                       letterSpacing: 1.1,
                     }}
                   >
-                    {option === "de" ? "DEUTSCH" : "ENGLISH"}
+                    {option.label}
                   </Text>
                   <Text
                     style={{
@@ -519,7 +533,11 @@ export default function SettingsScreen() {
         <View className="mt-8 items-center">
           <IconSymbol name="gearshape.fill" size={22} color={colors.muted} />
           <Text className="mt-3 text-sm font-bold uppercase tracking-[2px] text-muted">
-            Zaymax · Training Notes
+            {t(
+              "Zaymax · Trainingsnotizen",
+              "Zaymax · Training Notes",
+              "Zaymax · Notatki treningowe",
+            )}
           </Text>
         </View>
       </ScrollView>

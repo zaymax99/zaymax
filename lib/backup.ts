@@ -4,6 +4,8 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { Platform } from "react-native";
 
+import { HEALTHKIT_CONNECTED_KEY } from "@/lib/steps";
+
 export type ZaymaxBackup = {
   app: "Zaymax";
   version: 1;
@@ -13,7 +15,9 @@ export type ZaymaxBackup = {
 
 export async function createBackup() {
   const allKeys = await AsyncStorage.getAllKeys();
-  const keys = allKeys.filter((key) => key.startsWith("zaymax."));
+  const keys = allKeys.filter(
+    (key) => key.startsWith("zaymax.") && key !== HEALTHKIT_CONNECTED_KEY,
+  );
   const entries = await AsyncStorage.multiGet(keys);
   const backup: ZaymaxBackup = {
     app: "Zaymax",
@@ -88,6 +92,8 @@ export async function restoreBackup(backup: ZaymaxBackup) {
     key.startsWith("zaymax."),
   );
   if (currentKeys.length) await AsyncStorage.multiRemove(currentKeys);
-  const entries = Object.entries(backup.data);
+  const entries = Object.entries(backup.data).filter(
+    ([key]) => key !== HEALTHKIT_CONNECTED_KEY,
+  );
   if (entries.length) await AsyncStorage.multiSet(entries);
 }

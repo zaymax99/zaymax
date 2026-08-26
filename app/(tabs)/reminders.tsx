@@ -41,57 +41,73 @@ const WEEKDAYS: {
   value: Weekday;
   de: string;
   en: string;
+  pl: string;
   deShort: string;
   enShort: string;
+  plShort: string;
 }[] = [
   {
     value: "monday",
     de: "Montag",
     en: "Monday",
+    pl: "Poniedziałek",
     deShort: "Mo",
     enShort: "Mon",
+    plShort: "Pon",
   },
   {
     value: "tuesday",
     de: "Dienstag",
     en: "Tuesday",
+    pl: "Wtorek",
     deShort: "Di",
     enShort: "Tue",
+    plShort: "Wt",
   },
   {
     value: "wednesday",
     de: "Mittwoch",
     en: "Wednesday",
+    pl: "Środa",
     deShort: "Mi",
     enShort: "Wed",
+    plShort: "Śr",
   },
   {
     value: "thursday",
     de: "Donnerstag",
     en: "Thursday",
+    pl: "Czwartek",
     deShort: "Do",
     enShort: "Thu",
+    plShort: "Czw",
   },
   {
     value: "friday",
     de: "Freitag",
     en: "Friday",
+    pl: "Piątek",
     deShort: "Fr",
     enShort: "Fri",
+    plShort: "Pt",
   },
   {
     value: "saturday",
     de: "Samstag",
     en: "Saturday",
+    pl: "Sobota",
     deShort: "Sa",
     enShort: "Sat",
+    plShort: "Sob",
   },
   {
     value: "sunday",
     de: "Sonntag",
     en: "Sunday",
+    pl: "Niedziela",
     deShort: "So",
     enShort: "Sun",
+    plShort: "Ndz",
   },
 ];
 
@@ -208,7 +224,7 @@ export default function JournalScreen() {
 
   const selectedDayLabels = WEEKDAYS.filter((day) =>
     trainingDays.includes(day.value),
-  ).map((day) => t(day.de, day.en));
+  ).map((day) => t(day.de, day.en, day.pl));
 
   return (
     <ScreenContainer className="px-5" containerClassName="bg-background">
@@ -291,7 +307,7 @@ export default function JournalScreen() {
                           fontWeight: "800",
                         }}
                       >
-                        {t(day.deShort, day.enShort)}
+                        {t(day.deShort, day.enShort, day.plShort)}
                       </Text>
                     </View>
                   );
@@ -525,7 +541,7 @@ export default function JournalScreen() {
                     key={day.value}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: selected }}
-                    accessibilityLabel={t(day.de, day.en)}
+                    accessibilityLabel={t(day.de, day.en, day.pl)}
                     onPress={() => toggleDay(day.value)}
                     style={({ pressed }) => [
                       {
@@ -552,7 +568,7 @@ export default function JournalScreen() {
                         fontWeight: "800",
                       }}
                     >
-                      {t(day.de, day.en)}
+                      {t(day.de, day.en, day.pl)}
                     </Text>
                     <Text
                       style={{

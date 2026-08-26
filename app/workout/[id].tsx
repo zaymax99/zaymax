@@ -15,7 +15,6 @@ import * as Haptics from "expo-haptics";
 import Animated, {
   FadeIn,
   FadeInDown,
-  Layout,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
@@ -40,7 +39,7 @@ import {
   type Workout,
 } from "@/lib/workouts";
 import { useColors } from "@/hooks/use-colors";
-import { useLanguage } from "@/lib/i18n";
+import { useLanguage, usesDecimalComma, type AppLanguage } from "@/lib/i18n";
 
 export default function WorkoutEditorScreen() {
   const colors = useColors("dark");
@@ -432,7 +431,6 @@ function ExerciseCard({
     <GestureDetector gesture={gesture}>
       <Animated.View
         entering={FadeInDown.delay(index * 55).duration(300)}
-        layout={Layout.duration(220)}
         className="mt-3 bg-surface p-4"
         style={[
           animatedStyle,
@@ -567,6 +565,8 @@ function NumberField({
         placeholder="—"
         placeholderTextColor={colors.muted}
         style={{
+          width: "100%",
+          minHeight: 48,
           borderColor: colors.border,
           borderWidth: 1,
           borderRadius: ZAYMAX_DESIGN.radius.input,
@@ -602,12 +602,15 @@ function SetDetailRow({
     ? Number((unit === "lbs" ? weightKg * 2.20462 : weightKg).toFixed(1))
     : 0;
   return (
-    <View className="rounded-[18px] border border-border bg-background p-3">
+    <View
+      className="rounded-[18px] border border-border bg-background p-3"
+      style={{ width: "100%", minWidth: 0 }}
+    >
       <Text className="text-xs font-black uppercase tracking-[1px] text-muted">
         {t("Satz", "Set")} {String(setNumber).padStart(2, "0")}
       </Text>
       <View className="mt-2 flex-row gap-2">
-        <View className="flex-1">
+        <View className="flex-1" style={{ minWidth: 0 }}>
           <Text className="mb-1 text-[10px] font-bold uppercase tracking-[1px] text-muted">
             {t("Wdh.", "Reps")}
           </Text>
@@ -620,6 +623,8 @@ function SetDetailRow({
             placeholder="—"
             placeholderTextColor={colors.muted}
             style={{
+              width: "100%",
+              minHeight: 47,
               borderColor: colors.border,
               borderWidth: 1,
               borderRadius: ZAYMAX_DESIGN.radius.input,
@@ -631,7 +636,7 @@ function SetDetailRow({
             }}
           />
         </View>
-        <View className="flex-1">
+        <View className="flex-1" style={{ minWidth: 0 }}>
           <Text className="mb-1 text-[10px] font-bold uppercase tracking-[1px] text-muted">
             {unit} · {t("optional", "optional")}
           </Text>
@@ -681,7 +686,9 @@ function DecimalWeightInput({
         const normalized = decimalParts.length
           ? `${whole}.${decimalParts.join("").slice(0, 2)}`
           : whole;
-        setDraft(normalized.replace(".", language === "de" ? "," : "."));
+        setDraft(
+          normalized.replace(".", usesDecimalComma(language) ? "," : "."),
+        );
         if (!normalized) {
           onChange(0);
           return;
@@ -693,6 +700,8 @@ function DecimalWeightInput({
       placeholder="—"
       placeholderTextColor={colors.muted}
       style={{
+        width: "100%",
+        minHeight: 47,
         borderColor: colors.border,
         borderWidth: 1,
         borderRadius: ZAYMAX_DESIGN.radius.input,
@@ -706,11 +715,11 @@ function DecimalWeightInput({
   );
 }
 
-function formatDecimalWeight(value: number, language: "de" | "en") {
+function formatDecimalWeight(value: number, language: AppLanguage) {
   return value
     ? String(Number(value.toFixed(1))).replace(
         ".",
-        language === "de" ? "," : ".",
+        usesDecimalComma(language) ? "," : ".",
       )
     : "";
 }

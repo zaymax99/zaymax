@@ -7,7 +7,7 @@ import Animated, { FadeIn, FadeInDown, Layout } from "react-native-reanimated";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
-import { useLanguage } from "@/lib/i18n";
+import { useLanguage, type AppLanguage } from "@/lib/i18n";
 import {
   exerciseSummary,
   loadSettings,
@@ -211,6 +211,7 @@ export default function HomeScreen() {
               ? t(
                   `${nextWorkout.title} · ${nextWorkout.exercises.length} ${nextWorkout.exercises.length === 1 ? "Übung wartet" : "Übungen warten"} auf dich.`,
                   `${nextWorkout.title} · ${nextWorkout.exercises.length} ${nextWorkout.exercises.length === 1 ? "exercise is" : "exercises are"} waiting.`,
+                  `${nextWorkout.title} · ${nextWorkout.exercises.length} ${nextWorkout.exercises.length === 1 ? "ćwiczenie czeka" : "ćwiczenia czekają"} na Ciebie.`,
                 )
               : t(
                   "Erstelle deinen ersten Plan und trainiere genau nach deinen Regeln.",
@@ -464,7 +465,7 @@ function WorkoutCard({
   index: number;
   colors: any;
   unit: WeightUnit;
-  language: "de" | "en";
+  language: AppLanguage;
   onEdit: () => void;
   onStart: () => void;
   onToggleLock: () => void;

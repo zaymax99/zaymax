@@ -92,6 +92,28 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="steps"
+        options={{
+          title: t("Schritte", "Steps"),
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: ZAYMAX_DESIGN.radius.round,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: focused ? 1 : 0,
+                borderColor: focused ? colors.foreground : "transparent",
+                backgroundColor: focused ? colors.background : "transparent",
+              }}
+            >
+              <IconSymbol name="shoeprints.fill" size={21} color={color} />
+            </View>
+          ),
+        }}
+      />
     </Tabs>
   );
 }

@@ -17,7 +17,7 @@ import {
   type WorkoutHistoryExercise,
 } from "@/lib/workouts";
 import { useColors } from "@/hooks/use-colors";
-import { useLanguage } from "@/lib/i18n";
+import { useLanguage, type AppLanguage } from "@/lib/i18n";
 
 const GOLD = ZAYMAX_DESIGN.colors.gold;
 
@@ -187,6 +187,7 @@ export default function ExerciseHistoryScreen() {
             {t(
               `Die letzten ${Math.min(8, sessions.length)} Einheiten · älteste bis neueste`,
               `Last ${Math.min(8, sessions.length)} sessions · oldest to newest`,
+              `Ostatnie ${Math.min(8, sessions.length)} jednostki · od najstarszej do najnowszej`,
             )}
           </Text>
         </View>
@@ -394,10 +395,12 @@ function ProgressChart({
   );
 }
 
-function effortLabel(effort: WorkoutEffort, language: "de" | "en") {
-  const labels =
-    language === "de"
-      ? { leicht: "Leicht", gut: "Gut", hart: "Hart" }
-      : { leicht: "Easy", gut: "Good", hart: "Hard" };
-  return labels[effort];
+function effortLabel(effort: WorkoutEffort, language: AppLanguage) {
+  if (language === "de") {
+    return { leicht: "Leicht", gut: "Gut", hart: "Hart" }[effort];
+  }
+  if (language === "pl") {
+    return { leicht: "Lekko", gut: "Dobrze", hart: "Ciężko" }[effort];
+  }
+  return { leicht: "Easy", gut: "Good", hart: "Hard" }[effort];
 }

@@ -8,14 +8,17 @@ import {
   useState,
 } from "react";
 
-export type AppLanguage = "de" | "en";
+import { polishTranslationFor } from "./i18n-pl";
+
+export type AppLanguage = "de" | "en" | "pl";
+export type AppLocale = "de-DE" | "en-US" | "pl-PL";
 
 type LanguageContextValue = {
   language: AppLanguage;
-  locale: "de-DE" | "en-US";
+  locale: AppLocale;
   ready: boolean;
   setLanguage: (language: AppLanguage) => Promise<void>;
-  t: (german: string, english: string) => string;
+  t: (german: string, english: string, polish?: string) => string;
 };
 
 export const LANGUAGE_STORAGE_KEY = "zaymax.language.v1";
@@ -28,7 +31,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     void AsyncStorage.getItem(LANGUAGE_STORAGE_KEY)
-      .then((saved) => setLanguageState(saved === "en" ? "en" : "de"))
+      .then((saved) =>
+        setLanguageState(saved === "en" || saved === "pl" ? saved : "de"),
+      )
       .finally(() => setReady(true));
   }, []);
 
@@ -38,14 +43,15 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (german: string, english: string) => (language === "de" ? german : english),
+    (german: string, english: string, polish?: string) =>
+      translate(german, english, language, polish),
     [language],
   );
 
   const value = useMemo<LanguageContextValue>(
     () => ({
       language,
-      locale: language === "de" ? "de-DE" : "en-US",
+      locale: appLocaleForLanguage(language),
       ready,
       setLanguage,
       t,
@@ -58,6 +64,26 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       {ready ? children : null}
     </LanguageContext.Provider>
   );
+}
+
+export function appLocaleForLanguage(language: AppLanguage): AppLocale {
+  if (language === "pl") return "pl-PL";
+  return language === "de" ? "de-DE" : "en-US";
+}
+
+export function usesDecimalComma(language: AppLanguage) {
+  return language === "de" || language === "pl";
+}
+
+export function translate(
+  german: string,
+  english: string,
+  language: AppLanguage,
+  polish?: string,
+) {
+  if (language === "de") return german;
+  if (language === "en") return english;
+  return polish ?? polishTranslationFor(german) ?? english;
 }
 
 export function useLanguage() {

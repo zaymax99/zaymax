@@ -118,7 +118,7 @@ export function AppExperienceOverlay() {
                   fontWeight: "900",
                 }}
               >
-                ZAYMAX START
+                {t("ZAYMAX START", "ZAYMAX START", "START ZAYMAX")}
               </Text>
             </View>
             <Text
@@ -174,7 +174,13 @@ export function AppExperienceOverlay() {
             style={styles.birthdayCard}
           >
             <Text style={styles.birthdayEmoji}>🎂</Text>
-            <Text style={styles.birthdayEyebrow}>ZAYMAX CELEBRATES YOU</Text>
+            <Text style={styles.birthdayEyebrow}>
+              {t(
+                "ZAYMAX FEIERT DICH",
+                "ZAYMAX CELEBRATES YOU",
+                "ZAYMAX ŚWIĘTUJE Z TOBĄ",
+              )}
+            </Text>
             <Text style={styles.birthdayTitle}>
               {t("Alles Gute zum Geburtstag", "Happy Birthday")}
             </Text>

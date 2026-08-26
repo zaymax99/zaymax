@@ -67,6 +67,15 @@ const config: ExpoConfig = {
         },
       },
     ],
+    [
+      "@kingstinct/react-native-healthkit",
+      {
+        NSHealthShareUsageDescription:
+          "Zaymax liest deine Schrittzahlen aus Apple Health, um deine Schritte pro Tag und Woche anzuzeigen. / Zaymax reads your Apple Health step count to show your daily and weekly steps.",
+        NSHealthUpdateUsageDescription: false,
+        background: false,
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

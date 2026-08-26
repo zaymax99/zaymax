@@ -17,7 +17,7 @@ import {
   type WorkoutHistoryEntry,
 } from "@/lib/workouts";
 import { useColors } from "@/hooks/use-colors";
-import { useLanguage } from "@/lib/i18n";
+import { useLanguage, type AppLanguage } from "@/lib/i18n";
 
 const GOLD = ZAYMAX_DESIGN.colors.gold;
 
@@ -419,6 +419,7 @@ function HistoryCard({
               accessibilityLabel={t(
                 `Fortschritt für ${exercise.name} öffnen`,
                 `Open progress for ${exercise.name}`,
+                `Otwórz postęp dla ćwiczenia ${exercise.name}`,
               )}
               onPress={() => onOpenExercise(exercise.exerciseId, exercise.name)}
               style={({ pressed }) => [
@@ -509,19 +510,21 @@ function HistoryCard({
   );
 }
 
-function formatHistoryDuration(seconds: number, language: "de" | "en") {
+function formatHistoryDuration(seconds: number, language: AppLanguage) {
   const minutes = Math.floor(seconds / 60);
   return minutes
     ? `${minutes} min`
-    : `${seconds} ${language === "de" ? "Sek." : "sec"}`;
+    : `${seconds} ${language === "de" ? "Sek." : language === "pl" ? "s" : "sec"}`;
 }
 
-function effortLabel(effort: "leicht" | "gut" | "hart", language: "de" | "en") {
-  const labels =
-    language === "de"
-      ? { leicht: "Leicht", gut: "Gut", hart: "Hart" }
-      : { leicht: "Easy", gut: "Good", hart: "Hard" };
-  return labels[effort];
+function effortLabel(effort: "leicht" | "gut" | "hart", language: AppLanguage) {
+  if (language === "de") {
+    return { leicht: "Leicht", gut: "Gut", hart: "Hart" }[effort];
+  }
+  if (language === "pl") {
+    return { leicht: "Lekko", gut: "Dobrze", hart: "Ciężko" }[effort];
+  }
+  return { leicht: "Easy", gut: "Good", hart: "Hard" }[effort];
 }
 
 function HistoryProgressMark({
