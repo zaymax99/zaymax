@@ -28,4 +28,12 @@ describe("step week", () => {
     expect(week.todaySteps).toBe(10_250);
     expect(week.totalSteps).toBe(21_750);
   });
+
+  it("keeps invalid HealthKit values out of charts", () => {
+    const now = new Date(2026, 7, 26, 12, 0, 0);
+    const week = buildStepWeek(now, new Map([[stepDayKey(now), Number.NaN]]));
+
+    expect(week.todaySteps).toBe(0);
+    expect(week.totalSteps).toBe(0);
+  });
 });

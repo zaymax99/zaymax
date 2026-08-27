@@ -61,8 +61,10 @@ export default function TabLayout() {
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: focused ? 1 : 0,
-                borderColor: focused ? colors.foreground : "transparent",
-                backgroundColor: focused ? colors.background : "transparent",
+                borderColor: focused ? colors.primary : "transparent",
+                backgroundColor: focused
+                  ? ZAYMAX_DESIGN.colors.goldSoft
+                  : "transparent",
               }}
             >
               <IconSymbol name="house.fill" size={21} color={color} />
@@ -83,8 +85,10 @@ export default function TabLayout() {
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: focused ? 1 : 0,
-                borderColor: focused ? colors.foreground : "transparent",
-                backgroundColor: focused ? colors.background : "transparent",
+                borderColor: focused ? colors.primary : "transparent",
+                backgroundColor: focused
+                  ? ZAYMAX_DESIGN.colors.goldSoft
+                  : "transparent",
               }}
             >
               <IconSymbol name="pencil" size={21} color={color} />
@@ -105,8 +109,10 @@ export default function TabLayout() {
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: focused ? 1 : 0,
-                borderColor: focused ? colors.foreground : "transparent",
-                backgroundColor: focused ? colors.background : "transparent",
+                borderColor: focused ? colors.primary : "transparent",
+                backgroundColor: focused
+                  ? ZAYMAX_DESIGN.colors.goldSoft
+                  : "transparent",
               }}
             >
               <IconSymbol name="shoeprints.fill" size={21} color={color} />

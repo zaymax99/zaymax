@@ -23,12 +23,12 @@ const NAVIGATION_THEME = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    primary: "#F4F4F5",
+    primary: "#D8B963",
     background: APP_BACKGROUND,
     card: "#18191C",
     text: "#F4F4F5",
     border: "#2A2C30",
-    notification: "#F4F4F5",
+    notification: "#D8B963",
   },
 };
 

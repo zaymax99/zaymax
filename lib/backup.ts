@@ -4,7 +4,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { Platform } from "react-native";
 
-import { HEALTHKIT_CONNECTED_KEY } from "@/lib/steps";
+import { HEALTHKIT_CONNECTED_KEY } from "./steps";
 
 export type ZaymaxBackup = {
   app: "Zaymax";
@@ -12,6 +12,28 @@ export type ZaymaxBackup = {
   exportedAt: string;
   data: Record<string, string>;
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+export function parseBackupContents(contents: string): ZaymaxBackup {
+  const parsed = JSON.parse(contents) as unknown;
+  if (
+    !isRecord(parsed) ||
+    parsed.app !== "Zaymax" ||
+    parsed.version !== 1 ||
+    typeof parsed.exportedAt !== "string" ||
+    !Number.isFinite(Date.parse(parsed.exportedAt)) ||
+    !isRecord(parsed.data) ||
+    Object.entries(parsed.data).some(
+      ([key, value]) => !key.startsWith("zaymax.") || typeof value !== "string",
+    )
+  ) {
+    throw new Error("invalid-backup");
+  }
+  return parsed as ZaymaxBackup;
+}
 
 export async function createBackup() {
   const allKeys = await AsyncStorage.getAllKeys();
@@ -72,28 +94,36 @@ export async function pickBackup() {
     Platform.OS === "web" && asset.file
       ? await asset.file.text()
       : await FileSystem.readAsStringAsync(asset.uri);
-  const parsed = JSON.parse(contents) as Partial<ZaymaxBackup>;
-  if (
-    parsed.app !== "Zaymax" ||
-    parsed.version !== 1 ||
-    !parsed.data ||
-    typeof parsed.data !== "object" ||
-    Object.entries(parsed.data).some(
-      ([key, value]) => !key.startsWith("zaymax.") || typeof value !== "string",
-    )
-  ) {
-    throw new Error("invalid-backup");
-  }
-  return parsed as ZaymaxBackup;
+  return parseBackupContents(contents);
 }
 
 export async function restoreBackup(backup: ZaymaxBackup) {
   const currentKeys = (await AsyncStorage.getAllKeys()).filter((key) =>
     key.startsWith("zaymax."),
   );
-  if (currentKeys.length) await AsyncStorage.multiRemove(currentKeys);
+  const currentEntries = currentKeys.length
+    ? await AsyncStorage.multiGet(currentKeys)
+    : [];
   const entries = Object.entries(backup.data).filter(
     ([key]) => key !== HEALTHKIT_CONNECTED_KEY,
   );
-  if (entries.length) await AsyncStorage.multiSet(entries);
+  const touchedKeys = [
+    ...new Set([...currentKeys, ...entries.map(([key]) => key)]),
+  ];
+
+  try {
+    if (currentKeys.length) await AsyncStorage.multiRemove(currentKeys);
+    if (entries.length) await AsyncStorage.multiSet(entries);
+  } catch (error) {
+    try {
+      if (touchedKeys.length) await AsyncStorage.multiRemove(touchedKeys);
+      const rollbackEntries = currentEntries.filter(
+        (entry): entry is [string, string] => entry[1] !== null,
+      );
+      if (rollbackEntries.length) await AsyncStorage.multiSet(rollbackEntries);
+    } catch {
+      // The original storage error remains the useful failure for the UI.
+    }
+    throw error;
+  }
 }

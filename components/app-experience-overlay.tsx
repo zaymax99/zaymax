@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Alert,
   AppState,
   Modal,
   Pressable,
@@ -21,6 +22,7 @@ import Animated, {
 import { ProfileForm } from "@/components/profile-form";
 import { KeyboardDismissButton } from "@/components/keyboard-dismiss-button";
 import { useColors } from "@/hooks/use-colors";
+import { hapticSuccess, hapticTap, hapticWarning } from "@/lib/haptics";
 import { useLanguage } from "@/lib/i18n";
 import {
   BIRTHDAY_CELEBRATION_KEY,
@@ -38,33 +40,47 @@ export function AppExperienceOverlay() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showBirthday, setShowBirthday] = useState(false);
+  const profileSaveRef = useRef(false);
 
   const maybeOpenBirthday = useCallback(async (nextProfile: UserProfile) => {
     if (!isBirthdayToday(nextProfile.birthDate)) return;
-    const token = `${new Date().getFullYear()}-${nextProfile.birthDate}`;
-    const lastToken = await AsyncStorage.getItem(BIRTHDAY_CELEBRATION_KEY);
-    if (lastToken === token) return;
-    await AsyncStorage.setItem(BIRTHDAY_CELEBRATION_KEY, token);
-    setShowBirthday(true);
+    try {
+      const token = `${new Date().getFullYear()}-${nextProfile.birthDate}`;
+      const lastToken = await AsyncStorage.getItem(BIRTHDAY_CELEBRATION_KEY);
+      if (lastToken === token) return;
+      await AsyncStorage.setItem(BIRTHDAY_CELEBRATION_KEY, token);
+      hapticSuccess();
+      setShowBirthday(true);
+    } catch {
+      // A celebration must never block normal app use.
+    }
   }, []);
 
   useEffect(() => {
-    void loadProfile().then(async (loaded) => {
-      setProfile(loaded);
-      if (!loaded.onboardingCompleted) {
-        setShowOnboarding(true);
-        return;
-      }
-      await maybeOpenBirthday(loaded);
-    });
+    void loadProfile()
+      .then(async (loaded) => {
+        setProfile(loaded);
+        if (!loaded.onboardingCompleted) {
+          setShowOnboarding(true);
+          return;
+        }
+        await maybeOpenBirthday(loaded);
+      })
+      .catch(() => {
+        // Leave overlays closed if profile storage cannot be read.
+      });
   }, [maybeOpenBirthday]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
       if (state !== "active") return;
-      void loadProfile().then((loaded) => {
-        if (loaded.onboardingCompleted) void maybeOpenBirthday(loaded);
-      });
+      void loadProfile()
+        .then((loaded) => {
+          if (loaded.onboardingCompleted) void maybeOpenBirthday(loaded);
+        })
+        .catch(() => {
+          // App resume must remain usable even if profile storage is unavailable.
+        });
     });
     return () => subscription.remove();
   }, [maybeOpenBirthday]);
@@ -72,23 +88,53 @@ export function AppExperienceOverlay() {
   async function completeOnboarding(
     values: Pick<UserProfile, "weightKg" | "heightCm" | "birthDate">,
   ) {
-    const next = await saveProfile({
-      ...profile,
-      ...values,
-      onboardingCompleted: true,
-    });
-    setProfile(next);
-    setShowOnboarding(false);
-    await maybeOpenBirthday(next);
+    if (profileSaveRef.current) return;
+    profileSaveRef.current = true;
+    try {
+      const next = await saveProfile({
+        ...profile,
+        ...values,
+        onboardingCompleted: true,
+      });
+      setProfile(next);
+      setShowOnboarding(false);
+      hapticSuccess();
+      await maybeOpenBirthday(next);
+    } catch {
+      showProfileSaveError();
+    } finally {
+      profileSaveRef.current = false;
+    }
   }
 
   async function skipOnboarding() {
-    const next = await saveProfile({
-      ...profile,
-      onboardingCompleted: true,
-    });
-    setProfile(next);
-    setShowOnboarding(false);
+    if (profileSaveRef.current) return;
+    profileSaveRef.current = true;
+    try {
+      const next = await saveProfile({
+        ...profile,
+        onboardingCompleted: true,
+      });
+      setProfile(next);
+      setShowOnboarding(false);
+      hapticTap();
+    } catch {
+      showProfileSaveError();
+    } finally {
+      profileSaveRef.current = false;
+    }
+  }
+
+  function showProfileSaveError() {
+    hapticWarning();
+    Alert.alert(
+      t("Daten nicht gespeichert", "Data not saved", "Nie zapisano danych"),
+      t(
+        "Bitte versuche es erneut. Deine Eingaben bleiben geöffnet.",
+        "Please try again. Your entries will remain open.",
+        "Spróbuj ponownie. Wprowadzone dane pozostaną otwarte.",
+      ),
+    );
   }
 
   return (
@@ -192,14 +238,17 @@ export function AppExperienceOverlay() {
                 "Geburtstagsgruß schließen",
                 "Close birthday greeting",
               )}
-              onPress={() => setShowBirthday(false)}
+              onPress={() => {
+                hapticSuccess();
+                setShowBirthday(false);
+              }}
               style={({ pressed }) => ({
                 minHeight: 50,
                 marginTop: 24,
                 alignItems: "center",
                 justifyContent: "center",
                 borderRadius: 999,
-                backgroundColor: "#FFFFFF",
+                backgroundColor: "#D8B963",
                 paddingHorizontal: 28,
                 opacity: pressed ? 0.78 : 1,
               })}
@@ -333,7 +382,7 @@ const styles = StyleSheet.create({
   stepPill: {
     alignSelf: "flex-start",
     borderRadius: 999,
-    backgroundColor: "#EEEEF0",
+    backgroundColor: "#D8B963",
     paddingHorizontal: 11,
     paddingVertical: 6,
   },

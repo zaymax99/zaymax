@@ -7,6 +7,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { useColors } from "@/hooks/use-colors";
+import { hapticTap } from "@/lib/haptics";
 import { useLanguage } from "@/lib/i18n";
 
 const POLICY_VERSION = "26.08.2026";
@@ -42,9 +43,11 @@ export default function PrivacyScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t("Zurück", "Back")}
-          onPress={() =>
-            router.canGoBack() ? router.back() : router.replace("/settings")
-          }
+          onPress={() => {
+            hapticTap();
+            if (router.canGoBack()) router.back();
+            else router.replace("/settings");
+          }}
           style={({ pressed }) => ({
             minHeight: 50,
             marginBottom: 16,
@@ -52,13 +55,13 @@ export default function PrivacyScreen() {
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 1,
-            borderColor: colors.border,
+            borderColor: `${colors.primary}70`,
             borderRadius: ZAYMAX_DESIGN.radius.round,
             backgroundColor: colors.surface,
             opacity: pressed ? 0.65 : 1,
           })}
         >
-          <IconSymbol name="chevron.left" size={21} color={colors.foreground} />
+          <IconSymbol name="chevron.left" size={21} color={colors.primary} />
           <Text className="ml-1 font-black text-foreground">
             {t("Zurück", "Back")}
           </Text>

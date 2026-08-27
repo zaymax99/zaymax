@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Keyboard, Pressable, Text, TextInput, View } from "react-native";
 
 import { useColors } from "@/hooks/use-colors";
+import { hapticAction, hapticTap, hapticWarning } from "@/lib/haptics";
 import { useLanguage, usesDecimalComma } from "@/lib/i18n";
 import {
   formatBirthDate,
@@ -59,6 +60,7 @@ export function ProfileForm({
     const heightCm = parseDecimalInput(height);
     const birthDate = parseBirthDateInput(birthday);
     if (weightKg < 20 || weightKg > 500) {
+      hapticWarning();
       setError(
         t(
           "Bitte gib ein gültiges Gewicht ein.",
@@ -68,12 +70,14 @@ export function ProfileForm({
       return;
     }
     if (heightCm < 80 || heightCm > 250) {
+      hapticWarning();
       setError(
         t("Bitte gib eine gültige Größe ein.", "Please enter a valid height."),
       );
       return;
     }
     if (!birthDate) {
+      hapticWarning();
       setError(
         t(
           "Bitte gib deinen Geburtstag als TT.MM.JJJJ ein.",
@@ -84,6 +88,7 @@ export function ProfileForm({
     }
     setError("");
     Keyboard.dismiss();
+    hapticAction();
     onSubmit({ weightKg, heightCm, birthDate });
   }
 
@@ -144,7 +149,10 @@ export function ProfileForm({
       </Pressable>
       {onCancel ? (
         <Pressable
-          onPress={onCancel}
+          onPress={() => {
+            hapticTap();
+            onCancel();
+          }}
           style={({ pressed }) => ({
             minHeight: 44,
             marginTop: 5,

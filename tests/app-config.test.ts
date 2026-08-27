@@ -20,4 +20,11 @@ describe("App Store iOS configuration", () => {
       String(infoPlist?.NSHealthUpdateUsageDescription).length,
     ).toBeGreaterThan(40);
   });
+
+  it("keeps the iOS release dark and blocks arbitrary network loads", () => {
+    expect(config.userInterfaceStyle).toBe("dark");
+    expect(
+      config.ios?.infoPlist?.NSAppTransportSecurity?.NSAllowsArbitraryLoads,
+    ).toBe(false);
+  });
 });

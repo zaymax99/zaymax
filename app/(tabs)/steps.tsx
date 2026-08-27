@@ -19,6 +19,12 @@ import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { useColors } from "@/hooks/use-colors";
 import {
+  hapticAction,
+  hapticSuccess,
+  hapticTap,
+  hapticWarning,
+} from "@/lib/haptics";
+import {
   isAppleHealthAvailable,
   loadCurrentStepWeek,
   requestStepAuthorization,
@@ -59,7 +65,7 @@ export default function StepsScreen() {
   const refreshSteps = useCallback(async (showLoader = true) => {
     if (Platform.OS !== "ios") {
       setStatus("unavailable");
-      return;
+      return false;
     }
     if (showLoader) setStatus("loading");
     else setRefreshing(true);
@@ -67,14 +73,16 @@ export default function StepsScreen() {
     try {
       if (!(await isAppleHealthAvailable())) {
         setStatus("unavailable");
-        return;
+        return false;
       }
       const nextWeek = await loadCurrentStepWeek();
       setWeek(nextWeek);
       setLastUpdated(new Date());
       setStatus("ready");
+      return true;
     } catch {
       setStatus("error");
+      return false;
     } finally {
       if (!showLoader) setRefreshing(false);
     }
@@ -83,16 +91,20 @@ export default function StepsScreen() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      void AsyncStorage.getItem(HEALTHKIT_CONNECTED_KEY).then((connected) => {
-        if (!active) return;
-        if (Platform.OS !== "ios") {
-          setStatus("unavailable");
-        } else if (connected === "1") {
-          void refreshSteps();
-        } else {
-          setStatus("disconnected");
-        }
-      });
+      void AsyncStorage.getItem(HEALTHKIT_CONNECTED_KEY)
+        .then((connected) => {
+          if (!active) return;
+          if (Platform.OS !== "ios") {
+            setStatus("unavailable");
+          } else if (connected === "1") {
+            void refreshSteps();
+          } else {
+            setStatus("disconnected");
+          }
+        })
+        .catch(() => {
+          if (active) setStatus("error");
+        });
       return () => {
         active = false;
       };
@@ -100,21 +112,27 @@ export default function StepsScreen() {
   );
 
   async function connectAppleHealth() {
+    hapticAction();
     setStatus("loading");
     try {
       if (!(await isAppleHealthAvailable())) {
         setStatus("unavailable");
+        hapticWarning();
         return;
       }
       const requestCompleted = await requestStepAuthorization();
       if (!requestCompleted) {
         setStatus("error");
+        hapticWarning();
         return;
       }
       await AsyncStorage.setItem(HEALTHKIT_CONNECTED_KEY, "1");
-      await refreshSteps(false);
+      const loaded = await refreshSteps(false);
+      if (loaded) hapticSuccess();
+      else hapticWarning();
     } catch {
       setStatus("error");
+      hapticWarning();
     }
   }
 
@@ -136,8 +154,11 @@ export default function StepsScreen() {
           status === "ready" ? (
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => void refreshSteps(false)}
-              tintColor={colors.foreground}
+              onRefresh={() => {
+                hapticTap();
+                void refreshSteps(false);
+              }}
+              tintColor={colors.primary}
             />
           ) : undefined
         }
@@ -167,7 +188,7 @@ export default function StepsScreen() {
               entering={FadeInDown.duration(280)}
               style={{
                 borderWidth: 1,
-                borderColor: colors.border,
+                borderColor: `${colors.primary}45`,
                 borderRadius: ZAYMAX_DESIGN.radius.hero,
                 backgroundColor: colors.surface,
                 padding: 20,
@@ -194,14 +215,14 @@ export default function StepsScreen() {
                     alignItems: "center",
                     justifyContent: "center",
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: `${colors.primary}70`,
                     backgroundColor: colors.background,
                   }}
                 >
                   <IconSymbol
                     name="shoeprints.fill"
                     size={21}
-                    color={colors.foreground}
+                    color={colors.primary}
                   />
                 </View>
               </View>
@@ -226,7 +247,7 @@ export default function StepsScreen() {
                       cy={RING_SIZE / 2}
                       r={RING_RADIUS}
                       fill="transparent"
-                      stroke={colors.foreground}
+                      stroke={colors.primary}
                       strokeWidth={RING_STROKE}
                       strokeLinecap="round"
                       strokeDasharray={`${RING_CIRCUMFERENCE} ${RING_CIRCUMFERENCE}`}
@@ -251,7 +272,10 @@ export default function StepsScreen() {
                   {t("Tagesziel", "Daily goal")} ·{" "}
                   {formatSteps(DAILY_STEP_GOAL, locale)}
                 </Text>
-                <Text className="text-xs font-black text-foreground">
+                <Text
+                  className="text-xs font-black"
+                  style={{ color: colors.primary }}
+                >
                   {Math.round(todayProgress * 100)} %
                 </Text>
               </View>
@@ -269,7 +293,7 @@ export default function StepsScreen() {
                     width: `${todayProgress * 100}%`,
                     height: "100%",
                     borderRadius: ZAYMAX_DESIGN.radius.round,
-                    backgroundColor: colors.foreground,
+                    backgroundColor: colors.primary,
                   }}
                 />
               </View>
@@ -280,7 +304,7 @@ export default function StepsScreen() {
               style={{
                 marginTop: 14,
                 borderWidth: 1,
-                borderColor: colors.border,
+                borderColor: `${colors.primary}35`,
                 borderRadius: ZAYMAX_DESIGN.radius.card,
                 backgroundColor: colors.surface,
                 padding: 20,
@@ -373,7 +397,7 @@ function WeekBars({
             <Text
               style={{
                 marginBottom: 7,
-                color: day.isToday ? colors.foreground : colors.muted,
+                color: day.isToday ? colors.primary : colors.muted,
                 fontSize: 9,
                 fontWeight: "800",
               }}
@@ -386,15 +410,13 @@ function WeekBars({
                 height,
                 minHeight: 8,
                 borderRadius: ZAYMAX_DESIGN.radius.round,
-                backgroundColor: day.isToday
-                  ? colors.foreground
-                  : colors.border,
+                backgroundColor: day.isToday ? colors.primary : colors.border,
               }}
             />
             <Text
               style={{
                 marginTop: 9,
-                color: day.isToday ? colors.foreground : colors.muted,
+                color: day.isToday ? colors.primary : colors.muted,
                 fontSize: 10,
                 fontWeight: "900",
                 textTransform: "uppercase",
@@ -433,7 +455,7 @@ function ConnectionCard({
         alignItems: "center",
         justifyContent: "center",
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: `${colors.primary}45`,
         borderRadius: ZAYMAX_DESIGN.radius.hero,
         backgroundColor: colors.surface,
         padding: 24,
@@ -446,19 +468,15 @@ function ConnectionCard({
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 1,
-          borderColor: colors.border,
+          borderColor: `${colors.primary}70`,
           borderRadius: ZAYMAX_DESIGN.radius.round,
           backgroundColor: colors.background,
         }}
       >
         {loading ? (
-          <ActivityIndicator color={colors.foreground} />
+          <ActivityIndicator color={colors.primary} />
         ) : (
-          <IconSymbol
-            name="shoeprints.fill"
-            size={38}
-            color={colors.foreground}
-          />
+          <IconSymbol name="shoeprints.fill" size={38} color={colors.primary} />
         )}
       </View>
       <Text className="mt-6 text-center text-2xl font-black text-foreground">

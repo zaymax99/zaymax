@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
+import { hapticTap } from "@/lib/haptics";
 import { useLanguage } from "@/lib/i18n";
 
 export function KeyboardDismissButton() {
@@ -82,6 +83,7 @@ export function KeyboardDismissButton() {
         accessibilityRole="button"
         accessibilityLabel={t("Tastatur ausblenden", "Hide keyboard")}
         onPress={() => {
+          hapticTap();
           Keyboard.dismiss();
           if (
             Platform.OS === "web" &&
@@ -97,7 +99,7 @@ export function KeyboardDismissButton() {
           gap: 7,
           borderRadius: 999,
           borderWidth: 1,
-          borderColor: colors.border,
+          borderColor: `${colors.primary}70`,
           backgroundColor: colors.surface,
           paddingHorizontal: 14,
           opacity: pressed ? 0.72 : 1,
@@ -106,7 +108,7 @@ export function KeyboardDismissButton() {
         <IconSymbol
           name="keyboard.chevron.compact.down"
           size={20}
-          color={colors.foreground}
+          color={colors.primary}
         />
         <Text
           style={{

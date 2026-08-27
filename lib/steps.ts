@@ -40,10 +40,10 @@ export function buildStepWeek(
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + index);
-    const steps = Math.max(
-      0,
-      Math.round(stepsByDay.get(stepDayKey(date)) ?? 0),
-    );
+    const storedSteps = Number(stepsByDay.get(stepDayKey(date)) ?? 0);
+    const steps = Number.isFinite(storedSteps)
+      ? Math.max(0, Math.round(storedSteps))
+      : 0;
     return { date, steps, isToday: stepDayKey(date) === todayKey };
   });
   const endDate = new Date(startDate);

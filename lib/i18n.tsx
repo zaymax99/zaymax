@@ -34,12 +34,13 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       .then((saved) =>
         setLanguageState(saved === "en" || saved === "pl" ? saved : "de"),
       )
+      .catch(() => setLanguageState("de"))
       .finally(() => setReady(true));
   }, []);
 
   const setLanguage = useCallback(async (nextLanguage: AppLanguage) => {
-    setLanguageState(nextLanguage);
     await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, nextLanguage);
+    setLanguageState(nextLanguage);
   }, []);
 
   const t = useCallback(

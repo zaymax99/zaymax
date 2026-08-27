@@ -26,6 +26,12 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ProfileBmiCard } from "@/components/profile-bmi-card";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { useColors } from "@/hooks/use-colors";
+import {
+  hapticSelection,
+  hapticSuccess,
+  hapticTap,
+  hapticWarning,
+} from "@/lib/haptics";
 import { useLanguage } from "@/lib/i18n";
 import {
   loadReminders,
@@ -122,6 +128,7 @@ export default function JournalScreen() {
   const [draft, setDraft] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const confettiTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savingDraftRef = useRef(false);
 
   const refresh = useCallback(async () => {
     const [notes, days] = await Promise.all([
@@ -133,7 +140,9 @@ export default function JournalScreen() {
   }, []);
   useFocusEffect(
     useCallback(() => {
-      void refresh();
+      void refresh().catch(() => {
+        // Keep the last rendered journal instead of producing an unhandled error.
+      });
     }, [refresh]),
   );
   useEffect(
@@ -144,35 +153,46 @@ export default function JournalScreen() {
   );
 
   function beginEdit(reminder: Reminder) {
+    hapticTap();
     setEditingId(reminder.id);
     setDraft(reminder.text);
   }
 
   async function saveDraft() {
     const text = draft.trim();
-    if (!text) return;
-    const now = new Date().toISOString();
-    const current = await loadReminders();
-    const next = editingId
-      ? current.map((item) =>
-          item.id === editingId ? { ...item, text, updatedAt: now } : item,
-        )
-      : [
-          { id: reminderUid(), text, createdAt: now, updatedAt: now },
-          ...current,
-        ];
-    await saveReminders(next);
-    setReminders(next);
-    setDraft("");
-    setEditingId(null);
+    if (!text || savingDraftRef.current) return;
+    savingDraftRef.current = true;
+    try {
+      const now = new Date().toISOString();
+      const current = await loadReminders();
+      const next = editingId
+        ? current.map((item) =>
+            item.id === editingId ? { ...item, text, updatedAt: now } : item,
+          )
+        : [
+            { id: reminderUid(), text, createdAt: now, updatedAt: now },
+            ...current,
+          ];
+      await saveReminders(next);
+      setReminders(next);
+      setDraft("");
+      setEditingId(null);
+      hapticSuccess();
+    } catch {
+      showJournalStorageError();
+    } finally {
+      savingDraftRef.current = false;
+    }
   }
 
   function cancelEdit() {
+    hapticSelection();
     setDraft("");
     setEditingId(null);
   }
 
   function confirmDelete(reminder: Reminder) {
+    hapticTap();
     Alert.alert(
       t("Eintrag löschen?", "Delete entry?"),
       t(
@@ -185,12 +205,17 @@ export default function JournalScreen() {
           text: t("Löschen", "Delete"),
           style: "destructive",
           onPress: async () => {
-            const next = (await loadReminders()).filter(
-              (item) => item.id !== reminder.id,
-            );
-            await saveReminders(next);
-            setReminders(next);
-            if (editingId === reminder.id) cancelEdit();
+            try {
+              const next = (await loadReminders()).filter(
+                (item) => item.id !== reminder.id,
+              );
+              await saveReminders(next);
+              setReminders(next);
+              if (editingId === reminder.id) cancelEdit();
+              hapticWarning();
+            } catch {
+              showJournalStorageError();
+            }
           },
         },
       ],
@@ -198,11 +223,13 @@ export default function JournalScreen() {
   }
 
   function openDaySelection() {
+    hapticTap();
     setPendingDays(trainingDays);
     setDayModalVisible(true);
   }
 
   function toggleDay(day: Weekday) {
+    hapticSelection();
     setPendingDays((current) =>
       current.includes(day)
         ? current.filter((item) => item !== day)
@@ -214,12 +241,33 @@ export default function JournalScreen() {
     const ordered = WEEKDAYS.map((day) => day.value).filter((day) =>
       pendingDays.includes(day),
     );
-    await saveTrainingDays(ordered);
-    setTrainingDays(ordered);
-    setDayModalVisible(false);
-    setConfettiBurst((current) => current + 1);
-    if (confettiTimer.current) clearTimeout(confettiTimer.current);
-    confettiTimer.current = setTimeout(() => setConfettiBurst(0), 1250);
+    try {
+      await saveTrainingDays(ordered);
+      setTrainingDays(ordered);
+      setDayModalVisible(false);
+      setConfettiBurst((current) => current + 1);
+      hapticSuccess();
+      if (confettiTimer.current) clearTimeout(confettiTimer.current);
+      confettiTimer.current = setTimeout(() => setConfettiBurst(0), 1250);
+    } catch {
+      showJournalStorageError();
+    }
+  }
+
+  function showJournalStorageError() {
+    hapticWarning();
+    Alert.alert(
+      t(
+        "Tagebuch nicht gespeichert",
+        "Journal not saved",
+        "Nie zapisano dziennika",
+      ),
+      t(
+        "Deine bisherigen Einträge bleiben erhalten. Bitte versuche es erneut.",
+        "Your previous entries remain unchanged. Please try again.",
+        "Poprzednie wpisy pozostają bez zmian. Spróbuj ponownie.",
+      ),
+    );
   }
 
   const selectedDayLabels = WEEKDAYS.filter((day) =>
@@ -260,7 +308,7 @@ export default function JournalScreen() {
               className="bg-surface p-5"
               style={{
                 borderWidth: 1,
-                borderColor: colors.border,
+                borderColor: `${colors.primary}40`,
                 borderRadius: ZAYMAX_DESIGN.radius.card,
               }}
             >
@@ -273,11 +321,7 @@ export default function JournalScreen() {
                     {t("Deine Trainingstage", "Your training days")}
                   </Text>
                 </View>
-                <IconSymbol
-                  name="calendar"
-                  size={23}
-                  color={colors.foreground}
-                />
+                <IconSymbol name="calendar" size={23} color={colors.primary} />
               </View>
               <View className="mt-4 flex-row flex-wrap gap-2">
                 {WEEKDAYS.map((day) => {
@@ -289,11 +333,9 @@ export default function JournalScreen() {
                         minWidth: 37,
                         borderRadius: ZAYMAX_DESIGN.radius.round,
                         borderWidth: 1,
-                        borderColor: selected
-                          ? colors.foreground
-                          : colors.border,
+                        borderColor: selected ? colors.primary : colors.border,
                         backgroundColor: selected
-                          ? colors.foreground
+                          ? colors.primary
                           : colors.background,
                         paddingHorizontal: 9,
                         paddingVertical: 8,
@@ -332,13 +374,17 @@ export default function JournalScreen() {
                     marginTop: 16,
                     borderRadius: ZAYMAX_DESIGN.radius.round,
                     borderWidth: 1,
-                    borderColor: colors.foreground,
+                    borderColor: `${colors.primary}99`,
+                    backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
                     paddingVertical: 13,
                     opacity: pressed ? 0.6 : 1,
                   },
                 ]}
               >
-                <Text className="text-center font-black tracking-[0.4px] text-foreground">
+                <Text
+                  className="text-center font-black tracking-[0.4px]"
+                  style={{ color: colors.primary }}
+                >
                   {t("Tage auswählen", "Select days")}
                 </Text>
               </Pressable>
@@ -453,7 +499,7 @@ export default function JournalScreen() {
                 borderRadius: ZAYMAX_DESIGN.radius.nested,
                 borderWidth: 1,
                 borderColor:
-                  editingId === item.id ? colors.foreground : colors.border,
+                  editingId === item.id ? colors.primary : colors.border,
                 backgroundColor: colors.surface,
                 padding: 16,
               }}
@@ -551,11 +597,9 @@ export default function JournalScreen() {
                         justifyContent: "space-between",
                         borderRadius: ZAYMAX_DESIGN.radius.nested,
                         borderWidth: 1,
-                        borderColor: selected
-                          ? colors.foreground
-                          : colors.border,
+                        borderColor: selected ? colors.primary : colors.border,
                         backgroundColor: selected
-                          ? colors.foreground
+                          ? colors.primary
                           : colors.background,
                         paddingHorizontal: 14,
                         opacity: pressed ? 0.65 : 1,
@@ -604,7 +648,10 @@ export default function JournalScreen() {
               </Text>
             </Pressable>
             <Pressable
-              onPress={() => setDayModalVisible(false)}
+              onPress={() => {
+                hapticTap();
+                setDayModalVisible(false);
+              }}
               style={({ pressed }) => [
                 {
                   marginTop: 8,
@@ -625,13 +672,15 @@ export default function JournalScreen() {
 }
 
 function formatJournalDate(date: string, locale: string) {
+  const parsed = new Date(date);
+  if (!Number.isFinite(parsed.getTime())) return "—";
   return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(date));
+  }).format(parsed);
 }
 
 const WHITE_CONFETTI = [

@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from "react";
-import { Modal, Pressable, Text, View } from "react-native";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { Alert, Modal, Pressable, Text, View } from "react-native";
 import { useFocusEffect } from "expo-router";
 
 import { ProfileForm } from "@/components/profile-form";
@@ -7,6 +7,7 @@ import { KeyboardDismissButton } from "@/components/keyboard-dismiss-button";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { useColors } from "@/hooks/use-colors";
+import { hapticSuccess, hapticTap, hapticWarning } from "@/lib/haptics";
 import { useLanguage } from "@/lib/i18n";
 import {
   bmiLevel,
@@ -34,9 +35,14 @@ export function ProfileBmiCard() {
     onboardingCompleted: true,
   });
   const [editVisible, setEditVisible] = useState(false);
+  const profileSaveRef = useRef(false);
 
   const refresh = useCallback(() => {
-    void loadProfile().then(setProfile);
+    void loadProfile()
+      .then(setProfile)
+      .catch(() => {
+        // Keep the previously loaded profile when local storage is unavailable.
+      });
   }, []);
   useFocusEffect(refresh);
 
@@ -49,13 +55,34 @@ export function ProfileBmiCard() {
   async function updateProfile(
     values: Pick<UserProfile, "weightKg" | "heightCm" | "birthDate">,
   ) {
-    const next = await saveProfile({
-      ...profile,
-      ...values,
-      onboardingCompleted: true,
-    });
-    setProfile(next);
-    setEditVisible(false);
+    if (profileSaveRef.current) return;
+    profileSaveRef.current = true;
+    try {
+      const next = await saveProfile({
+        ...profile,
+        ...values,
+        onboardingCompleted: true,
+      });
+      setProfile(next);
+      setEditVisible(false);
+      hapticSuccess();
+    } catch {
+      hapticWarning();
+      Alert.alert(
+        t(
+          "Körperdaten nicht gespeichert",
+          "Body data not saved",
+          "Nie zapisano danych ciała",
+        ),
+        t(
+          "Deine bisherigen Daten bleiben erhalten. Bitte versuche es erneut.",
+          "Your previous data remains unchanged. Please try again.",
+          "Poprzednie dane pozostają bez zmian. Spróbuj ponownie.",
+        ),
+      );
+    } finally {
+      profileSaveRef.current = false;
+    }
   }
 
   return (
@@ -95,7 +122,10 @@ export function ProfileBmiCard() {
           </View>
           <Pressable
             accessibilityLabel={t("Körperdaten bearbeiten", "Edit body data")}
-            onPress={() => setEditVisible(true)}
+            onPress={() => {
+              hapticTap();
+              setEditVisible(true);
+            }}
             style={({ pressed }) => ({
               width: 42,
               height: 42,
@@ -103,11 +133,11 @@ export function ProfileBmiCard() {
               justifyContent: "center",
               borderRadius: ZAYMAX_DESIGN.radius.round,
               borderWidth: 1,
-              borderColor: colors.border,
+              borderColor: `${colors.primary}60`,
               opacity: pressed ? 0.6 : 1,
             })}
           >
-            <IconSymbol name="pencil" size={18} color={colors.foreground} />
+            <IconSymbol name="pencil" size={18} color={colors.primary} />
           </Pressable>
         </View>
 
@@ -209,7 +239,10 @@ export function ProfileBmiCard() {
               )}
             </Text>
             <Pressable
-              onPress={() => setEditVisible(true)}
+              onPress={() => {
+                hapticTap();
+                setEditVisible(true);
+              }}
               style={({ pressed }) => ({
                 minHeight: 46,
                 marginTop: 15,

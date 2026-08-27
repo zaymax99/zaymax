@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
 import { useFocusEffect, useRouter, type Href } from "expo-router";
-import * as Haptics from "expo-haptics";
 import Animated, { FadeIn, FadeInDown, Layout } from "react-native-reanimated";
 
 import { ScreenContainer } from "@/components/screen-container";
@@ -17,6 +16,12 @@ import {
   type Workout,
 } from "@/lib/workouts";
 import { useColors } from "@/hooks/use-colors";
+import {
+  hapticAction,
+  hapticSelection,
+  hapticTap,
+  hapticWarning,
+} from "@/lib/haptics";
 
 const logo = require("../../assets/images/icon.png");
 
@@ -35,7 +40,9 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void refresh();
+      void refresh().catch(() => {
+        // Keep the last rendered list instead of producing an unhandled error.
+      });
     }, [refresh]),
   );
   const completed = useMemo(
@@ -54,20 +61,24 @@ export default function HomeScreen() {
   }, [t]);
 
   async function toggleLock(workout: Workout) {
-    const all = await loadWorkouts();
-    const now = new Date().toISOString();
-    const lockedAt = workout.lockedAt ? undefined : now;
-    const updated = all.map((item) =>
-      item.id === workout.id ? { ...item, lockedAt, updatedAt: now } : item,
-    );
-    await saveWorkouts(updated);
-    setWorkouts(updated);
-    if (process.env.NODE_ENV !== "test")
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const all = await loadWorkouts();
+      const now = new Date().toISOString();
+      const lockedAt = workout.lockedAt ? undefined : now;
+      const updated = all.map((item) =>
+        item.id === workout.id ? { ...item, lockedAt, updatedAt: now } : item,
+      );
+      await saveWorkouts(updated);
+      setWorkouts(updated);
+      hapticSelection();
+    } catch {
+      showWorkoutStorageError();
+    }
   }
 
   function editWorkout(workout: Workout) {
     if (workout.lockedAt) {
+      hapticWarning();
       Alert.alert(
         t("Workout ist geschützt", "Workout is protected"),
         t(
@@ -77,11 +88,13 @@ export default function HomeScreen() {
       );
       return;
     }
+    hapticTap();
     router.push({ pathname: "/workout/[id]", params: { id: workout.id } });
   }
 
   function confirmDelete(workout: Workout) {
     if (workout.lockedAt) {
+      hapticWarning();
       Alert.alert(
         t("Workout ist geschützt", "Workout is protected"),
         t(
@@ -91,6 +104,7 @@ export default function HomeScreen() {
       );
       return;
     }
+    hapticTap();
     Alert.alert(
       t("Workout löschen?", "Delete workout?"),
       t(
@@ -103,14 +117,35 @@ export default function HomeScreen() {
           text: t("Löschen", "Delete"),
           style: "destructive",
           onPress: async () => {
-            const all = await loadWorkouts();
-            await saveWorkouts(all.filter((item) => item.id !== workout.id));
-            setWorkouts((current) =>
-              current.filter((item) => item.id !== workout.id),
-            );
+            try {
+              const all = await loadWorkouts();
+              await saveWorkouts(all.filter((item) => item.id !== workout.id));
+              setWorkouts((current) =>
+                current.filter((item) => item.id !== workout.id),
+              );
+              hapticWarning();
+            } catch {
+              showWorkoutStorageError();
+            }
           },
         },
       ],
+    );
+  }
+
+  function showWorkoutStorageError() {
+    hapticWarning();
+    Alert.alert(
+      t(
+        "Änderung nicht gespeichert",
+        "Change not saved",
+        "Nie zapisano zmiany",
+      ),
+      t(
+        "Deine Workouts bleiben unverändert. Bitte versuche es erneut.",
+        "Your workouts remain unchanged. Please try again.",
+        "Twoje treningi pozostają bez zmian. Spróbuj ponownie.",
+      ),
     );
   }
 
@@ -126,7 +161,10 @@ export default function HomeScreen() {
           style={{ position: "relative" }}
         >
           <View className="flex-row items-center" style={{ paddingRight: 82 }}>
-            <View className="mr-3 h-12 w-12 overflow-hidden rounded-full border border-border bg-black">
+            <View
+              className="mr-3 h-12 w-12 overflow-hidden rounded-full bg-black"
+              style={{ borderWidth: 1, borderColor: `${colors.primary}99` }}
+            >
               <Image
                 source={logo}
                 resizeMode="contain"
@@ -134,7 +172,10 @@ export default function HomeScreen() {
               />
             </View>
             <View>
-              <Text className="text-[10px] font-black tracking-[3px] text-muted">
+              <Text
+                className="text-[10px] font-black tracking-[3px]"
+                style={{ color: colors.primary }}
+              >
                 ZAYMAX
               </Text>
               <Text className="mt-1 text-xl font-black text-foreground">
@@ -171,7 +212,7 @@ export default function HomeScreen() {
           style={{
             minHeight: 272,
             borderWidth: 1,
-            borderColor: colors.border,
+            borderColor: `${colors.primary}55`,
             backgroundColor: colors.surface,
             paddingHorizontal: 21,
             paddingVertical: 22,
@@ -186,7 +227,7 @@ export default function HomeScreen() {
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 1,
-                borderColor: colors.border,
+                borderColor: `${colors.primary}70`,
                 backgroundColor: colors.background,
                 borderRadius: ZAYMAX_DESIGN.radius.round,
               }}
@@ -196,7 +237,7 @@ export default function HomeScreen() {
                   nextWorkout ? "figure.strengthtraining.traditional" : "plus"
                 }
                 size={27}
-                color={colors.foreground}
+                color={colors.primary}
               />
             </View>
             <Text className="pt-1 text-[10px] font-black uppercase tracking-[3px] text-muted">
@@ -224,17 +265,20 @@ export default function HomeScreen() {
                 ? t("Training jetzt starten", "Start workout now")
                 : t("Neues Workout erstellen", "Create new workout")
             }
-            onPress={() =>
-              nextWorkout
-                ? router.push({
-                    pathname: "/workout/active/[id]",
-                    params: { id: nextWorkout.id },
-                  })
-                : router.push({
-                    pathname: "/workout/[id]",
-                    params: { id: "new" },
-                  })
-            }
+            onPress={() => {
+              hapticAction();
+              if (nextWorkout) {
+                router.push({
+                  pathname: "/workout/active/[id]",
+                  params: { id: nextWorkout.id },
+                });
+              } else {
+                router.push({
+                  pathname: "/workout/[id]",
+                  params: { id: "new" },
+                });
+              }
+            }}
             style={({ pressed }) => [
               {
                 marginTop: 22,
@@ -256,21 +300,37 @@ export default function HomeScreen() {
           </Pressable>
           {nextWorkout ? (
             <Pressable
-              onPress={() =>
+              accessibilityLabel={t(
+                "Neues Workout erstellen",
+                "Create new workout",
+              )}
+              onPress={() => {
+                hapticTap();
                 router.push({
                   pathname: "/workout/[id]",
                   params: { id: "new" },
-                })
-              }
-              style={({ pressed }) => ({
-                alignSelf: "center",
-                paddingTop: 14,
-                paddingHorizontal: 12,
-                opacity: pressed ? 0.55 : 1,
-              })}
+                });
+              }}
+              style={({ pressed }) => [
+                {
+                  marginTop: 10,
+                  width: "100%",
+                  minHeight: 48,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  borderWidth: 1,
+                  borderColor: `${colors.primary}80`,
+                  backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
+                  borderRadius: ZAYMAX_DESIGN.radius.round,
+                  opacity: pressed ? 0.65 : 1,
+                },
+              ]}
             >
-              <Text className="text-sm font-bold text-muted">
-                + {t("Neues Workout", "New workout")}
+              <IconSymbol name="plus" size={18} color={colors.primary} />
+              <Text className="text-sm font-black tracking-[0.3px] text-foreground">
+                {t("Neues Workout erstellen", "Create new workout")}
               </Text>
             </Pressable>
           ) : null}
@@ -318,12 +378,13 @@ export default function HomeScreen() {
               unit={weightUnit}
               language={language}
               onEdit={() => editWorkout(workout)}
-              onStart={() =>
+              onStart={() => {
+                hapticAction();
                 router.push({
                   pathname: "/workout/active/[id]",
                   params: { id: workout.id },
-                })
-              }
+                });
+              }}
               onToggleLock={() => void toggleLock(workout)}
               onDelete={() => confirmDelete(workout)}
             />
@@ -360,7 +421,10 @@ function HeaderButton({
   return (
     <Pressable
       accessibilityLabel={label}
-      onPress={onPress}
+      onPress={() => {
+        hapticTap();
+        onPress();
+      }}
       style={({ pressed }) => [
         {
           width: 40,
@@ -368,7 +432,7 @@ function HeaderButton({
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 1,
-          borderColor: colors.border,
+          borderColor: `${colors.primary}70`,
           backgroundColor: colors.surface,
           borderRadius: ZAYMAX_DESIGN.radius.round,
           marginLeft: 6,
@@ -376,7 +440,7 @@ function HeaderButton({
         },
       ]}
     >
-      <IconSymbol name={icon} size={21} color={colors.foreground} />
+      <IconSymbol name={icon} size={21} color={colors.primary} />
     </Pressable>
   );
 }
@@ -396,7 +460,10 @@ function QuickCard({
 }) {
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        hapticTap();
+        onPress();
+      }}
       style={({ pressed }) => [
         {
           flex: 1,
@@ -418,12 +485,12 @@ function QuickCard({
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 1,
-          borderColor: colors.foreground,
+          borderColor: `${colors.primary}99`,
           backgroundColor: colors.background,
           borderRadius: ZAYMAX_DESIGN.radius.round,
         }}
       >
-        <IconSymbol name={icon} size={24} color={colors.foreground} />
+        <IconSymbol name={icon} size={24} color={colors.primary} />
       </View>
       <Text
         style={{
@@ -483,7 +550,7 @@ function WorkoutCard({
           minHeight: 194,
           backgroundColor: colors.surface,
           borderWidth: 1,
-          borderColor: workout.lockedAt ? colors.foreground : colors.border,
+          borderColor: workout.lockedAt ? colors.primary : colors.border,
           padding: 17,
           borderRadius: ZAYMAX_DESIGN.radius.card,
         }}
@@ -506,7 +573,7 @@ function WorkoutCard({
               alignItems: "center",
               justifyContent: "center",
               borderWidth: 1,
-              borderColor: colors.border,
+              borderColor: `${colors.primary}55`,
               backgroundColor: colors.background,
               borderRadius: ZAYMAX_DESIGN.radius.round,
             }}
@@ -518,7 +585,7 @@ function WorkoutCard({
                   : "figure.strengthtraining.traditional"
               }
               size={24}
-              color={colors.foreground}
+              color={colors.primary}
             />
           </View>
           <View className="flex-1">
@@ -583,9 +650,7 @@ function WorkoutCard({
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 1,
-                borderColor: workout.lockedAt
-                  ? colors.foreground
-                  : colors.border,
+                borderColor: workout.lockedAt ? colors.primary : colors.border,
                 borderRadius: ZAYMAX_DESIGN.radius.round,
                 opacity: pressed ? 0.65 : 1,
               },
@@ -594,7 +659,7 @@ function WorkoutCard({
             <IconSymbol
               name={workout.lockedAt ? "lock.fill" : "lock.open.fill"}
               size={20}
-              color={colors.foreground}
+              color={workout.lockedAt ? colors.primary : colors.foreground}
             />
           </Pressable>
           <Pressable

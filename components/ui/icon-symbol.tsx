@@ -16,6 +16,8 @@ const MAPPING = {
   "gearshape.fill": "settings",
   "chevron.right": "chevron-right",
   "chevron.left": "chevron-left",
+  "arrow.up": "keyboard-arrow-up",
+  "arrow.down": "keyboard-arrow-down",
   "trash.fill": "delete-outline",
   pencil: "edit",
   "figure.strengthtraining.traditional": "fitness-center",

@@ -1,14 +1,6 @@
 import { useCallback, useState } from "react";
-import {
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useFocusEffect, useRouter, type Href } from "expo-router";
-import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { ScreenContainer } from "@/components/screen-container";
@@ -22,6 +14,12 @@ import {
 } from "@/lib/i18n";
 import { loadSettings, saveSettings, type WeightUnit } from "@/lib/workouts";
 import { useColors } from "@/hooks/use-colors";
+import {
+  hapticAction,
+  hapticSuccess,
+  hapticTap,
+  hapticWarning,
+} from "@/lib/haptics";
 import { createBackup, pickBackup, restoreBackup } from "@/lib/backup";
 
 const restOptions = [30, 60, 90, 120, 180];
@@ -49,40 +47,71 @@ export default function SettingsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadSettings().then((settings) => {
-        setRestSeconds(settings.restSeconds);
-        setWeightUnit(settings.weightUnit);
-      });
+      void loadSettings()
+        .then((settings) => {
+          setRestSeconds(settings.restSeconds);
+          setWeightUnit(settings.weightUnit);
+        })
+        .catch(() => {
+          // Keep the last visible values; actions below report write failures.
+        });
     }, []),
   );
 
   async function chooseRest(seconds: number) {
-    const current = await loadSettings();
-    setRestSeconds(seconds);
-    await saveSettings({ ...current, restSeconds: seconds });
-    if (Platform.OS !== "web")
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const current = await loadSettings();
+      await saveSettings({ ...current, restSeconds: seconds });
+      setRestSeconds(seconds);
+      hapticTap();
+    } catch {
+      showSettingsSaveError();
+    }
   }
 
   async function chooseUnit(unit: WeightUnit) {
-    const current = await loadSettings();
-    setWeightUnit(unit);
-    await saveSettings({ ...current, weightUnit: unit });
-    if (Platform.OS !== "web")
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      const current = await loadSettings();
+      await saveSettings({ ...current, weightUnit: unit });
+      setWeightUnit(unit);
+      hapticTap();
+    } catch {
+      showSettingsSaveError();
+    }
   }
 
   async function chooseLanguage(nextLanguage: AppLanguage) {
-    await setLanguage(nextLanguage);
-    if (Platform.OS !== "web")
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await setLanguage(nextLanguage);
+      hapticTap();
+    } catch {
+      showSettingsSaveError();
+    }
+  }
+
+  function showSettingsSaveError() {
+    hapticWarning();
+    Alert.alert(
+      t(
+        "Einstellung nicht gespeichert",
+        "Setting not saved",
+        "Nie zapisano ustawienia",
+      ),
+      t(
+        "Bitte versuche es erneut. Deine bisherige Einstellung bleibt erhalten.",
+        "Please try again. Your previous setting remains unchanged.",
+        "Spróbuj ponownie. Poprzednie ustawienie pozostaje bez zmian.",
+      ),
+    );
   }
 
   async function exportData() {
     if (backupBusy) return;
+    hapticAction();
     setBackupBusy(true);
     try {
       const fileName = await createBackup();
+      hapticSuccess();
       Alert.alert(
         t("Backup erstellt", "Backup created"),
         t(
@@ -92,6 +121,7 @@ export default function SettingsScreen() {
         ),
       );
     } catch {
+      hapticWarning();
       Alert.alert(
         t("Backup nicht möglich", "Could not create backup"),
         t(
@@ -106,10 +136,14 @@ export default function SettingsScreen() {
 
   async function importData() {
     if (backupBusy) return;
+    hapticAction();
     setBackupBusy(true);
     try {
       const backup = await pickBackup();
-      if (!backup) return;
+      if (!backup) {
+        setBackupBusy(false);
+        return;
+      }
       Alert.alert(
         t("Backup wiederherstellen?", "Restore backup?"),
         t(
@@ -117,7 +151,14 @@ export default function SettingsScreen() {
           "Your current local data will be replaced with the contents of this file.",
         ),
         [
-          { text: t("Abbrechen", "Cancel"), style: "cancel" },
+          {
+            text: t("Abbrechen", "Cancel"),
+            style: "cancel",
+            onPress: () => {
+              hapticTap();
+              setBackupBusy(false);
+            },
+          },
           {
             text: t("Wiederherstellen", "Restore"),
             onPress: async () => {
@@ -129,6 +170,7 @@ export default function SettingsScreen() {
                     ? savedLanguage
                     : "de";
                 await setLanguage(restoredLanguage);
+                hapticSuccess();
                 router.replace("/");
                 Alert.alert(
                   t("Backup geladen", "Backup restored"),
@@ -138,6 +180,7 @@ export default function SettingsScreen() {
                   ),
                 );
               } catch {
+                hapticWarning();
                 Alert.alert(
                   t("Wiederherstellung fehlgeschlagen", "Restore failed"),
                   t(
@@ -145,12 +188,20 @@ export default function SettingsScreen() {
                     "The data could not be restored.",
                   ),
                 );
+              } finally {
+                setBackupBusy(false);
               }
             },
           },
         ],
+        {
+          cancelable: true,
+          onDismiss: () => setBackupBusy(false),
+        },
       );
     } catch {
+      setBackupBusy(false);
+      hapticWarning();
       Alert.alert(
         t("Ungültige Backup-Datei", "Invalid backup file"),
         t(
@@ -158,12 +209,11 @@ export default function SettingsScreen() {
           "Please select a valid Zaymax backup file.",
         ),
       );
-    } finally {
-      setBackupBusy(false);
     }
   }
 
   function clearData() {
+    hapticWarning();
     Alert.alert(
       t("Alle Daten löschen?", "Delete all data?"),
       t(
@@ -176,20 +226,37 @@ export default function SettingsScreen() {
           text: t("Löschen", "Delete"),
           style: "destructive",
           onPress: async () => {
-            const allKeys = await AsyncStorage.getAllKeys();
-            const zaymaxKeys = allKeys.filter((key) =>
-              key.startsWith("zaymax."),
-            );
-            if (zaymaxKeys.length) await AsyncStorage.multiRemove(zaymaxKeys);
-            await setLanguage("de");
-            Alert.alert(
-              t("Erledigt", "Done"),
-              t(
-                "Deine lokalen Daten wurden gelöscht.",
-                "Your local data has been deleted.",
-              ),
-            );
-            router.replace("/");
+            try {
+              const allKeys = await AsyncStorage.getAllKeys();
+              const zaymaxKeys = allKeys.filter((key) =>
+                key.startsWith("zaymax."),
+              );
+              if (zaymaxKeys.length) await AsyncStorage.multiRemove(zaymaxKeys);
+              await setLanguage("de");
+              hapticSuccess();
+              Alert.alert(
+                t("Erledigt", "Done"),
+                t(
+                  "Deine lokalen Daten wurden gelöscht.",
+                  "Your local data has been deleted.",
+                ),
+              );
+              router.replace("/");
+            } catch {
+              hapticWarning();
+              Alert.alert(
+                t(
+                  "Daten nicht vollständig gelöscht",
+                  "Data not fully deleted",
+                  "Dane nie zostały całkowicie usunięte",
+                ),
+                t(
+                  "Bitte versuche es erneut.",
+                  "Please try again.",
+                  "Spróbuj ponownie.",
+                ),
+              );
+            }
           },
         },
       ],
@@ -222,7 +289,10 @@ export default function SettingsScreen() {
 
         <Pressable
           accessibilityLabel={t("Zurück zu Heute", "Back to Today")}
-          onPress={() => router.replace("/")}
+          onPress={() => {
+            hapticTap();
+            router.replace("/");
+          }}
           style={({ pressed }) => [
             {
               marginBottom: 16,
@@ -463,7 +533,10 @@ export default function SettingsScreen() {
             "Datenschutz und Hilfe öffnen",
             "Open privacy and help",
           )}
-          onPress={() => router.push("/privacy" as Href)}
+          onPress={() => {
+            hapticTap();
+            router.push("/privacy" as Href);
+          }}
           style={({ pressed }) => [
             {
               marginTop: 14,

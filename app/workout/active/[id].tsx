@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,7 +9,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Animated, {
   FadeInDown,
@@ -27,17 +25,15 @@ import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import {
-  clearActiveSession,
   completedValuesForTemplate,
   displayWeight,
+  finalizeWorkoutStorage,
   gainsForSet,
   loadActiveSession,
   loadSettings,
   loadWorkoutHistory,
   loadWorkouts,
   saveActiveSession,
-  saveWorkoutHistory,
-  saveWorkouts,
   setValuesForExercise,
   toKg,
   uid,
@@ -50,6 +46,13 @@ import {
   type WorkoutHistoryEntry,
 } from "@/lib/workouts";
 import { useColors } from "@/hooks/use-colors";
+import {
+  hapticAction,
+  hapticSelection,
+  hapticSuccess,
+  hapticTap,
+  hapticWarning,
+} from "@/lib/haptics";
 import { useLanguage, usesDecimalComma } from "@/lib/i18n";
 import {
   calculateWorkoutDurationSeconds,
@@ -123,15 +126,18 @@ export default function ActiveWorkoutScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [session, setSession] = useState<ActiveSession | null>(null);
+  const [loadIssue, setLoadIssue] = useState<"missing" | "failed" | null>(null);
   const [timerRunning, setTimerRunning] = useState(false);
   const [weightUnit, setWeightUnit] = useState<WeightUnit>("kg");
   const [effortPromptVisible, setEffortPromptVisible] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const finishingRef = useRef(false);
   const [completionSummary, setCompletionSummary] =
     useState<CompletionSummary | null>(null);
   const [improvement, setImprovement] = useState<Improvement | null>(null);
   const improvementTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const improvementSequence = useRef(0);
+  const saveWarningShown = useRef(false);
   const goldFlash = useSharedValue(0);
   const goldStyle = useAnimatedStyle(() => ({ opacity: goldFlash.value }));
   const progressFill = useSharedValue(0);
@@ -140,78 +146,99 @@ export default function ActiveWorkoutScreen() {
   }));
 
   useEffect(() => {
+    let mounted = true;
     void (async () => {
-      const [allWorkouts, existing, settings, history] = await Promise.all([
-        loadWorkouts(),
-        loadActiveSession(),
-        loadSettings(),
-        loadWorkoutHistory(),
-      ]);
-      const found = allWorkouts.find((item) => item.id === id);
-      if (!found) return;
-      const canResume = existing?.workoutId === id;
-      const openedAt = new Date().toISOString();
-      const previousWorkout = history.find((entry) => entry.workoutId === id);
-      const initial: ActiveSession = {
-        workoutId: id!,
-        startedAt: canResume
-          ? normalizeWorkoutStartedAt(existing.startedAt, openedAt)
-          : openedAt,
-        completedSets: {},
-        setValues: {},
-        baselineSetValues: {},
-        restSeconds: settings.restSeconds || DEFAULT_REST,
-        restRemaining: canResume ? (existing.restRemaining ?? 0) : 0,
-      };
+      try {
+        const [allWorkouts, existing, settings, history] = await Promise.all([
+          loadWorkouts(),
+          loadActiveSession(),
+          loadSettings(),
+          loadWorkoutHistory(),
+        ]);
+        const found = allWorkouts.find((item) => item.id === id);
+        if (!found) {
+          if (mounted) setLoadIssue("missing");
+          return;
+        }
+        const canResume = existing?.workoutId === id;
+        const openedAt = new Date().toISOString();
+        const previousWorkout = history.find((entry) => entry.workoutId === id);
+        const initial: ActiveSession = {
+          workoutId: id!,
+          startedAt: canResume
+            ? normalizeWorkoutStartedAt(existing.startedAt, openedAt)
+            : openedAt,
+          completedSets: {},
+          setValues: {},
+          baselineSetValues: {},
+          restSeconds: settings.restSeconds || DEFAULT_REST,
+          restRemaining: canResume ? (existing.restRemaining ?? 0) : 0,
+        };
 
-      found.exercises.forEach((exercise) => {
-        const templateValues = setValuesForExercise(exercise);
-        const resumedValues = canResume
-          ? existing.setValues?.[exercise.id]
-          : undefined;
-        const values = (
-          resumedValues?.length ? resumedValues : templateValues
-        ).map((value) => ({ ...value }));
-        const resumedBaseline = canResume
-          ? existing.baselineSetValues?.[exercise.id]
-          : undefined;
-        const previousExercise = previousWorkout?.exercises.find(
-          (item) =>
-            item.exerciseId === exercise.id ||
-            item.name.trim().toLocaleLowerCase("de-DE") ===
-              exercise.name.trim().toLocaleLowerCase("de-DE"),
-        );
-        const baseline = values.map((value, setIndex) => {
-          const historicalSet = previousExercise?.sets.find(
-            (set) => set.setNumber === setIndex + 1,
-          );
-          const historicalValue = historicalSet
-            ? {
-                reps: historicalSet.reps,
-                weightKg: historicalSet.weightKg ?? null,
-              }
+        found.exercises.forEach((exercise) => {
+          const templateValues = setValuesForExercise(exercise);
+          const resumedValues = canResume
+            ? existing.setValues?.[exercise.id]
             : undefined;
-          return {
-            ...((canResume ? resumedBaseline?.[setIndex] : historicalValue) ??
+          const valueCount =
+            canResume && resumedValues?.length
+              ? Math.min(
+                  20,
+                  Math.max(resumedValues.length, templateValues.length),
+                )
+              : templateValues.length;
+          const values = Array.from({ length: valueCount }, (_, setIndex) => ({
+            ...(resumedValues?.[setIndex] ??
               templateValues[setIndex] ??
-              value),
-          };
+              resumedValues?.at(-1) ?? { reps: 10, weightKg: null }),
+          }));
+          const resumedBaseline = canResume
+            ? existing.baselineSetValues?.[exercise.id]
+            : undefined;
+          const previousExercise = previousWorkout?.exercises.find(
+            (item) =>
+              item.exerciseId === exercise.id ||
+              item.name.trim().toLocaleLowerCase("de-DE") ===
+                exercise.name.trim().toLocaleLowerCase("de-DE"),
+          );
+          const baseline = values.map((value, setIndex) => {
+            const historicalSet = previousExercise?.sets.find(
+              (set) => set.setNumber === setIndex + 1,
+            );
+            const historicalValue = historicalSet
+              ? {
+                  reps: historicalSet.reps,
+                  weightKg: historicalSet.weightKg ?? null,
+                }
+              : undefined;
+            return {
+              ...((canResume ? resumedBaseline?.[setIndex] : historicalValue) ??
+                templateValues[setIndex] ??
+                value),
+            };
+          });
+          const savedChecks = canResume
+            ? (existing.completedSets?.[exercise.id] ?? [])
+            : [];
+          initial.setValues[exercise.id] = values;
+          initial.baselineSetValues[exercise.id] = baseline;
+          initial.completedSets[exercise.id] = values.map(
+            (_, setIndex) => savedChecks[setIndex] ?? false,
+          );
         });
-        const savedChecks = canResume
-          ? (existing.completedSets?.[exercise.id] ?? [])
-          : [];
-        initial.setValues[exercise.id] = values;
-        initial.baselineSetValues[exercise.id] = baseline;
-        initial.completedSets[exercise.id] = values.map(
-          (_, setIndex) => savedChecks[setIndex] ?? false,
-        );
-      });
 
-      setWorkout(found);
-      setWeightUnit(settings.weightUnit);
-      setSession(initial);
-      await saveActiveSession(initial);
+        await saveActiveSession(initial);
+        if (!mounted) return;
+        setWorkout(found);
+        setWeightUnit(settings.weightUnit);
+        setSession(initial);
+      } catch {
+        if (mounted) setLoadIssue("failed");
+      }
     })();
+    return () => {
+      mounted = false;
+    };
   }, [id]);
 
   useEffect(
@@ -225,10 +252,7 @@ export default function ActiveWorkoutScreen() {
   useEffect(() => {
     if (timerRunning && restRemaining === 0) {
       setTimerRunning(false);
-      if (Platform.OS !== "web")
-        void Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Warning,
-        );
+      hapticWarning();
       return;
     }
     if (!timerRunning || !restRemaining) return;
@@ -246,8 +270,24 @@ export default function ActiveWorkoutScreen() {
   }, [timerRunning, restRemaining]);
 
   useEffect(() => {
-    if (session) void saveActiveSession(session);
-  }, [session]);
+    if (!session) return;
+    void saveActiveSession(session).catch(() => {
+      if (saveWarningShown.current) return;
+      saveWarningShown.current = true;
+      Alert.alert(
+        t(
+          "Training konnte nicht zwischengespeichert werden",
+          "Workout could not be saved temporarily",
+          "Nie udało się tymczasowo zapisać treningu",
+        ),
+        t(
+          "Lasse das Training geöffnet und versuche es gleich erneut.",
+          "Keep the workout open and try again shortly.",
+          "Pozostaw trening otwarty i spróbuj ponownie za chwilę.",
+        ),
+      );
+    });
+  }, [session, t]);
 
   const completedCount = useMemo(
     () =>
@@ -318,8 +358,7 @@ export default function ActiveWorkoutScreen() {
     );
     if (improvementTimer.current) clearTimeout(improvementTimer.current);
     improvementTimer.current = setTimeout(() => setImprovement(null), 1400);
-    if (Platform.OS !== "web")
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    hapticSuccess();
   }
 
   function changeReps(exerciseId: string, setIndex: number, reps: number) {
@@ -391,8 +430,7 @@ export default function ActiveWorkoutScreen() {
         },
       };
     });
-    if (Platform.OS !== "web")
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticTap();
   }
 
   function removeSet(exerciseId: string) {
@@ -418,13 +456,11 @@ export default function ActiveWorkoutScreen() {
         },
       };
     });
-    if (Platform.OS !== "web")
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticTap();
   }
 
   function toggleSet(exerciseId: string, setIndex: number) {
-    if (Platform.OS !== "web")
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticTap();
     const willBeChecked = !(
       session?.completedSets[exerciseId]?.[setIndex] ?? false
     );
@@ -444,6 +480,7 @@ export default function ActiveWorkoutScreen() {
   }
 
   function startRest() {
+    hapticTap();
     setSession((current) =>
       current ? { ...current, restRemaining: current.restSeconds } : current,
     );
@@ -451,6 +488,7 @@ export default function ActiveWorkoutScreen() {
   }
 
   function resetRest() {
+    hapticSelection();
     setTimerRunning(false);
     setSession((current) =>
       current ? { ...current, restRemaining: 0 } : current,
@@ -459,6 +497,7 @@ export default function ActiveWorkoutScreen() {
 
   function finish() {
     if (!workout || !session) return;
+    hapticAction();
     if (completedCount < totalSets) {
       const missing = totalSets - completedCount;
       Alert.alert(
@@ -482,150 +521,221 @@ export default function ActiveWorkoutScreen() {
   }
 
   async function completeWorkout(effort: WorkoutEffort) {
-    if (!workout || !session || finishing) return;
+    if (!workout || !session || finishingRef.current) return;
+    finishingRef.current = true;
     setFinishing(true);
-    const completedAt = new Date().toISOString();
-    const [all, history] = await Promise.all([
-      loadWorkouts(),
-      loadWorkoutHistory(),
-    ]);
-    const historyExercises = workout.exercises
-      .map((exercise) => {
-        const values = session.setValues[exercise.id] ?? [];
-        const previousSets = history.flatMap((entry) =>
-          entry.exercises
+    try {
+      const completedAt = new Date().toISOString();
+      const [all, history] = await Promise.all([
+        loadWorkouts(),
+        loadWorkoutHistory(),
+      ]);
+      const historyExercises = workout.exercises
+        .map((exercise) => {
+          const values = session.setValues[exercise.id] ?? [];
+          const previousSets = history.flatMap((entry) =>
+            entry.exercises
+              .filter(
+                (item) =>
+                  item.exerciseId === exercise.id ||
+                  item.name.trim().toLocaleLowerCase("de-DE") ===
+                    exercise.name.trim().toLocaleLowerCase("de-DE"),
+              )
+              .flatMap((item) => item.sets),
+          );
+          const bestReps = Math.max(0, ...previousSets.map((set) => set.reps));
+          const bestWeightKg = Math.max(
+            0,
+            ...previousSets.map((set) => set.weightKg ?? 0),
+          );
+          const completedIndexes = values
+            .map((_, setIndex) => setIndex)
             .filter(
-              (item) =>
-                item.exerciseId === exercise.id ||
-                item.name.trim().toLocaleLowerCase("de-DE") ===
-                  exercise.name.trim().toLocaleLowerCase("de-DE"),
-            )
-            .flatMap((item) => item.sets),
-        );
-        const bestReps = Math.max(0, ...previousSets.map((set) => set.reps));
-        const bestWeightKg = Math.max(
-          0,
-          ...previousSets.map((set) => set.weightKg ?? 0),
-        );
-        const completedIndexes = values
-          .map((_, setIndex) => setIndex)
-          .filter((setIndex) => session.completedSets[exercise.id]?.[setIndex]);
-        const currentBestReps = Math.max(
-          0,
-          ...completedIndexes.map((setIndex) => values[setIndex].reps),
-        );
-        const currentBestWeightKg = Math.max(
-          0,
-          ...completedIndexes.map((setIndex) => values[setIndex].weightKg ?? 0),
-        );
-        const repsBestIndex = completedIndexes.find(
-          (setIndex) => values[setIndex].reps === currentBestReps,
-        );
-        const weightBestIndex = completedIndexes.find(
-          (setIndex) =>
-            (values[setIndex].weightKg ?? 0) === currentBestWeightKg,
-        );
-        return {
-          exerciseId: exercise.id,
-          name: exercise.name,
-          sets: values.flatMap((value, setIndex) => {
-            if (!session.completedSets[exercise.id]?.[setIndex]) return [];
-            const baseline =
-              session.baselineSetValues[exercise.id]?.[setIndex] ?? value;
-            const gains = gainsForSet(value, baseline);
-            return [
-              {
-                setNumber: setIndex + 1,
-                reps: value.reps,
-                weightKg: value.weightKg ?? undefined,
-                repsGain: gains.repsGain || undefined,
-                weightGainKg: gains.weightGainKg || undefined,
-                repsPersonalBest:
-                  setIndex === repsBestIndex && currentBestReps > bestReps,
-                weightPersonalBest:
-                  setIndex === weightBestIndex &&
-                  currentBestWeightKg > bestWeightKg,
-              },
-            ];
-          }),
-        };
-      })
-      .filter((exercise) => exercise.sets.length > 0);
-    const completedHistorySets = historyExercises.flatMap(
-      (exercise) => exercise.sets,
-    );
-    const durationSeconds = calculateWorkoutDurationSeconds(
-      session.startedAt,
-      completedAt,
-    );
-    const totalVolumeKg = completedHistorySets.reduce(
-      (sum, set) => sum + set.reps * (set.weightKg ?? 0),
-      0,
-    );
-    const improvementCount = completedHistorySets.filter(
-      (set) => set.repsGain || set.weightGainKg,
-    ).length;
-    const personalBestCount = completedHistorySets.reduce(
-      (sum, set) =>
-        sum +
-        Number(Boolean(set.repsPersonalBest)) +
-        Number(Boolean(set.weightPersonalBest)),
-      0,
-    );
-    const historyEntry: WorkoutHistoryEntry = {
-      id: uid(),
-      workoutId: workout.id,
-      workoutTitle: workout.title,
-      startedAt: session.startedAt,
-      completedAt,
-      durationSeconds,
-      totalVolumeKg,
-      completedSetCount: completedHistorySets.length,
-      improvementCount,
-      personalBestCount,
-      effort,
-      exercises: historyExercises,
-    };
-    const updatedWorkouts = all.map((item) => {
-      if (item.id !== workout.id) return item;
-      return {
-        ...item,
-        completedAt,
-        updatedAt: completedAt,
-        exercises: item.exercises.map((exercise) => {
-          const values =
-            session.setValues[exercise.id] ?? setValuesForExercise(exercise);
-          const completedValues = completedValuesForTemplate(
-            exercise,
-            values,
-            session.completedSets[exercise.id] ?? [],
+              (setIndex) => session.completedSets[exercise.id]?.[setIndex],
+            );
+          const currentBestReps = Math.max(
+            0,
+            ...completedIndexes.map((setIndex) => values[setIndex].reps),
+          );
+          const currentBestWeightKg = Math.max(
+            0,
+            ...completedIndexes.map(
+              (setIndex) => values[setIndex].weightKg ?? 0,
+            ),
+          );
+          const repsBestIndex = completedIndexes.find(
+            (setIndex) => values[setIndex].reps === currentBestReps,
+          );
+          const weightBestIndex = completedIndexes.find(
+            (setIndex) =>
+              (values[setIndex].weightKg ?? 0) === currentBestWeightKg,
           );
           return {
-            ...exercise,
-            sets: completedValues.length,
-            reps: completedValues[0]?.reps ?? exercise.reps,
-            repsPerSet: completedValues.map((value) => value.reps),
-            weightKg: completedValues[0]?.weightKg ?? undefined,
-            weightsPerSetKg: completedValues.map((value) => value.weightKg),
+            exerciseId: exercise.id,
+            name: exercise.name,
+            sets: values.flatMap((value, setIndex) => {
+              if (!session.completedSets[exercise.id]?.[setIndex]) return [];
+              const baseline =
+                session.baselineSetValues[exercise.id]?.[setIndex] ?? value;
+              const gains = gainsForSet(value, baseline);
+              return [
+                {
+                  setNumber: setIndex + 1,
+                  reps: value.reps,
+                  weightKg: value.weightKg ?? undefined,
+                  repsGain: gains.repsGain || undefined,
+                  weightGainKg: gains.weightGainKg || undefined,
+                  repsPersonalBest:
+                    setIndex === repsBestIndex && currentBestReps > bestReps,
+                  weightPersonalBest:
+                    setIndex === weightBestIndex &&
+                    currentBestWeightKg > bestWeightKg,
+                },
+              ];
+            }),
           };
-        }),
+        })
+        .filter((exercise) => exercise.sets.length > 0);
+      const completedHistorySets = historyExercises.flatMap(
+        (exercise) => exercise.sets,
+      );
+      const durationSeconds = calculateWorkoutDurationSeconds(
+        session.startedAt,
+        completedAt,
+      );
+      const totalVolumeKg = completedHistorySets.reduce(
+        (sum, set) => sum + set.reps * (set.weightKg ?? 0),
+        0,
+      );
+      const improvementCount = completedHistorySets.filter(
+        (set) => set.repsGain || set.weightGainKg,
+      ).length;
+      const personalBestCount = completedHistorySets.reduce(
+        (sum, set) =>
+          sum +
+          Number(Boolean(set.repsPersonalBest)) +
+          Number(Boolean(set.weightPersonalBest)),
+        0,
+      );
+      const historyEntry: WorkoutHistoryEntry = {
+        id: uid(),
+        workoutId: workout.id,
+        workoutTitle: workout.title,
+        startedAt: session.startedAt,
+        completedAt,
+        durationSeconds,
+        totalVolumeKg,
+        completedSetCount: completedHistorySets.length,
+        improvementCount,
+        personalBestCount,
+        effort,
+        exercises: historyExercises,
       };
-    });
-    await Promise.all([
-      saveWorkouts(updatedWorkouts),
-      saveWorkoutHistory([historyEntry, ...history]),
-    ]);
-    await clearActiveSession();
-    setEffortPromptVisible(false);
-    setFinishing(false);
-    setCompletionSummary({
-      durationSeconds,
-      completedSets: completedHistorySets.length,
-      totalVolumeKg,
-      improvementCount,
-      personalBestCount,
-      effort,
-    });
+      const updatedWorkouts = all.map((item) => {
+        if (item.id !== workout.id) return item;
+        return {
+          ...item,
+          completedAt,
+          updatedAt: completedAt,
+          exercises: item.exercises.map((exercise) => {
+            const values =
+              session.setValues[exercise.id] ?? setValuesForExercise(exercise);
+            const completedValues = completedValuesForTemplate(
+              exercise,
+              values,
+              session.completedSets[exercise.id] ?? [],
+            );
+            return {
+              ...exercise,
+              sets: completedValues.length,
+              reps: completedValues[0]?.reps ?? exercise.reps,
+              repsPerSet: completedValues.map((value) => value.reps),
+              weightKg: completedValues[0]?.weightKg ?? undefined,
+              weightsPerSetKg: completedValues.map((value) => value.weightKg),
+            };
+          }),
+        };
+      });
+      await finalizeWorkoutStorage(updatedWorkouts, [historyEntry, ...history]);
+      setEffortPromptVisible(false);
+      setCompletionSummary({
+        durationSeconds,
+        completedSets: completedHistorySets.length,
+        totalVolumeKg,
+        improvementCount,
+        personalBestCount,
+        effort,
+      });
+      hapticSuccess();
+    } catch {
+      Alert.alert(
+        t(
+          "Training konnte nicht abgeschlossen werden",
+          "Workout could not be completed",
+          "Nie udało się zakończyć treningu",
+        ),
+        t(
+          "Dein Training bleibt geöffnet. Bitte versuche das Speichern erneut.",
+          "Your workout will remain open. Please try saving it again.",
+          "Trening pozostanie otwarty. Spróbuj zapisać go ponownie.",
+        ),
+      );
+    } finally {
+      finishingRef.current = false;
+      setFinishing(false);
+    }
+  }
+
+  if (loadIssue) {
+    return (
+      <ScreenContainer className="items-center justify-center px-7">
+        <IconSymbol
+          name="exclamationmark.triangle.fill"
+          size={32}
+          color={colors.muted}
+        />
+        <Text className="mt-4 text-center text-2xl font-black text-foreground">
+          {loadIssue === "missing"
+            ? t(
+                "Workout nicht gefunden",
+                "Workout not found",
+                "Nie znaleziono treningu",
+              )
+            : t(
+                "Training konnte nicht geladen werden",
+                "Workout could not be loaded",
+                "Nie udało się wczytać treningu",
+              )}
+        </Text>
+        <Text className="mt-2 text-center text-sm leading-5 text-muted">
+          {t(
+            "Kehre zur Startseite zurück und öffne das Workout erneut.",
+            "Return to the home screen and open the workout again.",
+            "Wróć do ekranu głównego i ponownie otwórz trening.",
+          )}
+        </Text>
+        <Pressable
+          onPress={() => {
+            hapticTap();
+            router.replace("/");
+          }}
+          style={({ pressed }) => ({
+            marginTop: 20,
+            minWidth: 190,
+            alignItems: "center",
+            borderRadius: ZAYMAX_DESIGN.radius.round,
+            backgroundColor: colors.primary,
+            paddingVertical: 14,
+            paddingHorizontal: 20,
+            opacity: pressed ? 0.75 : 1,
+          })}
+        >
+          <Text className="font-black text-background">
+            {t("Zur Startseite", "Go to home", "Wróć do strony głównej")}
+          </Text>
+        </Pressable>
+      </ScreenContainer>
+    );
   }
 
   if (!workout || !session) {
@@ -649,7 +759,10 @@ export default function ActiveWorkoutScreen() {
           <ZaymaxWatermark />
           <Pressable
             accessibilityLabel={t("Zurück", "Back")}
-            onPress={() => router.back()}
+            onPress={() => {
+              hapticTap();
+              router.back();
+            }}
             style={({ pressed }) => [
               {
                 padding: 8,
@@ -680,7 +793,7 @@ export default function ActiveWorkoutScreen() {
           className="bg-surface p-5"
           style={{
             borderWidth: 1,
-            borderColor: colors.border,
+            borderColor: `${colors.primary}35`,
             borderRadius: ZAYMAX_DESIGN.radius.card,
           }}
         >
@@ -782,9 +895,14 @@ export default function ActiveWorkoutScreen() {
                     ? t("Timer pausieren", "Pause timer")
                     : t("Timer starten", "Start timer")
                 }
-                onPress={
-                  timerRunning ? () => setTimerRunning(false) : startRest
-                }
+                onPress={() => {
+                  if (timerRunning) {
+                    hapticTap();
+                    setTimerRunning(false);
+                  } else {
+                    startRest();
+                  }
+                }}
                 style={({ pressed }) => [
                   {
                     width: 46,
@@ -814,7 +932,7 @@ export default function ActiveWorkoutScreen() {
                     justifyContent: "center",
                     borderRadius: ZAYMAX_DESIGN.radius.round,
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: `${colors.primary}70`,
                     opacity: pressed ? 0.65 : 1,
                   },
                 ]}
@@ -822,7 +940,7 @@ export default function ActiveWorkoutScreen() {
                 <IconSymbol
                   name="arrow.counterclockwise"
                   size={20}
-                  color={colors.foreground}
+                  color={colors.primary}
                 />
               </Pressable>
             </View>
@@ -902,7 +1020,7 @@ export default function ActiveWorkoutScreen() {
                         justifyContent: "center",
                         borderRadius: ZAYMAX_DESIGN.radius.round,
                         borderWidth: 1,
-                        borderColor: colors.foreground,
+                        borderColor: colors.primary,
                         opacity: values.length >= 20 ? 0.3 : pressed ? 0.55 : 1,
                       },
                     ]}
@@ -1181,7 +1299,10 @@ export default function ActiveWorkoutScreen() {
                 <Pressable
                   key={option.value}
                   disabled={finishing}
-                  onPress={() => void completeWorkout(option.value)}
+                  onPress={() => {
+                    hapticSelection();
+                    void completeWorkout(option.value);
+                  }}
                   style={({ pressed }) => [
                     {
                       minHeight: 56,
@@ -1208,7 +1329,10 @@ export default function ActiveWorkoutScreen() {
             </View>
             <Pressable
               disabled={finishing}
-              onPress={() => setEffortPromptVisible(false)}
+              onPress={() => {
+                hapticTap();
+                setEffortPromptVisible(false);
+              }}
               style={({ pressed }) => [
                 {
                   marginTop: 14,
@@ -1339,7 +1463,10 @@ export default function ActiveWorkoutScreen() {
                   "Zusammenfassung schließen",
                   "Close summary",
                 )}
-                onPress={() => router.replace("/")}
+                onPress={() => {
+                  hapticTap();
+                  router.replace("/");
+                }}
                 style={({ pressed }) => [
                   {
                     marginTop: 18,
@@ -1553,7 +1680,10 @@ function NumberField({
           <View style={{ flexDirection: "row", gap: 5 }}>
             <Pressable
               accessibilityLabel={`${label} ${t("verringern", "decrease")}`}
-              onPress={onDecrease}
+              onPress={() => {
+                hapticSelection();
+                onDecrease();
+              }}
               style={({ pressed }) => [
                 {
                   width: 30,
@@ -1562,7 +1692,7 @@ function NumberField({
                   justifyContent: "center",
                   borderRadius: ZAYMAX_DESIGN.radius.round,
                   borderWidth: 1,
-                  borderColor: colors.border,
+                  borderColor: `${colors.primary}55`,
                   opacity: pressed ? 0.55 : 1,
                 },
               ]}
@@ -1571,7 +1701,10 @@ function NumberField({
             </Pressable>
             <Pressable
               accessibilityLabel={`${label} ${t("erhöhen", "increase")}`}
-              onPress={onIncrease}
+              onPress={() => {
+                hapticSelection();
+                onIncrease();
+              }}
               style={({ pressed }) => [
                 {
                   width: 30,
@@ -1580,7 +1713,7 @@ function NumberField({
                   justifyContent: "center",
                   borderRadius: ZAYMAX_DESIGN.radius.round,
                   borderWidth: 1,
-                  borderColor: colors.border,
+                  borderColor: `${colors.primary}55`,
                   opacity: pressed ? 0.55 : 1,
                 },
               ]}

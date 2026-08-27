@@ -17,7 +17,9 @@ import {
   type WorkoutHistoryEntry,
 } from "@/lib/workouts";
 import { useColors } from "@/hooks/use-colors";
+import { hapticTap } from "@/lib/haptics";
 import { useLanguage, type AppLanguage } from "@/lib/i18n";
+import { formatWorkoutDuration } from "@/lib/workout-duration";
 
 const GOLD = ZAYMAX_DESIGN.colors.gold;
 
@@ -39,7 +41,9 @@ export default function TrainingHistoryScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void refresh();
+      void refresh().catch(() => {
+        // Keep the last rendered history if local storage is temporarily unavailable.
+      });
     }, [refresh]),
   );
 
@@ -70,7 +74,10 @@ export default function TrainingHistoryScreen() {
               <ZaymaxWatermark />
               <Pressable
                 accessibilityLabel={t("Zurück", "Back")}
-                onPress={() => router.back()}
+                onPress={() => {
+                  hapticTap();
+                  router.back();
+                }}
                 style={({ pressed }) => [
                   {
                     padding: 8,
@@ -104,7 +111,7 @@ export default function TrainingHistoryScreen() {
               <IconSymbol
                 name="book.closed.fill"
                 size={24}
-                color={colors.foreground}
+                color={colors.primary}
               />
             </View>
             {history.length ? (
@@ -398,7 +405,7 @@ function HistoryCard({
       entry.personalBestCount ? (
         <Text className="mt-3 text-xs font-semibold text-muted">
           {entry.durationSeconds
-            ? formatHistoryDuration(entry.durationSeconds, language)
+            ? formatWorkoutDuration(entry.durationSeconds, language)
             : "—"}{" "}
           ·{" "}
           {entry.totalVolumeKg
@@ -421,7 +428,10 @@ function HistoryCard({
                 `Open progress for ${exercise.name}`,
                 `Otwórz postęp dla ćwiczenia ${exercise.name}`,
               )}
-              onPress={() => onOpenExercise(exercise.exerciseId, exercise.name)}
+              onPress={() => {
+                hapticTap();
+                onOpenExercise(exercise.exerciseId, exercise.name);
+              }}
               style={({ pressed }) => [
                 {
                   flexDirection: "row",
@@ -508,13 +518,6 @@ function HistoryCard({
       )}
     </Animated.View>
   );
-}
-
-function formatHistoryDuration(seconds: number, language: AppLanguage) {
-  const minutes = Math.floor(seconds / 60);
-  return minutes
-    ? `${minutes} min`
-    : `${seconds} ${language === "de" ? "Sek." : language === "pl" ? "s" : "sec"}`;
 }
 
 function effortLabel(effort: "leicht" | "gut" | "hart", language: AppLanguage) {

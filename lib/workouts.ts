@@ -9,7 +9,7 @@ export type Exercise = {
   reps: number;
   repsPerSet: number[];
   weightKg?: number;
-  weightsPerSetKg: Array<number | null>;
+  weightsPerSetKg: (number | null)[];
   note?: string;
 };
 export type Workout = {
@@ -69,6 +69,37 @@ const SESSION_KEY = "zaymax.active-session.v1";
 const SETTINGS_KEY = "zaymax.settings.v1";
 const HISTORY_KEY = "zaymax.workout-history.v1";
 
+type UnknownRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function finiteNumber(value: unknown, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function optionalString(value: unknown) {
+  return typeof value === "string" && value ? value : undefined;
+}
+
+function optionalNonNegativeNumber(value: unknown) {
+  if (value === undefined || value === null) return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : undefined;
+}
+
+function uniqueBy<T>(values: T[], keyFor: (value: T) => string) {
+  const seen = new Set<string>();
+  return values.filter((value) => {
+    const key = keyFor(value);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export function repsForSet(
   exercise: Pick<Exercise, "reps" | "repsPerSet">,
   setIndex: number,
@@ -117,8 +148,56 @@ export function resizeWeightsPerSet(
   );
 }
 
-function normalizeExercise(exercise: Exercise): Exercise {
-  const sets = Math.max(0, Math.min(20, Number(exercise.sets) || 0));
+function normalizeExercise(value: unknown): Exercise | null {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== "string" ||
+    !value.id ||
+    typeof value.name !== "string"
+  ) {
+    return null;
+  }
+
+  const rawRepsPerSet = Array.isArray(value.repsPerSet)
+    ? value.repsPerSet.map((reps) =>
+        Math.max(0, Math.min(999, Math.round(finiteNumber(reps)))),
+      )
+    : [];
+  const rawWeightsPerSet = Array.isArray(value.weightsPerSetKg)
+    ? value.weightsPerSetKg.map((weight) => {
+        if (weight === null || weight === undefined || weight === "")
+          return null;
+        const parsed = finiteNumber(weight, -1);
+        return parsed >= 0 ? Math.min(5000, parsed) : null;
+      })
+    : [];
+  const sets = Math.max(
+    1,
+    Math.min(
+      20,
+      Math.round(
+        finiteNumber(
+          value.sets,
+          Math.max(rawRepsPerSet.length, rawWeightsPerSet.length, 1),
+        ),
+      ),
+    ),
+  );
+  const reps = Math.max(
+    0,
+    Math.min(999, Math.round(finiteNumber(value.reps, rawRepsPerSet[0] ?? 10))),
+  );
+  const weight = optionalNonNegativeNumber(value.weightKg);
+  const exercise: Exercise = {
+    id: value.id,
+    name: value.name,
+    sets,
+    reps,
+    repsPerSet: rawRepsPerSet,
+    weightKg: weight === undefined ? undefined : Math.min(5000, weight),
+    weightsPerSetKg: rawWeightsPerSet,
+    note: optionalString(value.note),
+  };
   const repsPerSet = resizeRepsPerSet(exercise, sets);
   const weightsPerSetKg = resizeWeightsPerSet(exercise, sets);
   return {
@@ -128,6 +207,162 @@ function normalizeExercise(exercise: Exercise): Exercise {
     repsPerSet,
     weightKg: weightsPerSetKg[0] ?? undefined,
     weightsPerSetKg,
+  };
+}
+
+function normalizeWorkout(value: unknown): Workout | null {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== "string" ||
+    !value.id ||
+    typeof value.title !== "string" ||
+    !Array.isArray(value.exercises)
+  ) {
+    return null;
+  }
+
+  const exercises = uniqueBy(
+    value.exercises.flatMap((exercise) => {
+      const normalized = normalizeExercise(exercise);
+      return normalized ? [normalized] : [];
+    }),
+    (exercise) => exercise.id,
+  );
+  if (!exercises.length) return null;
+
+  const now = new Date().toISOString();
+  const updatedAt = optionalString(value.updatedAt) ?? now;
+  return {
+    id: value.id,
+    title: value.title,
+    exercises,
+    createdAt: optionalString(value.createdAt) ?? updatedAt,
+    updatedAt,
+    completedAt: optionalString(value.completedAt),
+    lockedAt: optionalString(value.lockedAt),
+  };
+}
+
+function normalizeActiveSetValue(value: unknown): ActiveSetValue | null {
+  if (!isRecord(value)) return null;
+  const reps = Number(value.reps);
+  const weight = value.weightKg;
+  if (!Number.isFinite(reps)) return null;
+  if (
+    weight !== null &&
+    weight !== undefined &&
+    !Number.isFinite(Number(weight))
+  )
+    return null;
+  return {
+    reps: Math.max(0, Math.min(999, Math.round(reps))),
+    weightKg:
+      weight === null || weight === undefined
+        ? null
+        : Math.max(0, Math.min(5000, Number(weight))),
+  };
+}
+
+function normalizeSetValueRecord(value: unknown) {
+  if (!isRecord(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([exerciseId, entries]) => {
+      if (!Array.isArray(entries)) return [];
+      const normalized = entries.slice(0, 20).flatMap((entry) => {
+        const setValue = normalizeActiveSetValue(entry);
+        return setValue ? [setValue] : [];
+      });
+      return normalized.length ? [[exerciseId, normalized]] : [];
+    }),
+  ) as Record<string, ActiveSetValue[]>;
+}
+
+function normalizeCompletedSetRecord(value: unknown) {
+  if (!isRecord(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([exerciseId, entries]) =>
+      Array.isArray(entries)
+        ? [[exerciseId, entries.slice(0, 20).map((entry) => entry === true)]]
+        : [],
+    ),
+  ) as Record<string, boolean[]>;
+}
+
+function normalizeHistorySet(value: unknown): WorkoutHistorySet | null {
+  if (!isRecord(value)) return null;
+  const setNumber = Math.round(Number(value.setNumber));
+  const reps = Math.round(Number(value.reps));
+  if (!Number.isFinite(setNumber) || setNumber < 1 || !Number.isFinite(reps))
+    return null;
+  return {
+    setNumber,
+    reps: Math.max(0, reps),
+    weightKg: optionalNonNegativeNumber(value.weightKg),
+    repsGain: optionalNonNegativeNumber(value.repsGain),
+    weightGainKg: optionalNonNegativeNumber(value.weightGainKg),
+    repsPersonalBest:
+      typeof value.repsPersonalBest === "boolean"
+        ? value.repsPersonalBest
+        : undefined,
+    weightPersonalBest:
+      typeof value.weightPersonalBest === "boolean"
+        ? value.weightPersonalBest
+        : undefined,
+  };
+}
+
+function normalizeHistoryEntry(value: unknown): WorkoutHistoryEntry | null {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== "string" ||
+    !value.id ||
+    typeof value.workoutId !== "string" ||
+    typeof value.workoutTitle !== "string" ||
+    typeof value.completedAt !== "string" ||
+    !Array.isArray(value.exercises)
+  ) {
+    return null;
+  }
+
+  const exercises = value.exercises.flatMap((exercise) => {
+    if (
+      !isRecord(exercise) ||
+      typeof exercise.exerciseId !== "string" ||
+      typeof exercise.name !== "string" ||
+      !Array.isArray(exercise.sets)
+    ) {
+      return [];
+    }
+    return [
+      {
+        exerciseId: exercise.exerciseId,
+        name: exercise.name,
+        sets: exercise.sets.flatMap((set) => {
+          const normalized = normalizeHistorySet(set);
+          return normalized ? [normalized] : [];
+        }),
+      },
+    ];
+  });
+  const effort =
+    value.effort === "leicht" ||
+    value.effort === "gut" ||
+    value.effort === "hart"
+      ? value.effort
+      : undefined;
+  return {
+    id: value.id,
+    workoutId: value.workoutId,
+    workoutTitle: value.workoutTitle,
+    startedAt: optionalString(value.startedAt),
+    completedAt: value.completedAt,
+    durationSeconds: optionalNonNegativeNumber(value.durationSeconds),
+    totalVolumeKg: optionalNonNegativeNumber(value.totalVolumeKg),
+    completedSetCount: optionalNonNegativeNumber(value.completedSetCount),
+    improvementCount: optionalNonNegativeNumber(value.improvementCount),
+    personalBestCount: optionalNonNegativeNumber(value.personalBestCount),
+    effort,
+    exercises,
   };
 }
 
@@ -163,15 +398,15 @@ export async function loadWorkouts(): Promise<Workout[]> {
   const raw = await AsyncStorage.getItem(STORAGE_KEY);
   if (!raw) return [];
   try {
-    const parsed = JSON.parse(raw) as Workout[];
-    return Array.isArray(parsed)
-      ? parsed
-          .map((workout) => ({
-            ...workout,
-            exercises: workout.exercises.map(normalizeExercise),
-          }))
-          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-      : [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return uniqueBy(
+      parsed.flatMap((workout) => {
+        const normalized = normalizeWorkout(workout);
+        return normalized ? [normalized] : [];
+      }),
+      (workout) => workout.id,
+    ).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   } catch {
     return [];
   }
@@ -181,7 +416,35 @@ export async function saveWorkouts(entries: Workout[]) {
 }
 export async function loadActiveSession(): Promise<ActiveSession | null> {
   const raw = await AsyncStorage.getItem(SESSION_KEY);
-  return raw ? (JSON.parse(raw) as ActiveSession) : null;
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      !isRecord(parsed) ||
+      typeof parsed.workoutId !== "string" ||
+      !parsed.workoutId ||
+      typeof parsed.startedAt !== "string"
+    ) {
+      return null;
+    }
+    return {
+      workoutId: parsed.workoutId,
+      startedAt: parsed.startedAt,
+      completedSets: normalizeCompletedSetRecord(parsed.completedSets),
+      setValues: normalizeSetValueRecord(parsed.setValues),
+      baselineSetValues: normalizeSetValueRecord(parsed.baselineSetValues),
+      restSeconds: Math.max(
+        15,
+        Math.min(600, Math.round(finiteNumber(parsed.restSeconds, 90))),
+      ),
+      restRemaining: Math.max(
+        0,
+        Math.min(600, Math.round(finiteNumber(parsed.restRemaining))),
+      ),
+    };
+  } catch {
+    return null;
+  }
 }
 export async function saveActiveSession(session: ActiveSession) {
   await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(session));
@@ -193,10 +456,15 @@ export async function loadWorkoutHistory(): Promise<WorkoutHistoryEntry[]> {
   const raw = await AsyncStorage.getItem(HISTORY_KEY);
   if (!raw) return [];
   try {
-    const parsed = JSON.parse(raw) as WorkoutHistoryEntry[];
-    return Array.isArray(parsed)
-      ? parsed.sort((a, b) => b.completedAt.localeCompare(a.completedAt))
-      : [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return uniqueBy(
+      parsed.flatMap((entry) => {
+        const normalized = normalizeHistoryEntry(entry);
+        return normalized ? [normalized] : [];
+      }),
+      (entry) => entry.id,
+    ).sort((a, b) => b.completedAt.localeCompare(a.completedAt));
   } catch {
     return [];
   }
@@ -204,6 +472,34 @@ export async function loadWorkoutHistory(): Promise<WorkoutHistoryEntry[]> {
 export async function saveWorkoutHistory(entries: WorkoutHistoryEntry[]) {
   await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(entries));
 }
+
+export async function finalizeWorkoutStorage(
+  workouts: Workout[],
+  history: WorkoutHistoryEntry[],
+) {
+  const keys = [STORAGE_KEY, HISTORY_KEY, SESSION_KEY];
+  const previousEntries = await AsyncStorage.multiGet(keys);
+
+  try {
+    await AsyncStorage.multiSet([
+      [STORAGE_KEY, JSON.stringify(workouts)],
+      [HISTORY_KEY, JSON.stringify(history)],
+    ]);
+    await AsyncStorage.removeItem(SESSION_KEY);
+  } catch (error) {
+    try {
+      await AsyncStorage.multiRemove(keys);
+      const rollbackEntries = previousEntries.filter(
+        (entry): entry is [string, string] => entry[1] !== null,
+      );
+      if (rollbackEntries.length) await AsyncStorage.multiSet(rollbackEntries);
+    } catch {
+      // Keep the original write error so the UI reports the useful failure.
+    }
+    throw error;
+  }
+}
+
 export async function loadSettings(): Promise<AppSettings> {
   const raw = await AsyncStorage.getItem(SETTINGS_KEY);
   if (!raw) return { restSeconds: 90, weightUnit: "kg" };
@@ -245,20 +541,24 @@ export function emptyExercise(): Exercise {
   };
 }
 export function formatDate(date: string, locale = "de-DE") {
+  const parsed = new Date(date);
+  if (!Number.isFinite(parsed.getTime())) return "—";
   return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  }).format(new Date(date));
+  }).format(parsed);
 }
 export function formatDateTime(date: string, locale = "de-DE") {
+  const parsed = new Date(date);
+  if (!Number.isFinite(parsed.getTime())) return "—";
   return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(date));
+  }).format(parsed);
 }
 export function exerciseSummary(
   exercise?: Exercise,

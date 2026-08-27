@@ -27,6 +27,10 @@ const config: ExpoConfig = {
       ITSAppUsesNonExemptEncryption: false,
       NSHealthShareUsageDescription: healthReadUsageDescription,
       NSHealthUpdateUsageDescription: healthUpdateUsageDescription,
+      NSAppTransportSecurity: {
+        NSAllowsArbitraryLoads: false,
+        NSAllowsLocalNetworking: true,
+      },
     },
     privacyManifests: {
       NSPrivacyCollectedDataTypes: [],
@@ -59,9 +63,6 @@ const config: ExpoConfig = {
         imageWidth: 200,
         resizeMode: "contain",
         backgroundColor: "#070707",
-        dark: {
-          backgroundColor: "#070707",
-        },
       },
     ],
     [

@@ -17,6 +17,7 @@ import {
   type WorkoutHistoryExercise,
 } from "@/lib/workouts";
 import { useColors } from "@/hooks/use-colors";
+import { hapticTap } from "@/lib/haptics";
 import { useLanguage, type AppLanguage } from "@/lib/i18n";
 
 const GOLD = ZAYMAX_DESIGN.colors.gold;
@@ -79,7 +80,9 @@ export default function ExerciseHistoryScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void refresh();
+      void refresh().catch(() => {
+        // Keep the last rendered progress if local storage is temporarily unavailable.
+      });
     }, [refresh]),
   );
 
@@ -108,7 +111,10 @@ export default function ExerciseHistoryScreen() {
           <ZaymaxWatermark />
           <Pressable
             accessibilityLabel={t("Zurück", "Back")}
-            onPress={() => router.back()}
+            onPress={() => {
+              hapticTap();
+              router.back();
+            }}
             style={({ pressed }) => [
               {
                 padding: 8,
