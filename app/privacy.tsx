@@ -1,4 +1,5 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
+import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
@@ -9,6 +10,7 @@ import { useColors } from "@/hooks/use-colors";
 import { useLanguage } from "@/lib/i18n";
 
 const POLICY_VERSION = "26.08.2026";
+const APP_VERSION = Constants.expoConfig?.version ?? "1.0.2";
 
 export default function PrivacyScreen() {
   const colors = useColors("dark");
@@ -182,7 +184,7 @@ export default function PrivacyScreen() {
 
         <Text className="mt-6 text-center text-xs leading-5 text-muted">
           {t("Stand", "Last updated")}: {POLICY_VERSION}
-          {"\n"}Zaymax 1.0.1
+          {"\n"}Zaymax {APP_VERSION}
         </Text>
       </ScrollView>
     </ScreenContainer>

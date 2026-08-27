@@ -1,11 +1,15 @@
 import type { ExpoConfig } from "expo/config";
 
 const bundleIdentifier = "com.app.zaymax";
+const healthReadUsageDescription =
+  "Zaymax liest deine Schrittzahlen aus Apple Health, um deine Schritte pro Tag und Woche anzuzeigen. / Zaymax reads your Apple Health step count to show your daily and weekly steps. / Zaymax odczytuje liczbę kroków z Apple Health, aby wyświetlać wyniki dzienne i tygodniowe.";
+const healthUpdateUsageDescription =
+  "Zaymax verwendet diese HealthKit-Freigabe ausschließlich für die technische Apple-Health-Verbindung. Die App speichert keine Gesundheitsdaten in Apple Health. / Zaymax uses this HealthKit permission only for the technical Apple Health connection. The app does not save health data to Apple Health. / Zaymax używa tego uprawnienia HealthKit wyłącznie do technicznego połączenia z Apple Health. Aplikacja nie zapisuje danych zdrowotnych w Apple Health.";
 
 const config: ExpoConfig = {
   name: "Zaymax",
   slug: "zaymax",
-  version: "1.0.1",
+  version: "1.0.2",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: "zaymax",
@@ -21,6 +25,8 @@ const config: ExpoConfig = {
     bundleIdentifier,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      NSHealthShareUsageDescription: healthReadUsageDescription,
+      NSHealthUpdateUsageDescription: healthUpdateUsageDescription,
     },
     privacyManifests: {
       NSPrivacyCollectedDataTypes: [],
@@ -70,9 +76,8 @@ const config: ExpoConfig = {
     [
       "@kingstinct/react-native-healthkit",
       {
-        NSHealthShareUsageDescription:
-          "Zaymax liest deine Schrittzahlen aus Apple Health, um deine Schritte pro Tag und Woche anzuzeigen. / Zaymax reads your Apple Health step count to show your daily and weekly steps.",
-        NSHealthUpdateUsageDescription: false,
+        NSHealthShareUsageDescription: healthReadUsageDescription,
+        NSHealthUpdateUsageDescription: healthUpdateUsageDescription,
         background: false,
       },
     ],
