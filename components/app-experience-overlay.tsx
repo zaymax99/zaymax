@@ -3,8 +3,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   AppState,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -21,6 +24,7 @@ import Animated, {
 
 import { ProfileForm } from "@/components/profile-form";
 import { KeyboardDismissButton } from "@/components/keyboard-dismiss-button";
+import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { useColors } from "@/hooks/use-colors";
 import { hapticSuccess, hapticTap, hapticWarning } from "@/lib/haptics";
 import { useLanguage } from "@/lib/i18n";
@@ -32,7 +36,13 @@ import {
   type UserProfile,
 } from "@/lib/profile";
 
-const CONFETTI_COLORS = ["#FF4F81", "#FFD166", "#4FD1C5", "#8B7CFF", "#64B5F6"];
+const CONFETTI_COLORS = [
+  ZAYMAX_DESIGN.colors.gold,
+  ZAYMAX_DESIGN.colors.goldBright,
+  "#F1EFEA",
+  "#96928A",
+  "#4A4843",
+];
 
 export function AppExperienceOverlay() {
   const colors = useColors("dark");
@@ -145,66 +155,76 @@ export function AppExperienceOverlay() {
         animationType="fade"
         onRequestClose={() => void skipOnboarding()}
       >
-        <View style={styles.overlay}>
-          <Animated.View
-            entering={FadeInDown.duration(280)}
-            style={[
-              styles.onboardingCard,
-              {
-                borderColor: colors.border,
-                backgroundColor: colors.surface,
-              },
-            ]}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.overlay}
+        >
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            style={styles.onboardingScroll}
+            contentContainerStyle={styles.onboardingScrollContent}
           >
-            <View style={styles.stepPill}>
+            <Animated.View
+              entering={FadeInDown.duration(280)}
+              style={[
+                styles.onboardingCard,
+                {
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                },
+              ]}
+            >
+              <View style={styles.stepPill}>
+                <Text
+                  style={{
+                    color: colors.background,
+                    fontSize: 10,
+                    fontWeight: "900",
+                  }}
+                >
+                  {t("ZAYMAX START", "ZAYMAX START", "START ZAYMAX")}
+                </Text>
+              </View>
               <Text
-                style={{
-                  color: colors.background,
-                  fontSize: 10,
-                  fontWeight: "900",
-                }}
+                style={[styles.onboardingTitle, { color: colors.foreground }]}
               >
-                {t("ZAYMAX START", "ZAYMAX START", "START ZAYMAX")}
+                {t("Schön, dass du da bist.", "Great to have you here.")}
               </Text>
-            </View>
-            <Text
-              style={[styles.onboardingTitle, { color: colors.foreground }]}
-            >
-              {t("Schön, dass du da bist.", "Great to have you here.")}
-            </Text>
-            <Text style={[styles.onboardingText, { color: colors.muted }]}>
-              {t(
-                "Mit drei Angaben kann Zaymax deinen BMI anzeigen und deinen Geburtstag mit dir feiern.",
-                "With three details, Zaymax can show your BMI and celebrate your birthday with you.",
-              )}
-            </Text>
-            <ProfileForm
-              initialProfile={profile ?? undefined}
-              submitLabel={t("Profil speichern", "Save profile")}
-              onSubmit={(values) => void completeOnboarding(values)}
-            />
-            <Pressable
-              accessibilityLabel={t(
-                "Onboarding überspringen",
-                "Skip onboarding",
-              )}
-              onPress={() => void skipOnboarding()}
-              style={({ pressed }) => ({
-                minHeight: 44,
-                marginTop: 4,
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 999,
-                opacity: pressed ? 0.55 : 1,
-              })}
-            >
-              <Text style={{ color: colors.muted, fontWeight: "700" }}>
-                {t("Jetzt überspringen", "Skip for now")}
+              <Text style={[styles.onboardingText, { color: colors.muted }]}>
+                {t(
+                  "Mit drei Angaben kann Zaymax deinen BMI anzeigen und deinen Geburtstag mit dir feiern.",
+                  "With three details, Zaymax can show your BMI and celebrate your birthday with you.",
+                )}
               </Text>
-            </Pressable>
-          </Animated.View>
+              <ProfileForm
+                initialProfile={profile ?? undefined}
+                submitLabel={t("Profil speichern", "Save profile")}
+                onSubmit={(values) => void completeOnboarding(values)}
+              />
+              <Pressable
+                accessibilityLabel={t(
+                  "Onboarding überspringen",
+                  "Skip onboarding",
+                )}
+                onPress={() => void skipOnboarding()}
+                style={({ pressed }) => ({
+                  minHeight: 44,
+                  marginTop: 4,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: ZAYMAX_DESIGN.radius.round,
+                  opacity: pressed ? 0.55 : 1,
+                })}
+              >
+                <Text style={{ color: colors.muted, fontWeight: "700" }}>
+                  {t("Jetzt überspringen", "Skip for now")}
+                </Text>
+              </Pressable>
+            </Animated.View>
+          </ScrollView>
           <KeyboardDismissButton />
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal
@@ -213,13 +233,18 @@ export function AppExperienceOverlay() {
         animationType="fade"
         onRequestClose={() => setShowBirthday(false)}
       >
-        <View style={[styles.overlay, { backgroundColor: "rgba(7,7,9,0.94)" }]}>
+        <View
+          style={[
+            styles.overlay,
+            { backgroundColor: ZAYMAX_DESIGN.colors.overlay },
+          ]}
+        >
           <BirthdayEffects />
           <Animated.View
             entering={FadeInDown.springify().damping(15)}
             style={styles.birthdayCard}
           >
-            <Text style={styles.birthdayEmoji}>🎂</Text>
+            <Text style={styles.birthdayEmoji}>✦</Text>
             <Text style={styles.birthdayEyebrow}>
               {t(
                 "ZAYMAX FEIERT DICH",
@@ -247,15 +272,15 @@ export function AppExperienceOverlay() {
                 marginTop: 24,
                 alignItems: "center",
                 justifyContent: "center",
-                borderRadius: 999,
-                backgroundColor: "#D8B963",
+                borderRadius: ZAYMAX_DESIGN.radius.round,
+                backgroundColor: ZAYMAX_DESIGN.colors.gold,
                 paddingHorizontal: 28,
                 opacity: pressed ? 0.78 : 1,
               })}
             >
               <Text
                 style={{
-                  color: "#111114",
+                  color: ZAYMAX_DESIGN.colors.background,
                   fontWeight: "900",
                   letterSpacing: 0.8,
                 }}
@@ -276,8 +301,8 @@ function BirthdayEffects() {
       style={[StyleSheet.absoluteFill, { overflow: "hidden" }]}
       pointerEvents="none"
     >
-      {["🎈", "🎈", "🎈", "🎈"].map((balloon, index) => (
-        <FloatingBalloon key={index} index={index} balloon={balloon} />
+      {Array.from({ length: 4 }, (_, index) => (
+        <FloatingBalloon key={index} index={index} />
       ))}
       {Array.from({ length: 22 }, (_, index) => (
         <FallingConfetti key={index} index={index} />
@@ -286,13 +311,7 @@ function BirthdayEffects() {
   );
 }
 
-function FloatingBalloon({
-  index,
-  balloon,
-}: {
-  index: number;
-  balloon: string;
-}) {
+function FloatingBalloon({ index }: { index: number }) {
   const travel = useSharedValue(0);
   useEffect(() => {
     travel.value = withDelay(
@@ -313,20 +332,35 @@ function FloatingBalloon({
     ],
   }));
   return (
-    <Animated.Text
+    <Animated.View
       style={[
         {
           position: "absolute",
           left: index % 2 ? undefined : 15 + index * 18,
           right: index % 2 ? 8 + index * 17 : undefined,
           bottom: 90 + index * 105,
-          fontSize: 52 - index * 3,
+          width: 46 - index * 2,
+          height: 46 - index * 2,
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: ZAYMAX_DESIGN.radius.round,
+          borderWidth: 1,
+          borderColor: ZAYMAX_DESIGN.colors.goldLine,
+          backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
         },
         style,
       ]}
     >
-      {balloon}
-    </Animated.Text>
+      <Text
+        style={{
+          color: ZAYMAX_DESIGN.colors.gold,
+          fontSize: 20,
+          fontWeight: "900",
+        }}
+      >
+        ✦
+      </Text>
+    </Animated.View>
   );
 }
 
@@ -368,21 +402,31 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.9)",
+    backgroundColor: ZAYMAX_DESIGN.colors.overlay,
     padding: 20,
+  },
+  onboardingScroll: {
+    width: "100%",
+  },
+  onboardingScrollContent: {
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
   },
   onboardingCard: {
     width: "100%",
     maxWidth: 460,
     maxHeight: "94%",
-    borderRadius: 30,
+    borderRadius: ZAYMAX_DESIGN.radius.hero,
     borderWidth: 1,
     padding: 22,
+    ...ZAYMAX_DESIGN.shadow,
   },
   stepPill: {
     alignSelf: "flex-start",
-    borderRadius: 999,
-    backgroundColor: "#D8B963",
+    borderRadius: ZAYMAX_DESIGN.radius.round,
+    backgroundColor: ZAYMAX_DESIGN.colors.gold,
     paddingHorizontal: 11,
     paddingVertical: 6,
   },
@@ -400,24 +444,28 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 430,
     alignItems: "center",
-    borderRadius: 34,
+    borderRadius: ZAYMAX_DESIGN.radius.hero,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
-    backgroundColor: "rgba(28,25,38,0.95)",
+    borderColor: ZAYMAX_DESIGN.colors.goldLine,
+    backgroundColor: ZAYMAX_DESIGN.colors.surface,
     paddingHorizontal: 26,
     paddingVertical: 34,
+    ...ZAYMAX_DESIGN.shadow,
   },
-  birthdayEmoji: { fontSize: 58 },
+  birthdayEmoji: {
+    color: ZAYMAX_DESIGN.colors.gold,
+    fontSize: 58,
+  },
   birthdayEyebrow: {
     marginTop: 15,
-    color: "#FFD166",
+    color: ZAYMAX_DESIGN.colors.gold,
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2.4,
   },
   birthdayTitle: {
     marginTop: 14,
-    color: "#FFFFFF",
+    color: "#F1EFEA",
     fontSize: 33,
     fontStyle: "italic",
     fontWeight: "900",
@@ -426,7 +474,7 @@ const styles = StyleSheet.create({
   },
   birthdayWish: {
     marginTop: 9,
-    color: "#D8D4E5",
+    color: "#96928A",
     fontSize: 18,
     fontStyle: "italic",
     textAlign: "center",

@@ -21,6 +21,7 @@ import {
   hapticWarning,
 } from "@/lib/haptics";
 import { createBackup, pickBackup, restoreBackup } from "@/lib/backup";
+import { dismissAllLockScreenReminders } from "@/lib/lock-screen-reminders";
 
 const restOptions = [30, 60, 90, 120, 180];
 const languageOptions: {
@@ -163,6 +164,7 @@ export default function SettingsScreen() {
             text: t("Wiederherstellen", "Restore"),
             onPress: async () => {
               try {
+                await dismissAllLockScreenReminders().catch(() => undefined);
                 await restoreBackup(backup);
                 const savedLanguage = backup.data[LANGUAGE_STORAGE_KEY];
                 const restoredLanguage: AppLanguage =
@@ -232,6 +234,7 @@ export default function SettingsScreen() {
                 key.startsWith("zaymax."),
               );
               if (zaymaxKeys.length) await AsyncStorage.multiRemove(zaymaxKeys);
+              await dismissAllLockScreenReminders().catch(() => undefined);
               await setLanguage("de");
               hapticSuccess();
               Alert.alert(
@@ -546,8 +549,9 @@ export default function SettingsScreen() {
               borderWidth: 1,
               borderColor: colors.border,
               backgroundColor: colors.surface,
-              padding: 20,
+              padding: ZAYMAX_DESIGN.spacing.card,
               borderRadius: ZAYMAX_DESIGN.radius.card,
+              ...ZAYMAX_DESIGN.shadow,
               opacity: pressed ? 0.65 : 1,
             },
           ]}
@@ -559,7 +563,9 @@ export default function SettingsScreen() {
               alignItems: "center",
               justifyContent: "center",
               borderRadius: ZAYMAX_DESIGN.radius.round,
-              backgroundColor: colors.background,
+              borderWidth: 1,
+              borderColor: ZAYMAX_DESIGN.colors.goldLine,
+              backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
             }}
           >
             <IconSymbol name="lock.fill" size={21} color={colors.foreground} />
@@ -584,9 +590,9 @@ export default function SettingsScreen() {
             {
               marginTop: 14,
               borderWidth: 1,
-              borderColor: `${colors.error}66`,
-              backgroundColor: "rgba(223, 133, 133, 0.04)",
-              padding: 20,
+              borderColor: colors.border,
+              backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
+              padding: ZAYMAX_DESIGN.spacing.card,
               borderRadius: ZAYMAX_DESIGN.radius.card,
               opacity: pressed ? 0.6 : 1,
             },
@@ -642,8 +648,9 @@ function SettingsPanel({
           borderWidth: 1,
           borderColor: colors.border,
           backgroundColor: colors.surface,
-          padding: 20,
+          padding: ZAYMAX_DESIGN.spacing.card,
           borderRadius: ZAYMAX_DESIGN.radius.card,
+          ...ZAYMAX_DESIGN.shadow,
         },
         style,
       ]}

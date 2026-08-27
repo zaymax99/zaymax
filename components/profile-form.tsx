@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Keyboard, Pressable, Text, TextInput, View } from "react-native";
 
 import { useColors } from "@/hooks/use-colors";
+import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { hapticAction, hapticTap, hapticWarning } from "@/lib/haptics";
 import { useLanguage, usesDecimalComma } from "@/lib/i18n";
 import {
@@ -119,7 +120,7 @@ export function ProfileForm({
         birthday
       />
       {error ? (
-        <Text style={{ marginTop: 12, color: colors.error, fontSize: 13 }}>
+        <Text style={{ marginTop: 12, color: colors.primary, fontSize: 13 }}>
           {error}
         </Text>
       ) : null}
@@ -130,7 +131,7 @@ export function ProfileForm({
           marginTop: 18,
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: 999,
+          borderRadius: ZAYMAX_DESIGN.radius.round,
           backgroundColor: colors.primary,
           opacity: pressed ? 0.72 : 1,
         })}
@@ -158,7 +159,7 @@ export function ProfileForm({
             marginTop: 5,
             alignItems: "center",
             justifyContent: "center",
-            borderRadius: 999,
+            borderRadius: ZAYMAX_DESIGN.radius.round,
             opacity: pressed ? 0.55 : 1,
           })}
         >
@@ -220,10 +221,10 @@ function ProfileField({
           maxLength={birthday ? 10 : 6}
           style={{
             minHeight: 50,
-            borderRadius: 16,
+            borderRadius: ZAYMAX_DESIGN.radius.input,
             borderWidth: 1,
             borderColor: colors.border,
-            backgroundColor: colors.background,
+            backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
             paddingHorizontal: 15,
             paddingRight: suffix ? 52 : 15,
             color: colors.foreground,

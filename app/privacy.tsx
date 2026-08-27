@@ -55,9 +55,9 @@ export default function PrivacyScreen() {
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 1,
-            borderColor: `${colors.primary}70`,
+            borderColor: ZAYMAX_DESIGN.colors.goldLine,
             borderRadius: ZAYMAX_DESIGN.radius.round,
-            backgroundColor: colors.surface,
+            backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
             opacity: pressed ? 0.65 : 1,
           })}
         >
@@ -76,6 +76,24 @@ export default function PrivacyScreen() {
             {t(
               "Zaymax benötigt kein Konto, enthält keine Werbung und verwendet kein Tracking oder Analyse-SDK. Deine Eingaben werden nicht an Zaymax oder den Entwickler übertragen.",
               "Zaymax requires no account, contains no advertising and uses no tracking or analytics SDK. Your entries are not transmitted to Zaymax or the developer.",
+            )}
+          </BodyText>
+        </PrivacyCard>
+
+        <PrivacyCard
+          eyebrow={t("MITTEILUNGEN", "NOTIFICATIONS", "POWIADOMIENIA")}
+          title={t(
+            "Sperrbildschirm nur auf deinen Wunsch",
+            "Lock Screen only when you choose",
+            "Ekran blokady tylko na Twoje życzenie",
+          )}
+          colors={colors}
+        >
+          <BodyText colors={colors}>
+            {t(
+              "Wenn du bei einem Tagebucheintrag selbst „Am Sperrbildschirm merken“ auswählst, erstellt Zaymax eine lokale iOS-Mitteilung mit dem Text dieser Notiz. Dafür fragt die App nach deiner Erlaubnis für Mitteilungen. Der Inhalt wird nicht an den Entwickler oder externe Server übertragen. Du kannst die Erinnerung in Zaymax ausschalten, auf dem Sperrbildschirm entfernen oder die Berechtigung jederzeit in den iOS-Einstellungen widerrufen.",
+              "When you choose “Show on Lock Screen” for a journal entry, Zaymax creates a local iOS notification containing that note. The app asks for notification permission first. The content is not sent to the developer or external servers. You can turn the reminder off in Zaymax, remove it from the Lock Screen, or revoke permission at any time in iOS Settings.",
+              "Gdy wybierzesz „Pokaż na ekranie blokady” dla wpisu w dzienniku, Zaymax utworzy lokalne powiadomienie iOS z treścią tej notatki. Aplikacja najpierw poprosi o zgodę na powiadomienia. Treść nie jest wysyłana do twórcy ani na zewnętrzne serwery. Przypomnienie możesz wyłączyć w Zaymax, usunąć z ekranu blokady lub w każdej chwili cofnąć zgodę w ustawieniach iOS.",
             )}
           </BodyText>
         </PrivacyCard>
@@ -213,7 +231,7 @@ function PrivacyCard({
         borderColor: colors.border,
         borderRadius: ZAYMAX_DESIGN.radius.card,
         backgroundColor: colors.surface,
-        padding: 20,
+        padding: ZAYMAX_DESIGN.spacing.card,
       }}
     >
       <Text

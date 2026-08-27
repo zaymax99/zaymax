@@ -5,6 +5,10 @@ import * as Sharing from "expo-sharing";
 import { Platform } from "react-native";
 
 import { HEALTHKIT_CONNECTED_KEY } from "./steps";
+import {
+  REMINDERS_STORAGE_KEY,
+  stripLockScreenStateFromRemindersValue,
+} from "./reminders";
 
 export type ZaymaxBackup = {
   app: "Zaymax";
@@ -40,7 +44,15 @@ export async function createBackup() {
   const keys = allKeys.filter(
     (key) => key.startsWith("zaymax.") && key !== HEALTHKIT_CONNECTED_KEY,
   );
-  const entries = await AsyncStorage.multiGet(keys);
+  const entries = (await AsyncStorage.multiGet(keys)).map(
+    ([key, value]) =>
+      [
+        key,
+        key === REMINDERS_STORAGE_KEY && value !== null
+          ? stripLockScreenStateFromRemindersValue(value)
+          : value,
+      ] as [string, string | null],
+  );
   const backup: ZaymaxBackup = {
     app: "Zaymax",
     version: 1,
@@ -104,9 +116,17 @@ export async function restoreBackup(backup: ZaymaxBackup) {
   const currentEntries = currentKeys.length
     ? await AsyncStorage.multiGet(currentKeys)
     : [];
-  const entries = Object.entries(backup.data).filter(
-    ([key]) => key !== HEALTHKIT_CONNECTED_KEY,
-  );
+  const entries = Object.entries(backup.data)
+    .filter(([key]) => key !== HEALTHKIT_CONNECTED_KEY)
+    .map(
+      ([key, value]) =>
+        [
+          key,
+          key === REMINDERS_STORAGE_KEY
+            ? stripLockScreenStateFromRemindersValue(value)
+            : value,
+        ] as [string, string],
+    );
   const touchedKeys = [
     ...new Set([...currentKeys, ...entries.map(([key]) => key)]),
   ];

@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import Svg, { Circle } from "react-native-svg";
+import Svg, { Line } from "react-native-svg";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -42,9 +42,10 @@ import {
   type StepWeek,
 } from "@/lib/steps";
 const RING_SIZE = 196;
-const RING_STROKE = 13;
-const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+const RING_TICKS = 49;
+const RING_CENTER = RING_SIZE / 2;
+const RING_INNER_RADIUS = 76;
+const RING_OUTER_RADIUS = 91;
 
 type StepStatus =
   | "checking"
@@ -188,10 +189,11 @@ export default function StepsScreen() {
               entering={FadeInDown.duration(280)}
               style={{
                 borderWidth: 1,
-                borderColor: `${colors.primary}45`,
+                borderColor: colors.border,
                 borderRadius: ZAYMAX_DESIGN.radius.hero,
                 backgroundColor: colors.surface,
-                padding: 20,
+                padding: 18,
+                ...ZAYMAX_DESIGN.shadow,
               }}
             >
               <View className="flex-row items-start justify-between">
@@ -215,8 +217,8 @@ export default function StepsScreen() {
                     alignItems: "center",
                     justifyContent: "center",
                     borderWidth: 1,
-                    borderColor: `${colors.primary}70`,
-                    backgroundColor: colors.background,
+                    borderColor: ZAYMAX_DESIGN.colors.goldLine,
+                    backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
                   }}
                 >
                   <IconSymbol
@@ -229,32 +231,26 @@ export default function StepsScreen() {
 
               <View className="mt-5 items-center">
                 <View style={{ width: RING_SIZE, height: RING_SIZE }}>
-                  <Svg
-                    width={RING_SIZE}
-                    height={RING_SIZE}
-                    style={{ transform: [{ rotate: "-90deg" }] }}
-                  >
-                    <Circle
-                      cx={RING_SIZE / 2}
-                      cy={RING_SIZE / 2}
-                      r={RING_RADIUS}
-                      fill="transparent"
-                      stroke={colors.border}
-                      strokeWidth={RING_STROKE}
-                    />
-                    <Circle
-                      cx={RING_SIZE / 2}
-                      cy={RING_SIZE / 2}
-                      r={RING_RADIUS}
-                      fill="transparent"
-                      stroke={colors.primary}
-                      strokeWidth={RING_STROKE}
-                      strokeLinecap="round"
-                      strokeDasharray={`${RING_CIRCUMFERENCE} ${RING_CIRCUMFERENCE}`}
-                      strokeDashoffset={
-                        RING_CIRCUMFERENCE * (1 - todayProgress)
-                      }
-                    />
+                  <Svg width={RING_SIZE} height={RING_SIZE}>
+                    {Array.from({ length: RING_TICKS }, (_, index) => {
+                      const angle =
+                        ((135 + (index / (RING_TICKS - 1)) * 270) * Math.PI) /
+                        180;
+                      const active =
+                        index < Math.round(todayProgress * RING_TICKS);
+                      return (
+                        <Line
+                          key={index}
+                          x1={RING_CENTER + Math.cos(angle) * RING_INNER_RADIUS}
+                          y1={RING_CENTER + Math.sin(angle) * RING_INNER_RADIUS}
+                          x2={RING_CENTER + Math.cos(angle) * RING_OUTER_RADIUS}
+                          y2={RING_CENTER + Math.sin(angle) * RING_OUTER_RADIUS}
+                          stroke={active ? colors.primary : colors.border}
+                          strokeWidth={active ? 4 : 3}
+                          strokeLinecap="round"
+                        />
+                      );
+                    })}
                   </Svg>
                   <View className="absolute inset-0 items-center justify-center">
                     <Text className="text-4xl font-black text-foreground">
@@ -304,10 +300,10 @@ export default function StepsScreen() {
               style={{
                 marginTop: 14,
                 borderWidth: 1,
-                borderColor: `${colors.primary}35`,
+                borderColor: colors.border,
                 borderRadius: ZAYMAX_DESIGN.radius.card,
                 backgroundColor: colors.surface,
-                padding: 20,
+                padding: 18,
               }}
             >
               <View className="flex-row items-end justify-between">
@@ -451,11 +447,11 @@ function ConnectionCard({
   return (
     <View
       style={{
-        minHeight: 390,
+        minHeight: 340,
         alignItems: "center",
         justifyContent: "center",
         borderWidth: 1,
-        borderColor: `${colors.primary}45`,
+        borderColor: colors.border,
         borderRadius: ZAYMAX_DESIGN.radius.hero,
         backgroundColor: colors.surface,
         padding: 24,
@@ -468,9 +464,9 @@ function ConnectionCard({
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 1,
-          borderColor: `${colors.primary}70`,
+          borderColor: ZAYMAX_DESIGN.colors.goldLine,
           borderRadius: ZAYMAX_DESIGN.radius.round,
-          backgroundColor: colors.background,
+          backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
         }}
       >
         {loading ? (

@@ -24,7 +24,7 @@ import {
 const BMI_COLORS: Record<BmiLevel, string> = {
   low: ZAYMAX_DESIGN.colors.danger,
   healthy: ZAYMAX_DESIGN.colors.success,
-  elevated: ZAYMAX_DESIGN.colors.gold,
+  elevated: ZAYMAX_DESIGN.colors.goldBright,
   high: ZAYMAX_DESIGN.colors.danger,
 };
 
@@ -94,7 +94,8 @@ export function ProfileBmiCard() {
           borderWidth: 1,
           borderColor: colors.border,
           backgroundColor: colors.surface,
-          padding: 20,
+          padding: 18,
+          ...ZAYMAX_DESIGN.shadow,
         }}
       >
         <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
@@ -199,7 +200,28 @@ export function ProfileBmiCard() {
                   </Text>
                 </View>
                 <View style={{ alignItems: "flex-end" }}>
-                  <Text style={{ fontSize: 25 }}>{bmiEmoji(level)}</Text>
+                  <View
+                    style={{
+                      width: 34,
+                      height: 34,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: ZAYMAX_DESIGN.radius.round,
+                      borderWidth: 1,
+                      borderColor: BMI_COLORS[level],
+                      backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: BMI_COLORS[level],
+                        fontSize: 17,
+                        fontWeight: "900",
+                      }}
+                    >
+                      {bmiIndicator(level)}
+                    </Text>
+                  </View>
                   <Text
                     style={{
                       marginTop: 2,
@@ -277,7 +299,7 @@ export function ProfileBmiCard() {
             flex: 1,
             justifyContent: "center",
             padding: 20,
-            backgroundColor: "rgba(0,0,0,0.9)",
+            backgroundColor: ZAYMAX_DESIGN.colors.overlay,
           }}
         >
           <View
@@ -287,6 +309,7 @@ export function ProfileBmiCard() {
               borderColor: colors.border,
               backgroundColor: colors.surface,
               padding: 21,
+              ...ZAYMAX_DESIGN.shadow,
             }}
           >
             <Text
@@ -336,10 +359,10 @@ function ProfileMetric({
     <View
       style={{
         flex: 1,
-        minHeight: 66,
+        minHeight: 62,
         justifyContent: "center",
         borderRadius: ZAYMAX_DESIGN.radius.input,
-        backgroundColor: colors.background,
+        backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
         paddingHorizontal: 10,
       }}
     >
@@ -375,18 +398,14 @@ function BmiScale({ bmi, colors }: { bmi: number; colors: any }) {
             borderRadius: ZAYMAX_DESIGN.radius.round,
           }}
         >
+          <View style={{ flex: 4.5, backgroundColor: colors.border }} />
           <View
-            style={{ flex: 4.5, backgroundColor: ZAYMAX_DESIGN.colors.danger }}
+            style={{ flex: 6.5, backgroundColor: ZAYMAX_DESIGN.colors.gold }}
           />
           <View
-            style={{ flex: 6.5, backgroundColor: ZAYMAX_DESIGN.colors.success }}
+            style={{ flex: 5, backgroundColor: ZAYMAX_DESIGN.colors.goldLine }}
           />
-          <View
-            style={{ flex: 5, backgroundColor: ZAYMAX_DESIGN.colors.gold }}
-          />
-          <View
-            style={{ flex: 10, backgroundColor: ZAYMAX_DESIGN.colors.danger }}
-          />
+          <View style={{ flex: 10, backgroundColor: colors.muted }} />
         </View>
         <View
           style={{
@@ -429,10 +448,10 @@ function BmiScale({ bmi, colors }: { bmi: number; colors: any }) {
   );
 }
 
-function bmiEmoji(level: BmiLevel) {
-  if (level === "healthy") return "🙂";
-  if (level === "elevated") return "😐";
-  return "☹️";
+function bmiIndicator(level: BmiLevel) {
+  if (level === "healthy") return "✓";
+  if (level === "elevated") return "–";
+  return "!";
 }
 
 function formatProfileNumber(value: number, locale: string) {

@@ -8,14 +8,14 @@ export function ZaymaxWatermark() {
   return (
     <View
       style={{
-        width: 28,
-        height: 28,
+        width: 30,
+        height: 30,
         borderRadius: 999,
-        backgroundColor: "#000",
+        backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
         borderWidth: 1,
-        borderColor: `${ZAYMAX_DESIGN.colors.gold}80`,
+        borderColor: ZAYMAX_DESIGN.colors.goldLine,
         overflow: "hidden",
-        opacity: 0.92,
+        opacity: 1,
       }}
     >
       <Image

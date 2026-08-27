@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { loadReminders } from "../lib/reminders";
+import {
+  loadReminders,
+  stripLockScreenStateFromRemindersValue,
+} from "../lib/reminders";
 
 const storage = vi.hoisted(() => ({
   getItem: vi.fn(),
@@ -49,5 +52,39 @@ describe("journal storage recovery", () => {
     storage.getItem.mockResolvedValue("{invalid-json");
 
     await expect(loadReminders()).resolves.toEqual([]);
+  });
+
+  it("keeps an active local Lock Screen identifier on the device", async () => {
+    storage.getItem.mockResolvedValue(
+      JSON.stringify([
+        {
+          id: "note-1",
+          text: "Gym-Tasche mitnehmen",
+          createdAt: "2026-08-27T12:00:00.000Z",
+          updatedAt: "2026-08-27T12:00:00.000Z",
+          lockScreenNotificationId: "local-notification-1",
+        },
+      ]),
+    );
+
+    await expect(loadReminders()).resolves.toMatchObject([
+      { lockScreenNotificationId: "local-notification-1" },
+    ]);
+  });
+
+  it("removes device-only Lock Screen state from backup values", () => {
+    expect(
+      JSON.parse(
+        stripLockScreenStateFromRemindersValue(
+          JSON.stringify([
+            {
+              id: "note-1",
+              text: "Gym-Tasche mitnehmen",
+              lockScreenNotificationId: "local-notification-1",
+            },
+          ]),
+        ),
+      ),
+    ).toEqual([{ id: "note-1", text: "Gym-Tasche mitnehmen" }]);
   });
 });

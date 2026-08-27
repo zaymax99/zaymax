@@ -173,11 +173,13 @@ export default function ExerciseHistoryScreen() {
         </View>
 
         <View
-          className="mt-4 bg-surface p-5"
+          className="mt-4 bg-surface"
           style={{
             borderWidth: 1,
             borderColor: colors.border,
             borderRadius: ZAYMAX_DESIGN.radius.card,
+            padding: ZAYMAX_DESIGN.spacing.card,
+            ...ZAYMAX_DESIGN.shadow,
           }}
         >
           <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
@@ -265,7 +267,14 @@ export default function ExerciseHistoryScreen() {
             </View>
           ))
         ) : (
-          <View className="mt-3 rounded-3xl border border-border bg-surface/40 p-6">
+          <View
+            className="mt-3 border border-border"
+            style={{
+              borderRadius: ZAYMAX_DESIGN.radius.card,
+              backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
+              padding: ZAYMAX_DESIGN.spacing.card,
+            }}
+          >
             <Text className="font-black uppercase text-foreground">
               {t("Noch keine Daten", "No data yet")}
             </Text>
@@ -298,7 +307,7 @@ function StatCard({
         borderRadius: ZAYMAX_DESIGN.radius.nested,
         borderWidth: 1,
         borderColor: colors.border,
-        backgroundColor: colors.surface,
+        backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
         padding: 14,
       }}
     >

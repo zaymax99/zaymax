@@ -53,6 +53,27 @@ describe("backup restoration", () => {
     ]);
   });
 
+  it("does not restore a device-only Lock Screen notification identifier", async () => {
+    await restoreBackup(
+      backup({
+        "zaymax.reminders.v1": JSON.stringify([
+          {
+            id: "note-1",
+            text: "Gym-Tasche mitnehmen",
+            lockScreenNotificationId: "old-device-notification",
+          },
+        ]),
+      }),
+    );
+
+    expect(storage.multiSet).toHaveBeenCalledWith([
+      [
+        "zaymax.reminders.v1",
+        JSON.stringify([{ id: "note-1", text: "Gym-Tasche mitnehmen" }]),
+      ],
+    ]);
+  });
+
   it("rolls back the previous local data when writing the backup fails", async () => {
     storage.getAllKeys.mockResolvedValue(["zaymax.workouts.builder.v1"]);
     storage.multiGet.mockResolvedValue([

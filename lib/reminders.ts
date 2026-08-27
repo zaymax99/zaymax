@@ -5,6 +5,7 @@ export type Reminder = {
   text: string;
   createdAt: string;
   updatedAt: string;
+  lockScreenNotificationId?: string;
 };
 export type Weekday =
   | "monday"
@@ -14,13 +15,13 @@ export type Weekday =
   | "friday"
   | "saturday"
   | "sunday";
-const STORAGE_KEY = "zaymax.reminders.v1";
+export const REMINDERS_STORAGE_KEY = "zaymax.reminders.v1";
 const TRAINING_DAYS_KEY = "zaymax.training-days.v1";
 export const reminderUid = () =>
   `reminder-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export async function loadReminders(): Promise<Reminder[]> {
-  const raw = await AsyncStorage.getItem(STORAGE_KEY);
+  const raw = await AsyncStorage.getItem(REMINDERS_STORAGE_KEY);
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw) as unknown;
@@ -44,12 +45,18 @@ export async function loadReminders(): Promise<Reminder[]> {
         typeof record.createdAt === "string" ? record.createdAt : "";
       const updatedAt =
         typeof record.updatedAt === "string" ? record.updatedAt : createdAt;
+      const lockScreenNotificationId =
+        typeof record.lockScreenNotificationId === "string" &&
+        record.lockScreenNotificationId
+          ? record.lockScreenNotificationId
+          : undefined;
       return [
         {
           id: item.id,
           text: item.text,
           createdAt,
           updatedAt,
+          ...(lockScreenNotificationId ? { lockScreenNotificationId } : {}),
         },
       ];
     });
@@ -59,7 +66,25 @@ export async function loadReminders(): Promise<Reminder[]> {
 }
 
 export async function saveReminders(reminders: Reminder[]) {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(reminders));
+  await AsyncStorage.setItem(REMINDERS_STORAGE_KEY, JSON.stringify(reminders));
+}
+
+export function stripLockScreenStateFromRemindersValue(value: string) {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!Array.isArray(parsed)) return value;
+    return JSON.stringify(
+      parsed.map((item) => {
+        if (!item || typeof item !== "object" || Array.isArray(item))
+          return item;
+        const { lockScreenNotificationId: _localState, ...rest } =
+          item as Record<string, unknown>;
+        return rest;
+      }),
+    );
+  } catch {
+    return value;
+  }
 }
 
 export async function loadTrainingDays(): Promise<Weekday[]> {

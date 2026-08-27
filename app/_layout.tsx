@@ -13,28 +13,31 @@ import { ThemeProvider } from "@/lib/theme-provider";
 import { LanguageProvider } from "@/lib/i18n";
 import { KeyboardDismissButton } from "@/components/keyboard-dismiss-button";
 import { AppExperienceOverlay } from "@/components/app-experience-overlay";
+import { configureLockScreenReminderHandler } from "@/lib/lock-screen-reminders";
 import {
   SafeAreaProvider,
   initialWindowMetrics,
 } from "react-native-safe-area-context";
 
-const APP_BACKGROUND = "#0C0D0F";
+const APP_BACKGROUND = "#0D0D0D";
 const NAVIGATION_THEME = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    primary: "#D8B963",
+    primary: "#D4B86A",
     background: APP_BACKGROUND,
-    card: "#18191C",
-    text: "#F4F4F5",
-    border: "#2A2C30",
-    notification: "#D8B963",
+    card: "#1B1B1A",
+    text: "#F1EFEA",
+    border: "#302F2C",
+    notification: "#D4B86A",
   },
 };
 
 export const unstable_settings = {
   anchor: "(tabs)",
 };
+
+configureLockScreenReminderHandler();
 
 export default function RootLayout() {
   const providerInitialMetrics = useMemo(() => {

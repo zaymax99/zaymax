@@ -31,20 +31,28 @@ export default function TabLayout() {
         tabBarButton: HapticTab,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          height: 66 + bottomPadding,
-          paddingTop: 7,
+          height: 72 + bottomPadding,
+          paddingTop: 8,
           paddingBottom: bottomPadding,
-          backgroundColor: colors.surface,
+          backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
           borderTopColor: colors.border,
-          borderTopWidth: 1,
+          borderTopWidth: 0.75,
           borderTopLeftRadius: ZAYMAX_DESIGN.radius.card,
           borderTopRightRadius: ZAYMAX_DESIGN.radius.card,
           overflow: "hidden",
+          ...ZAYMAX_DESIGN.shadow,
         },
         tabBarLabelStyle: {
           fontSize: 11,
+          lineHeight: 14,
           fontWeight: "700",
           letterSpacing: 0.2,
+          marginTop: 3,
+          marginBottom: 2,
+        },
+        tabBarIconStyle: {
+          height: 32,
+          marginTop: 1,
         },
       }}
     >
@@ -55,19 +63,21 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View
               style={{
-                width: 38,
-                height: 38,
+                width: 32,
+                height: 32,
                 borderRadius: ZAYMAX_DESIGN.radius.round,
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: focused ? 1 : 0,
-                borderColor: focused ? colors.primary : "transparent",
+                borderColor: focused
+                  ? ZAYMAX_DESIGN.colors.goldLine
+                  : "transparent",
                 backgroundColor: focused
                   ? ZAYMAX_DESIGN.colors.goldSoft
                   : "transparent",
               }}
             >
-              <IconSymbol name="house.fill" size={21} color={color} />
+              <IconSymbol name="house.fill" size={18} color={color} />
             </View>
           ),
         }}
@@ -79,19 +89,21 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View
               style={{
-                width: 38,
-                height: 38,
+                width: 32,
+                height: 32,
                 borderRadius: ZAYMAX_DESIGN.radius.round,
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: focused ? 1 : 0,
-                borderColor: focused ? colors.primary : "transparent",
+                borderColor: focused
+                  ? ZAYMAX_DESIGN.colors.goldLine
+                  : "transparent",
                 backgroundColor: focused
                   ? ZAYMAX_DESIGN.colors.goldSoft
                   : "transparent",
               }}
             >
-              <IconSymbol name="pencil" size={21} color={color} />
+              <IconSymbol name="pencil" size={18} color={color} />
             </View>
           ),
         }}
@@ -103,19 +115,21 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View
               style={{
-                width: 38,
-                height: 38,
+                width: 32,
+                height: 32,
                 borderRadius: ZAYMAX_DESIGN.radius.round,
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: focused ? 1 : 0,
-                borderColor: focused ? colors.primary : "transparent",
+                borderColor: focused
+                  ? ZAYMAX_DESIGN.colors.goldLine
+                  : "transparent",
                 backgroundColor: focused
                   ? ZAYMAX_DESIGN.colors.goldSoft
                   : "transparent",
               }}
             >
-              <IconSymbol name="shoeprints.fill" size={21} color={color} />
+              <IconSymbol name="shoeprints.fill" size={18} color={color} />
             </View>
           ),
         }}

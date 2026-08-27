@@ -10,17 +10,7 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  FadeOut,
-  Layout,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown, Layout } from "react-native-reanimated";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
@@ -40,12 +30,7 @@ import {
   type Workout,
 } from "@/lib/workouts";
 import { useColors } from "@/hooks/use-colors";
-import {
-  hapticAction,
-  hapticSelection,
-  hapticSuccess,
-  hapticTap,
-} from "@/lib/haptics";
+import { hapticSelection, hapticSuccess, hapticTap } from "@/lib/haptics";
 import { useLanguage, usesDecimalComma, type AppLanguage } from "@/lib/i18n";
 
 export default function WorkoutEditorScreen() {
@@ -61,8 +46,6 @@ export default function WorkoutEditorScreen() {
   const [loadIssue, setLoadIssue] = useState<"missing" | "failed" | null>(null);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
-  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
-  const [placeholderIndex, setPlaceholderIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (
@@ -117,16 +100,6 @@ export default function WorkoutEditorScreen() {
         ? current.filter((item) => item.id !== exerciseId)
         : current,
     );
-  }
-  function reorder(from: number, insertionIndex: number) {
-    setExercises((current) => {
-      const next = [...current];
-      const [moved] = next.splice(from, 1);
-      const adjusted =
-        insertionIndex > from ? insertionIndex - 1 : insertionIndex;
-      next.splice(Math.max(0, Math.min(next.length, adjusted)), 0, moved);
-      return next;
-    });
   }
   function moveExercise(from: number, to: number) {
     if (from === to || to < 0 || to >= exercises.length) return;
@@ -316,11 +289,13 @@ export default function WorkoutEditorScreen() {
           </View>
           <Animated.View
             entering={FadeIn.duration(300)}
-            className="bg-surface p-5"
+            className="bg-surface"
             style={{
               borderWidth: 1,
               borderColor: colors.border,
               borderRadius: ZAYMAX_DESIGN.radius.card,
+              padding: ZAYMAX_DESIGN.spacing.card,
+              ...ZAYMAX_DESIGN.shadow,
             }}
           >
             <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
@@ -333,8 +308,15 @@ export default function WorkoutEditorScreen() {
               placeholderTextColor={colors.muted}
               style={{
                 marginTop: 10,
+                minHeight: 48,
                 color: colors.foreground,
-                fontSize: 24,
+                backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
+                borderColor: colors.border,
+                borderWidth: 1,
+                borderRadius: ZAYMAX_DESIGN.radius.input,
+                paddingHorizontal: 13,
+                paddingVertical: 9,
+                fontSize: 20,
                 fontWeight: "800",
               }}
             />
@@ -346,9 +328,9 @@ export default function WorkoutEditorScreen() {
               </Text>
               <Text className="mt-1 text-sm text-muted">
                 {t(
-                  "Am Griff ziehen oder Pfeile verwenden",
-                  "Drag the handle or use the arrows",
-                  "Przeciągnij uchwyt lub użyj strzałek",
+                  "Mit den Pfeilen sortieren",
+                  "Reorder with the arrows",
+                  "Zmieniaj kolejność strzałkami",
                 )}
               </Text>
             </View>
@@ -361,36 +343,19 @@ export default function WorkoutEditorScreen() {
           </View>
           {exercises.map((exercise, index) => (
             <View key={exercise.id}>
-              {draggingIndex !== null &&
-                placeholderIndex === index &&
-                draggingIndex !== index && <DropPlaceholder colors={colors} />}
               <ExerciseCard
                 exercise={exercise}
                 index={index}
                 total={exercises.length}
                 colors={colors}
                 unit={weightUnit}
-                dragging={draggingIndex === index}
                 onChange={(patch) => updateExercise(exercise.id, patch)}
                 onRemove={() => removeExercise(exercise.id)}
                 onMoveUp={() => moveExercise(index, index - 1)}
                 onMoveDown={() => moveExercise(index, index + 1)}
-                onDragStart={() => {
-                  setDraggingIndex(index);
-                  setPlaceholderIndex(index);
-                }}
-                onDragMove={(target) => setPlaceholderIndex(target)}
-                onDragEnd={(target) => {
-                  reorder(index, target);
-                  setDraggingIndex(null);
-                  setPlaceholderIndex(null);
-                }}
               />
             </View>
           ))}
-          {draggingIndex !== null && placeholderIndex === exercises.length && (
-            <DropPlaceholder colors={colors} />
-          )}
           <Pressable
             onPress={() => {
               hapticTap();
@@ -455,155 +420,54 @@ export default function WorkoutEditorScreen() {
   );
 }
 
-function DropPlaceholder({ colors }: { colors: any }) {
-  const { t } = useLanguage();
-  return (
-    <Animated.View
-      entering={FadeIn.duration(140)}
-      exiting={FadeOut.duration(120)}
-      style={{
-        marginTop: 12,
-        height: 54,
-        borderWidth: 1,
-        borderStyle: "dashed",
-        borderColor: `${colors.primary}90`,
-        backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: ZAYMAX_DESIGN.radius.nested,
-      }}
-    >
-      <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
-        {t("HIER ABLEGEN", "DROP HERE")}
-      </Text>
-    </Animated.View>
-  );
-}
-
 function ExerciseCard({
   exercise,
   index,
   total,
   colors,
   unit,
-  dragging,
   onChange,
   onRemove,
   onMoveUp,
   onMoveDown,
-  onDragStart,
-  onDragMove,
-  onDragEnd,
 }: {
   exercise: Exercise;
   index: number;
   total: number;
   colors: any;
   unit: WeightUnit;
-  dragging: boolean;
   onChange: (patch: Partial<Exercise>) => void;
   onRemove: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
-  onDragStart: () => void;
-  onDragMove: (target: number) => void;
-  onDragEnd: (target: number) => void;
 }) {
   const { t } = useLanguage();
-  const translateY = useSharedValue(0);
-  const dragTarget = useSharedValue(index);
-  const dragActive = useSharedValue(false);
-  const lastSlot = useRef(index);
-  function beginDrag() {
-    lastSlot.current = index;
-    dragTarget.value = index;
-    hapticTap();
-    onDragStart();
-  }
-  function moveDrag(target: number) {
-    if (target !== lastSlot.current) {
-      hapticSelection();
-      lastSlot.current = target;
-    }
-    onDragMove(target);
-  }
-  function endDrag(target: number, committed: boolean) {
-    if (committed) hapticAction();
-    onDragEnd(target);
-  }
-  const gesture = Gesture.Pan()
-    .activateAfterLongPress(180)
-    .onStart(() => {
-      dragActive.value = true;
-      runOnJS(beginDrag)();
-    })
-    .onUpdate((event) => {
-      translateY.value = event.translationY;
-      const shift = Math.trunc(event.translationY / 96);
-      const target = Math.max(
-        0,
-        Math.min(total, index + shift + (shift > 0 ? 1 : 0)),
-      );
-      if (target !== dragTarget.value) {
-        dragTarget.value = target;
-        runOnJS(moveDrag)(target);
-      }
-    })
-    .onFinalize((_event, success) => {
-      if (dragActive.value) {
-        runOnJS(endDrag)(success ? dragTarget.value : index, success);
-        dragActive.value = false;
-      }
-      translateY.value = withSpring(0, { damping: 18, stiffness: 190 });
-    });
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: translateY.value },
-      { scale: dragging ? 1.015 : 1 },
-    ],
-    zIndex: dragging ? 20 : 0,
-    opacity: dragging ? 0.94 : 1,
-  }));
   return (
     <Animated.View
-      entering={FadeInDown.delay(index * 45).duration(240)}
-      layout={Layout.springify().damping(18).stiffness(190)}
-      className="mt-3 bg-surface p-3"
-      style={[
-        animatedStyle,
-        {
-          borderWidth: 1,
-          borderColor: dragging ? colors.primary : colors.border,
-          borderRadius: ZAYMAX_DESIGN.radius.card,
-        },
-      ]}
+      entering={FadeInDown.delay(index * 15).duration(150)}
+      layout={Layout.duration(90)}
+      className="mt-3 bg-surface"
+      style={{
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: ZAYMAX_DESIGN.radius.card,
+        padding: 14,
+      }}
     >
       <View className="flex-row items-center justify-between">
-        <GestureDetector gesture={gesture}>
-          <View
-            accessibilityLabel={t(
-              `Übung ${index + 1} verschieben`,
-              `Move exercise ${index + 1}`,
-              `Przesuń ćwiczenie ${index + 1}`,
-            )}
-            style={{
-              minHeight: 36,
-              flex: 1,
-              flexDirection: "row",
-              alignItems: "center",
-              paddingHorizontal: 4,
-            }}
-          >
-            <IconSymbol
-              name="line.3.horizontal"
-              size={21}
-              color={colors.primary}
-            />
-            <Text className="ml-2 text-xs font-black uppercase tracking-[1.6px] text-muted">
-              {t("Übung", "Exercise")} {index + 1}
-            </Text>
-          </View>
-        </GestureDetector>
+        <View
+          style={{
+            minHeight: 36,
+            flex: 1,
+            flexDirection: "row",
+            alignItems: "center",
+            paddingHorizontal: 4,
+          }}
+        >
+          <Text className="text-xs font-black uppercase tracking-[1.6px] text-muted">
+            {t("Übung", "Exercise")} {index + 1}
+          </Text>
+        </View>
         <View className="flex-row items-center gap-1">
           <ExerciseMoveButton
             direction="up"
@@ -665,7 +529,7 @@ function ExerciseCard({
           paddingHorizontal: 13,
           paddingVertical: 9,
           color: colors.foreground,
-          backgroundColor: colors.background,
+          backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
           fontSize: 14,
           fontWeight: "700",
         }}
@@ -801,7 +665,7 @@ function NumberField({
           paddingVertical: 8,
           textAlign: "center",
           color: colors.foreground,
-          backgroundColor: colors.background,
+          backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
           fontWeight: "700",
         }}
       />
@@ -831,12 +695,13 @@ function SetDetailRow({
     : 0;
   return (
     <View
-      className="flex-row items-end border bg-background"
+      className="flex-row items-end border"
       style={{
         width: "100%",
         minWidth: 0,
         gap: 7,
         borderColor: colors.border,
+        backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
         borderRadius: ZAYMAX_DESIGN.radius.nested,
         paddingHorizontal: 9,
         paddingVertical: 9,
@@ -878,7 +743,7 @@ function SetDetailRow({
             paddingVertical: 8,
             textAlign: "center",
             color: colors.foreground,
-            backgroundColor: colors.surface,
+            backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
             fontWeight: "800",
           }}
         />
@@ -954,7 +819,7 @@ function DecimalWeightInput({
         paddingVertical: 8,
         textAlign: "center",
         color: colors.foreground,
-        backgroundColor: colors.surface,
+        backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
         fontWeight: "800",
       }}
     />

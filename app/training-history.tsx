@@ -219,6 +219,7 @@ function HistoryOverview({
         borderColor: colors.border,
         backgroundColor: colors.surface,
         padding: 18,
+        ...ZAYMAX_DESIGN.shadow,
       }}
     >
       <Text className="text-[10px] font-black uppercase tracking-[2.5px] text-muted">
@@ -247,7 +248,7 @@ function HistoryOverview({
           marginTop: 17,
           height: 92,
           borderRadius: ZAYMAX_DESIGN.radius.nested,
-          backgroundColor: colors.background,
+          backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
           overflow: "hidden",
           paddingHorizontal: 6,
         }}
@@ -314,7 +315,19 @@ function HistoryMetric({
   accent?: boolean;
 }) {
   return (
-    <View style={{ flex: 1, minWidth: 0 }}>
+    <View
+      style={{
+        flex: 1,
+        minWidth: 0,
+        minHeight: 62,
+        justifyContent: "center",
+        borderRadius: ZAYMAX_DESIGN.radius.nested,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
+        paddingHorizontal: 10,
+      }}
+    >
       <Text
         numberOfLines={1}
         style={{ color: colors.muted, fontSize: 9, fontWeight: "800" }}
@@ -362,11 +375,12 @@ function HistoryCard({
       entering={FadeInDown.delay(Math.min(index * 35, 140)).duration(
         ZAYMAX_DESIGN.motion.standard,
       )}
-      className="mb-4 bg-surface p-5"
+      className="mb-4 bg-surface"
       style={{
         borderWidth: 1,
         borderColor: colors.border,
         borderRadius: ZAYMAX_DESIGN.radius.card,
+        padding: 16,
       }}
     >
       <View className="flex-row items-start justify-between">
@@ -388,7 +402,7 @@ function HistoryCard({
             borderRadius: ZAYMAX_DESIGN.radius.round,
             borderWidth: 1,
             borderColor: colors.border,
-            backgroundColor: colors.background,
+            backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
             paddingHorizontal: 12,
             paddingVertical: 8,
           }}
@@ -455,8 +469,11 @@ function HistoryCard({
               {exercise.sets.map((set) => (
                 <View
                   key={`${exercise.exerciseId}-${set.setNumber}`}
-                  className="flex-row items-start justify-between border border-border bg-background px-3 py-3"
-                  style={{ borderRadius: ZAYMAX_DESIGN.radius.nested }}
+                  className="flex-row items-start justify-between border border-border px-3 py-3"
+                  style={{
+                    borderRadius: ZAYMAX_DESIGN.radius.nested,
+                    backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
+                  }}
                 >
                   <Text className="text-sm font-semibold text-muted">
                     {t("Satz", "Set")} {set.setNumber}

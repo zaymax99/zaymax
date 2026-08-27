@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
+  Linking,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -33,6 +35,11 @@ import {
   hapticWarning,
 } from "@/lib/haptics";
 import { useLanguage } from "@/lib/i18n";
+import {
+  dismissLockScreenReminder,
+  getPresentedLockScreenReminderIds,
+  scheduleLockScreenReminder,
+} from "@/lib/lock-screen-reminders";
 import {
   loadReminders,
   loadTrainingDays,
@@ -127,6 +134,7 @@ export default function JournalScreen() {
   const [confettiBurst, setConfettiBurst] = useState(0);
   const [draft, setDraft] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [lockScreenBusyId, setLockScreenBusyId] = useState<string | null>(null);
   const confettiTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savingDraftRef = useRef(false);
 
@@ -135,7 +143,30 @@ export default function JournalScreen() {
       loadReminders(),
       loadTrainingDays(),
     ]);
-    setReminders(notes);
+    let visibleNotes = notes;
+    if (
+      Platform.OS === "ios" &&
+      notes.some((note) => note.lockScreenNotificationId)
+    ) {
+      try {
+        const presentedIds = await getPresentedLockScreenReminderIds();
+        let changed = false;
+        visibleNotes = notes.map((note) => {
+          if (
+            !note.lockScreenNotificationId ||
+            presentedIds.has(note.lockScreenNotificationId)
+          ) {
+            return note;
+          }
+          changed = true;
+          return removeLockScreenStatus(note);
+        });
+        if (changed) await saveReminders(visibleNotes);
+      } catch {
+        // Keep the saved state if iOS cannot currently query Notification Center.
+      }
+    }
+    setReminders(visibleNotes);
     setTrainingDays(days);
   }, []);
   useFocusEffect(
@@ -211,6 +242,11 @@ export default function JournalScreen() {
               );
               await saveReminders(next);
               setReminders(next);
+              if (reminder.lockScreenNotificationId) {
+                await dismissLockScreenReminder(
+                  reminder.lockScreenNotificationId,
+                );
+              }
               if (editingId === reminder.id) cancelEdit();
               hapticWarning();
             } catch {
@@ -220,6 +256,109 @@ export default function JournalScreen() {
         },
       ],
     );
+  }
+
+  async function toggleLockScreenReminder(reminder: Reminder) {
+    if (lockScreenBusyId) return;
+    setLockScreenBusyId(reminder.id);
+    try {
+      const current = await loadReminders();
+      const storedReminder =
+        current.find((item) => item.id === reminder.id) ?? reminder;
+
+      if (storedReminder.lockScreenNotificationId) {
+        await dismissLockScreenReminder(
+          storedReminder.lockScreenNotificationId,
+        );
+        const next = current.map((item) =>
+          item.id === reminder.id ? removeLockScreenStatus(item) : item,
+        );
+        await saveReminders(next);
+        setReminders(next);
+        hapticSelection();
+        return;
+      }
+
+      const result = await scheduleLockScreenReminder(
+        reminder.id,
+        storedReminder.text,
+        {
+          title: t("ZAYMAX · NOTIZ", "ZAYMAX · NOTE", "ZAYMAX · NOTATKA"),
+          subtitle: t(
+            "Aus deinem Tagebuch",
+            "From your journal",
+            "Z twojego dziennika",
+          ),
+        },
+      );
+      if (result.status === "unsupported") {
+        Alert.alert(
+          t(
+            "Nur auf dem iPhone verfügbar",
+            "Available on iPhone only",
+            "Dostępne tylko na iPhonie",
+          ),
+          t(
+            "Sperrbildschirm-Erinnerungen werden derzeit nur von iOS unterstützt.",
+            "Lock Screen reminders are currently supported on iOS only.",
+            "Przypomnienia na ekranie blokady są obecnie obsługiwane tylko w iOS.",
+          ),
+        );
+        return;
+      }
+      if (result.status === "denied") {
+        Alert.alert(
+          t(
+            "Mitteilungen sind deaktiviert",
+            "Notifications are disabled",
+            "Powiadomienia są wyłączone",
+          ),
+          t(
+            "Erlaube Zaymax-Mitteilungen in den iPhone-Einstellungen, um diese Notiz auf dem Sperrbildschirm zu sehen.",
+            "Allow Zaymax notifications in iPhone Settings to see this note on the Lock Screen.",
+            "Zezwól na powiadomienia Zaymax w ustawieniach iPhone’a, aby zobaczyć tę notatkę na ekranie blokady.",
+          ),
+          [
+            { text: t("Abbrechen", "Cancel", "Anuluj"), style: "cancel" },
+            {
+              text: t("Einstellungen", "Settings", "Ustawienia"),
+              onPress: () => void Linking.openSettings(),
+            },
+          ],
+        );
+        return;
+      }
+
+      const next = current.map((item) =>
+        item.id === reminder.id
+          ? { ...item, lockScreenNotificationId: result.identifier }
+          : item,
+      );
+      try {
+        await saveReminders(next);
+      } catch (error) {
+        await dismissLockScreenReminder(result.identifier);
+        throw error;
+      }
+      setReminders(next);
+      hapticSuccess();
+    } catch {
+      hapticWarning();
+      Alert.alert(
+        t(
+          "Erinnerung nicht aktiviert",
+          "Reminder not enabled",
+          "Nie włączono przypomnienia",
+        ),
+        t(
+          "Die Sperrbildschirm-Erinnerung konnte nicht geändert werden. Bitte versuche es erneut.",
+          "The Lock Screen reminder could not be changed. Please try again.",
+          "Nie udało się zmienić przypomnienia na ekranie blokady. Spróbuj ponownie.",
+        ),
+      );
+    } finally {
+      setLockScreenBusyId(null);
+    }
   }
 
   function openDaySelection() {
@@ -293,7 +432,7 @@ export default function JournalScreen() {
                 <Text className="mt-1 text-3xl font-black text-foreground">
                   {t("Tagebuch", "Journal")}
                 </Text>
-                <Text className="mt-2 text-base leading-6 text-muted">
+                <Text className="mt-2 text-sm leading-5 text-muted">
                   {t(
                     "Deine Trainingstage und Gedanken für Training oder Leben.",
                     "Your training days and thoughts for workouts or life.",
@@ -305,11 +444,12 @@ export default function JournalScreen() {
             <ProfileBmiCard />
 
             <View
-              className="bg-surface p-5"
+              className="bg-surface p-[18px]"
               style={{
                 borderWidth: 1,
-                borderColor: `${colors.primary}40`,
+                borderColor: colors.border,
                 borderRadius: ZAYMAX_DESIGN.radius.card,
+                ...ZAYMAX_DESIGN.shadow,
               }}
             >
               <View className="flex-row items-start justify-between">
@@ -374,7 +514,7 @@ export default function JournalScreen() {
                     marginTop: 16,
                     borderRadius: ZAYMAX_DESIGN.radius.round,
                     borderWidth: 1,
-                    borderColor: `${colors.primary}99`,
+                    borderColor: ZAYMAX_DESIGN.colors.goldLine,
                     backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
                     paddingVertical: 13,
                     opacity: pressed ? 0.6 : 1,
@@ -392,7 +532,7 @@ export default function JournalScreen() {
 
             <Animated.View
               entering={FadeIn.duration(ZAYMAX_DESIGN.motion.quick)}
-              className="bg-surface p-4"
+              className="bg-surface p-[18px]"
               style={{
                 marginTop: 16,
                 borderWidth: 1,
@@ -415,8 +555,14 @@ export default function JournalScreen() {
                 placeholderTextColor={colors.muted}
                 multiline
                 style={{
-                  minHeight: 82,
+                  minHeight: 96,
                   marginTop: 12,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: ZAYMAX_DESIGN.radius.input,
+                  backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
                   color: colors.foreground,
                   fontSize: 16,
                   lineHeight: 23,
@@ -468,13 +614,16 @@ export default function JournalScreen() {
                 </Pressable>
               </View>
             </Animated.View>
-            <Text className="mt-8 mb-3 text-xl font-black text-foreground">
+            <Text className="mt-7 mb-3 text-xl font-black text-foreground">
               {t("Meine Einträge", "My entries")}
             </Text>
           </>
         }
         ListEmptyComponent={
-          <View className="flex-1 items-center justify-center rounded-3xl border border-border bg-surface/40 p-7">
+          <View
+            className="flex-1 items-center justify-center border border-border bg-surface/40 p-7"
+            style={{ borderRadius: ZAYMAX_DESIGN.radius.card }}
+          >
             <IconSymbol name="pencil" size={29} color={colors.foreground} />
             <Text className="mt-4 text-lg font-black text-foreground">
               {t("Dein Tagebuch ist noch leer", "Your journal is still empty")}
@@ -499,8 +648,12 @@ export default function JournalScreen() {
                 borderRadius: ZAYMAX_DESIGN.radius.nested,
                 borderWidth: 1,
                 borderColor:
-                  editingId === item.id ? colors.primary : colors.border,
-                backgroundColor: colors.surface,
+                  editingId === item.id || item.lockScreenNotificationId
+                    ? colors.primary
+                    : colors.border,
+                backgroundColor: item.lockScreenNotificationId
+                  ? ZAYMAX_DESIGN.colors.goldSoft
+                  : colors.surface,
                 padding: 16,
               }}
             >
@@ -517,28 +670,107 @@ export default function JournalScreen() {
                 </Text>
                 <Text className="mt-3 text-xs text-muted">
                   {formatJournalDate(item.updatedAt, locale)} ·{" "}
-                  {t("Tippen zum Bearbeiten", "Tap to edit")}
+                  {t(
+                    "Tippen zum Bearbeiten",
+                    "Tap to edit",
+                    "Dotknij, aby edytować",
+                  )}
                 </Text>
               </Pressable>
-              <Pressable
-                accessibilityLabel={t(
-                  "Tagebucheintrag löschen",
-                  "Delete journal entry",
-                )}
-                onPress={() => confirmDelete(item)}
-                style={({ pressed }) => [
-                  {
-                    position: "absolute",
-                    right: 8,
-                    bottom: 8,
-                    padding: 8,
+              <View className="mt-4 flex-row items-center justify-between gap-3">
+                <Pressable
+                  accessibilityRole="switch"
+                  accessibilityState={{
+                    checked: Boolean(item.lockScreenNotificationId),
+                    disabled: lockScreenBusyId === item.id,
+                  }}
+                  accessibilityLabel={t(
+                    "Sperrbildschirm-Erinnerung",
+                    "Lock Screen reminder",
+                    "Przypomnienie na ekranie blokady",
+                  )}
+                  disabled={Boolean(lockScreenBusyId)}
+                  onPress={() => void toggleLockScreenReminder(item)}
+                  style={({ pressed }) => ({
+                    minHeight: 38,
+                    flex: 1,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 7,
                     borderRadius: ZAYMAX_DESIGN.radius.round,
+                    borderWidth: 1,
+                    borderColor: item.lockScreenNotificationId
+                      ? colors.primary
+                      : colors.border,
+                    backgroundColor: item.lockScreenNotificationId
+                      ? `${colors.primary}20`
+                      : colors.background,
+                    paddingHorizontal: 12,
+                    opacity:
+                      lockScreenBusyId === item.id ? 0.45 : pressed ? 0.62 : 1,
+                  })}
+                >
+                  <IconSymbol
+                    name={
+                      item.lockScreenNotificationId ? "lock.fill" : "bell.fill"
+                    }
+                    size={16}
+                    color={
+                      item.lockScreenNotificationId
+                        ? colors.primary
+                        : colors.muted
+                    }
+                  />
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      color: item.lockScreenNotificationId
+                        ? colors.primary
+                        : colors.foreground,
+                      fontSize: 12,
+                      fontWeight: "800",
+                    }}
+                  >
+                    {item.lockScreenNotificationId
+                      ? t(
+                          "Am Sperrbildschirm",
+                          "On Lock Screen",
+                          "Na ekranie blokady",
+                        )
+                      : t(
+                          "Am Sperrbildschirm merken",
+                          "Show on Lock Screen",
+                          "Pokaż na ekranie blokady",
+                        )}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  accessibilityLabel={t(
+                    "Tagebucheintrag löschen",
+                    "Delete journal entry",
+                    "Usuń wpis z dziennika",
+                  )}
+                  onPress={() => confirmDelete(item)}
+                  style={({ pressed }) => ({
+                    width: 38,
+                    height: 38,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: ZAYMAX_DESIGN.radius.round,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    backgroundColor: colors.background,
                     opacity: pressed ? 0.55 : 1,
-                  },
-                ]}
-              >
-                <IconSymbol name="trash.fill" size={18} color={colors.muted} />
-              </Pressable>
+                  })}
+                >
+                  <IconSymbol
+                    name="trash.fill"
+                    size={17}
+                    color={colors.muted}
+                  />
+                </Pressable>
+              </View>
             </View>
           </Animated.View>
         )}
@@ -555,7 +787,7 @@ export default function JournalScreen() {
             flex: 1,
             justifyContent: "center",
             padding: 22,
-            backgroundColor: "rgba(0,0,0,0.88)",
+            backgroundColor: ZAYMAX_DESIGN.colors.overlay,
           }}
         >
           <View
@@ -681,6 +913,15 @@ function formatJournalDate(date: string, locale: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(parsed);
+}
+
+function removeLockScreenStatus(reminder: Reminder): Reminder {
+  return {
+    id: reminder.id,
+    text: reminder.text,
+    createdAt: reminder.createdAt,
+    updatedAt: reminder.updatedAt,
+  };
 }
 
 const WHITE_CONFETTI = [

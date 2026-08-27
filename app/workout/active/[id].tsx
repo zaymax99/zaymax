@@ -790,11 +790,12 @@ export default function ActiveWorkoutScreen() {
         </View>
 
         <View
-          className="bg-surface p-5"
+          className="bg-surface p-[18px]"
           style={{
             borderWidth: 1,
-            borderColor: `${colors.primary}35`,
+            borderColor: colors.border,
             borderRadius: ZAYMAX_DESIGN.radius.card,
+            ...ZAYMAX_DESIGN.shadow,
           }}
         >
           <View className="flex-row items-end justify-between">
@@ -869,7 +870,7 @@ export default function ActiveWorkoutScreen() {
         </View>
 
         <View
-          className="mt-4 bg-surface p-5"
+          className="mt-3 bg-surface p-[18px]"
           style={{
             borderWidth: 1,
             borderColor: colors.border,
@@ -1056,7 +1057,7 @@ export default function ActiveWorkoutScreen() {
                         borderRadius: ZAYMAX_DESIGN.radius.nested,
                         borderWidth: 1,
                         borderColor: checked
-                          ? "rgba(120, 201, 145, 0.42)"
+                          ? ZAYMAX_DESIGN.colors.goldLine
                           : colors.border,
                         backgroundColor: checked
                           ? ZAYMAX_DESIGN.colors.successSoft
@@ -1270,7 +1271,7 @@ export default function ActiveWorkoutScreen() {
             flex: 1,
             justifyContent: "center",
             padding: 22,
-            backgroundColor: "rgba(0,0,0,0.82)",
+            backgroundColor: ZAYMAX_DESIGN.colors.overlay,
           }}
         >
           <View
@@ -1280,6 +1281,7 @@ export default function ActiveWorkoutScreen() {
               borderColor: colors.border,
               backgroundColor: colors.surface,
               padding: 20,
+              ...ZAYMAX_DESIGN.shadow,
             }}
           >
             <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
@@ -1312,7 +1314,7 @@ export default function ActiveWorkoutScreen() {
                       borderRadius: ZAYMAX_DESIGN.radius.nested,
                       borderWidth: 1,
                       borderColor: colors.border,
-                      backgroundColor: colors.background,
+                      backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
                       paddingHorizontal: 15,
                       opacity: finishing ? 0.45 : pressed ? 0.65 : 1,
                     },
@@ -1362,7 +1364,7 @@ export default function ActiveWorkoutScreen() {
             flex: 1,
             justifyContent: "center",
             padding: 22,
-            backgroundColor: "rgba(0,0,0,0.9)",
+            backgroundColor: ZAYMAX_DESIGN.colors.overlay,
           }}
         >
           {completionSummary ? (
@@ -1373,6 +1375,7 @@ export default function ActiveWorkoutScreen() {
                 borderColor: colors.border,
                 backgroundColor: colors.surface,
                 padding: 20,
+                ...ZAYMAX_DESIGN.shadow,
               }}
             >
               <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
@@ -1441,7 +1444,7 @@ export default function ActiveWorkoutScreen() {
                   borderRadius: ZAYMAX_DESIGN.radius.nested,
                   borderWidth: 1,
                   borderColor: colors.border,
-                  backgroundColor: colors.background,
+                  backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
                   padding: 13,
                 }}
               >
@@ -1514,7 +1517,7 @@ function SummaryMetric({
         borderRadius: ZAYMAX_DESIGN.radius.nested,
         borderWidth: 1,
         borderColor: colors.border,
-        backgroundColor: colors.background,
+        backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
         padding: 13,
       }}
     >

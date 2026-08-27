@@ -157,13 +157,17 @@ export default function HomeScreen() {
       >
         <Animated.View
           entering={FadeIn.duration(180)}
-          className="flex-row items-center justify-between pt-4 pb-6"
+          className="flex-row items-center justify-between pt-3 pb-5"
           style={{ position: "relative" }}
         >
           <View className="flex-row items-center" style={{ paddingRight: 82 }}>
             <View
-              className="mr-3 h-12 w-12 overflow-hidden rounded-full bg-black"
-              style={{ borderWidth: 1, borderColor: `${colors.primary}99` }}
+              className="mr-3 h-11 w-11 overflow-hidden rounded-full"
+              style={{
+                borderWidth: 1,
+                borderColor: ZAYMAX_DESIGN.colors.goldLine,
+                backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
+              }}
             >
               <Image
                 source={logo}
@@ -178,7 +182,7 @@ export default function HomeScreen() {
               >
                 ZAYMAX
               </Text>
-              <Text className="mt-1 text-xl font-black text-foreground">
+              <Text className="mt-1 text-[22px] font-black text-foreground">
                 {greeting}
               </Text>
             </View>
@@ -210,25 +214,28 @@ export default function HomeScreen() {
         <Animated.View
           entering={FadeInDown.duration(ZAYMAX_DESIGN.motion.standard)}
           style={{
-            minHeight: 272,
+            minHeight: 238,
             borderWidth: 1,
-            borderColor: `${colors.primary}55`,
+            borderColor: nextWorkout
+              ? ZAYMAX_DESIGN.colors.goldLine
+              : colors.border,
             backgroundColor: colors.surface,
-            paddingHorizontal: 21,
-            paddingVertical: 22,
+            paddingHorizontal: 18,
+            paddingVertical: 18,
             borderRadius: ZAYMAX_DESIGN.radius.hero,
+            ...ZAYMAX_DESIGN.shadow,
           }}
         >
           <View className="flex-row items-start justify-between">
             <View
               style={{
-                width: 58,
-                height: 58,
+                width: 48,
+                height: 48,
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 1,
-                borderColor: `${colors.primary}70`,
-                backgroundColor: colors.background,
+                borderColor: ZAYMAX_DESIGN.colors.goldLine,
+                backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
                 borderRadius: ZAYMAX_DESIGN.radius.round,
               }}
             >
@@ -236,7 +243,7 @@ export default function HomeScreen() {
                 name={
                   nextWorkout ? "figure.strengthtraining.traditional" : "plus"
                 }
-                size={27}
+                size={23}
                 color={colors.primary}
               />
             </View>
@@ -244,7 +251,7 @@ export default function HomeScreen() {
               {t("HEUTE", "TODAY")}
             </Text>
           </View>
-          <Text className="mt-6 text-[28px] font-black leading-8 text-foreground">
+          <Text className="mt-5 text-[26px] font-black leading-8 text-foreground">
             {t("Bereit fürs Training?", "Ready to train?")}
           </Text>
           <Text className="mt-2 text-sm leading-5 text-muted">
@@ -281,9 +288,9 @@ export default function HomeScreen() {
             }}
             style={({ pressed }) => [
               {
-                marginTop: 22,
+                marginTop: 18,
                 width: "100%",
-                minHeight: 52,
+                minHeight: 50,
                 alignItems: "center",
                 justifyContent: "center",
                 backgroundColor: colors.primary,
@@ -315,13 +322,13 @@ export default function HomeScreen() {
                 {
                   marginTop: 10,
                   width: "100%",
-                  minHeight: 48,
+                  minHeight: 44,
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 8,
                   borderWidth: 1,
-                  borderColor: `${colors.primary}80`,
+                  borderColor: ZAYMAX_DESIGN.colors.goldLine,
                   backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
                   borderRadius: ZAYMAX_DESIGN.radius.round,
                   opacity: pressed ? 0.65 : 1,
@@ -353,7 +360,7 @@ export default function HomeScreen() {
           />
         </View>
 
-        <View className="mt-8 flex-row items-end justify-between">
+        <View className="mt-7 flex-row items-end justify-between">
           <View>
             <Text className="text-[10px] font-black uppercase tracking-[2.5px] text-muted">
               {t("BIBLIOTHEK", "LIBRARY")}
@@ -390,7 +397,14 @@ export default function HomeScreen() {
             />
           ))
         ) : (
-          <View className="mt-3 rounded-3xl border border-border bg-surface/80 p-5">
+          <View
+            className="mt-3 border border-border"
+            style={{
+              borderRadius: ZAYMAX_DESIGN.radius.card,
+              backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
+              padding: ZAYMAX_DESIGN.spacing.card,
+            }}
+          >
             <Text className="font-black uppercase text-foreground">
               {t("Noch kein eigenes Workout", "No custom workout yet")}
             </Text>
@@ -432,8 +446,8 @@ function HeaderButton({
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 1,
-          borderColor: `${colors.primary}70`,
-          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
           borderRadius: ZAYMAX_DESIGN.radius.round,
           marginLeft: 6,
           opacity: pressed ? 0.6 : 1,
@@ -467,52 +481,54 @@ function QuickCard({
       style={({ pressed }) => [
         {
           flex: 1,
-          minHeight: 134,
-          alignItems: "center",
-          justifyContent: "center",
+          minHeight: 118,
+          alignItems: "flex-start",
+          justifyContent: "space-between",
           borderWidth: 1,
           borderColor: colors.border,
           backgroundColor: colors.surface,
           borderRadius: ZAYMAX_DESIGN.radius.card,
+          padding: 15,
           opacity: pressed ? 0.72 : 1,
         },
       ]}
     >
       <View
         style={{
-          width: 54,
-          height: 54,
+          width: 40,
+          height: 40,
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 1,
-          borderColor: `${colors.primary}99`,
-          backgroundColor: colors.background,
+          borderColor: ZAYMAX_DESIGN.colors.goldLine,
+          backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
           borderRadius: ZAYMAX_DESIGN.radius.round,
         }}
       >
-        <IconSymbol name={icon} size={24} color={colors.primary} />
+        <IconSymbol name={icon} size={19} color={colors.primary} />
       </View>
-      <Text
-        style={{
-          marginTop: 14,
-          color: colors.muted,
-          fontSize: 9,
-          fontWeight: "900",
-          letterSpacing: 2,
-        }}
-      >
-        {eyebrow}
-      </Text>
-      <Text
-        style={{
-          marginTop: 5,
-          color: colors.foreground,
-          fontSize: 17,
-          fontWeight: "900",
-        }}
-      >
-        {title}
-      </Text>
+      <View>
+        <Text
+          style={{
+            color: colors.muted,
+            fontSize: 9,
+            fontWeight: "900",
+            letterSpacing: 1.7,
+          }}
+        >
+          {eyebrow}
+        </Text>
+        <Text
+          style={{
+            marginTop: 4,
+            color: colors.foreground,
+            fontSize: 17,
+            fontWeight: "900",
+          }}
+        >
+          {title}
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -547,11 +563,11 @@ function WorkoutCard({
       <View
         style={{
           marginTop: 12,
-          minHeight: 194,
+          minHeight: 172,
           backgroundColor: colors.surface,
           borderWidth: 1,
           borderColor: workout.lockedAt ? colors.primary : colors.border,
-          padding: 17,
+          padding: 16,
           borderRadius: ZAYMAX_DESIGN.radius.card,
         }}
       >
@@ -567,14 +583,14 @@ function WorkoutCard({
         >
           <View
             style={{
-              marginRight: 14,
-              width: 54,
-              height: 54,
+              marginRight: 12,
+              width: 46,
+              height: 46,
               alignItems: "center",
               justifyContent: "center",
               borderWidth: 1,
-              borderColor: `${colors.primary}55`,
-              backgroundColor: colors.background,
+              borderColor: ZAYMAX_DESIGN.colors.goldLine,
+              backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
               borderRadius: ZAYMAX_DESIGN.radius.round,
             }}
           >
@@ -584,7 +600,7 @@ function WorkoutCard({
                   ? "lock.fill"
                   : "figure.strengthtraining.traditional"
               }
-              size={24}
+              size={21}
               color={colors.primary}
             />
           </View>
@@ -618,7 +634,7 @@ function WorkoutCard({
           </View>
           <IconSymbol name="chevron.right" size={20} color={colors.muted} />
         </Pressable>
-        <View className="mt-10 flex-row gap-2">
+        <View className="mt-5 flex-row gap-2">
           <Pressable
             onPress={onStart}
             style={({ pressed }) => [
