@@ -10,7 +10,7 @@ import { useColors } from "@/hooks/use-colors";
 import { hapticTap } from "@/lib/haptics";
 import { useLanguage } from "@/lib/i18n";
 
-const POLICY_VERSION = "26.08.2026";
+const POLICY_VERSION = "28.08.2026";
 const APP_VERSION = Constants.expoConfig?.version ?? "1.0.2";
 
 export default function PrivacyScreen() {
@@ -81,19 +81,23 @@ export default function PrivacyScreen() {
         </PrivacyCard>
 
         <PrivacyCard
-          eyebrow={t("MITTEILUNGEN", "NOTIFICATIONS", "POWIADOMIENIA")}
+          eyebrow={t(
+            "SPERRBILDSCHIRM-WIDGET",
+            "LOCK SCREEN WIDGET",
+            "WIDŻET EKRANU BLOKADY",
+          )}
           title={t(
-            "Sperrbildschirm nur auf deinen Wunsch",
-            "Lock Screen only when you choose",
-            "Ekran blokady tylko na Twoje życzenie",
+            "Deine ausgewählte Notiz auf einen Blick",
+            "Your selected note at a glance",
+            "Wybrana notatka na pierwszy rzut oka",
           )}
           colors={colors}
         >
           <BodyText colors={colors}>
             {t(
-              "Wenn du bei einem Tagebucheintrag selbst „Am Sperrbildschirm merken“ auswählst, erstellt Zaymax eine lokale iOS-Mitteilung mit dem Text dieser Notiz. Dafür fragt die App nach deiner Erlaubnis für Mitteilungen. Der Inhalt wird nicht an den Entwickler oder externe Server übertragen. Du kannst die Erinnerung in Zaymax ausschalten, auf dem Sperrbildschirm entfernen oder die Berechtigung jederzeit in den iOS-Einstellungen widerrufen.",
-              "When you choose “Show on Lock Screen” for a journal entry, Zaymax creates a local iOS notification containing that note. The app asks for notification permission first. The content is not sent to the developer or external servers. You can turn the reminder off in Zaymax, remove it from the Lock Screen, or revoke permission at any time in iOS Settings.",
-              "Gdy wybierzesz „Pokaż na ekranie blokady” dla wpisu w dzienniku, Zaymax utworzy lokalne powiadomienie iOS z treścią tej notatki. Aplikacja najpierw poprosi o zgodę na powiadomienia. Treść nie jest wysyłana do twórcy ani na zewnętrzne serwery. Przypomnienie możesz wyłączyć w Zaymax, usunąć z ekranu blokady lub w każdej chwili cofnąć zgodę w ustawieniach iOS.",
+              "Wenn du einen Tagebucheintrag selbst für das Sperrbildschirm-Widget auswählst, speichert Zaymax genau diese Notiz lokal in einer gemeinsamen iOS-App-Gruppe für die App und ihre Widget-Erweiterung. Es erfolgt keine Übertragung an den Entwickler oder externe Server. Das Widget fügst du selbst über „Sperrbildschirm anpassen“ hinzu und kannst es dort jederzeit wieder entfernen. In Zaymax kann immer genau eine Notiz für das Widget ausgewählt sein.",
+              "When you select a journal entry for the Lock Screen widget, Zaymax stores only that note locally in an iOS App Group shared by the app and its widget extension. Nothing is transmitted to the developer or external servers. You add the widget yourself through Customize Lock Screen and can remove it there at any time. Exactly one note can be selected for the widget in Zaymax.",
+              "Gdy wybierzesz wpis dziennika dla widżetu ekranu blokady, Zaymax zapisze wyłącznie tę notatkę lokalnie we wspólnej grupie iOS używanej przez aplikację i rozszerzenie widżetu. Dane nie są przesyłane do twórcy ani na zewnętrzne serwery. Widżet dodajesz samodzielnie przez opcję dostosowania ekranu blokady i możesz go w każdej chwili usunąć. W Zaymax można wybrać dokładnie jedną notatkę dla widżetu.",
             )}
           </BodyText>
         </PrivacyCard>
@@ -117,8 +121,9 @@ export default function PrivacyScreen() {
           </Bullet>
           <Bullet colors={colors}>
             {t(
-              "Tagebucheinträge und ausgewählte Trainingstage",
-              "Journal entries and selected training days",
+              "Tagebucheinträge, ausgewählte Trainingstage und optional die für das Sperrbildschirm-Widget gewählte Notiz",
+              "Journal entries, selected training days and, optionally, the note selected for the Lock Screen widget",
+              "Wpisy dziennika, wybrane dni treningowe oraz opcjonalnie notatka wybrana dla widżetu ekranu blokady",
             )}
           </Bullet>
           <Bullet colors={colors}>

@@ -1,6 +1,7 @@
 import type { ExpoConfig } from "expo/config";
 
 const bundleIdentifier = "com.app.zaymax";
+const appGroupIdentifier = `group.${bundleIdentifier}`;
 const healthReadUsageDescription =
   "Zaymax liest deine Schrittzahlen aus Apple Health, um deine Schritte pro Tag und Woche anzuzeigen. / Zaymax reads your Apple Health step count to show your daily and weekly steps. / Zaymax odczytuje liczbę kroków z Apple Health, aby wyświetlać wyniki dzienne i tygodniowe.";
 const healthUpdateUsageDescription =
@@ -23,6 +24,10 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: false,
     bundleIdentifier,
+    appleTeamId: "5VY3JKR7A2",
+    entitlements: {
+      "com.apple.security.application-groups": [appGroupIdentifier],
+    },
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSHealthShareUsageDescription: healthReadUsageDescription,
@@ -56,6 +61,7 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
+    "@bacons/apple-targets",
     [
       "expo-splash-screen",
       {

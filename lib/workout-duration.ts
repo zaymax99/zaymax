@@ -1,6 +1,7 @@
 import type { AppLanguage } from "@/lib/i18n";
 
 const MAX_RESUMABLE_WORKOUT_MS = 12 * 60 * 60 * 1000;
+const MAX_ACTIVE_WORKOUT_SECONDS = 24 * 60 * 60;
 
 export function normalizeWorkoutStartedAt(
   startedAt: string | undefined,
@@ -34,6 +35,41 @@ export function calculateWorkoutDurationSeconds(
   if (!Number.isFinite(startMs) || !Number.isFinite(completedMs)) return 1;
 
   return Math.max(1, Math.round((completedMs - startMs) / 1000));
+}
+
+export function normalizeActiveWorkoutSeconds(value: unknown) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 0;
+  return Math.min(MAX_ACTIVE_WORKOUT_SECONDS, Math.max(0, Math.floor(value)));
+}
+
+export function calculateActiveWorkoutSeconds(
+  accumulatedSeconds: number,
+  activeSinceMs: number | null,
+  nowMs = Date.now(),
+) {
+  const accumulated = normalizeActiveWorkoutSeconds(accumulatedSeconds);
+  if (activeSinceMs === null || !Number.isFinite(activeSinceMs)) {
+    return accumulated;
+  }
+
+  const segmentSeconds = Math.max(
+    0,
+    Math.floor((nowMs - activeSinceMs) / 1000),
+  );
+  return normalizeActiveWorkoutSeconds(accumulated + segmentSeconds);
+}
+
+export function formatWorkoutClock(seconds: number) {
+  const safeSeconds = normalizeActiveWorkoutSeconds(seconds);
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const remainingSeconds = safeSeconds % 60;
+  const minuteText = String(minutes).padStart(2, "0");
+  const secondText = String(remainingSeconds).padStart(2, "0");
+
+  return hours > 0
+    ? `${String(hours).padStart(2, "0")}:${minuteText}:${secondText}`
+    : `${minuteText}:${secondText}`;
 }
 
 export function formatWorkoutDuration(seconds: number, language: AppLanguage) {

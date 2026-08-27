@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  getPinnedLockScreenReminder,
   loadReminders,
+  selectLockScreenReminder,
   stripLockScreenStateFromRemindersValue,
+  type Reminder,
 } from "../lib/reminders";
 
 const storage = vi.hoisted(() => ({
@@ -86,5 +89,49 @@ describe("journal storage recovery", () => {
         ),
       ),
     ).toEqual([{ id: "note-1", text: "Gym-Tasche mitnehmen" }]);
+  });
+
+  it("allows exactly one note to be selected for the Lock Screen widget", () => {
+    const notes: Reminder[] = [
+      {
+        id: "note-1",
+        text: "Gym-Tasche mitnehmen",
+        createdAt: "2026-08-27T12:00:00.000Z",
+        updatedAt: "2026-08-27T12:00:00.000Z",
+        lockScreenPinned: true,
+      },
+      {
+        id: "note-2",
+        text: "Langsam steigern",
+        createdAt: "2026-08-27T13:00:00.000Z",
+        updatedAt: "2026-08-27T13:00:00.000Z",
+      },
+    ];
+
+    const selected = selectLockScreenReminder(notes, "note-2");
+    expect(selected.filter((note) => note.lockScreenPinned)).toHaveLength(1);
+    expect(getPinnedLockScreenReminder(selected)?.id).toBe("note-2");
+    expect(
+      getPinnedLockScreenReminder(selectLockScreenReminder(notes, null)),
+    ).toBeUndefined();
+  });
+
+  it("keeps the portable widget selection but removes legacy notification ids", () => {
+    expect(
+      JSON.parse(
+        stripLockScreenStateFromRemindersValue(
+          JSON.stringify([
+            {
+              id: "note-1",
+              text: "Gym-Tasche mitnehmen",
+              lockScreenPinned: true,
+              lockScreenNotificationId: "old-device-notification",
+            },
+          ]),
+        ),
+      ),
+    ).toEqual([
+      { id: "note-1", text: "Gym-Tasche mitnehmen", lockScreenPinned: true },
+    ]);
   });
 });

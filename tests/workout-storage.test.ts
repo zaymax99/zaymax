@@ -89,8 +89,10 @@ describe("workout storage recovery", () => {
           ],
         },
         baselineSetValues: {},
+        activeElapsedSeconds: 999999,
         restSeconds: 9999,
         restRemaining: -3,
+        restEndsAt: "2026-08-26T18:01:30.000Z",
       }),
     );
 
@@ -100,6 +102,26 @@ describe("workout storage recovery", () => {
     expect(session?.setValues.bench).toEqual([{ reps: 10, weightKg: 22.5 }]);
     expect(session?.restSeconds).toBe(600);
     expect(session?.restRemaining).toBe(0);
+    expect(session?.activeElapsedSeconds).toBe(24 * 60 * 60);
+    expect(session?.restEndsAt).toBe("2026-08-26T18:01:30.000Z");
+  });
+
+  it("migrates old active sessions to zero foreground time", async () => {
+    storage.getItem.mockResolvedValue(
+      JSON.stringify({
+        workoutId: "push",
+        startedAt: "2026-08-26T18:00:00.000Z",
+        completedSets: {},
+        setValues: {},
+        baselineSetValues: {},
+        restSeconds: 90,
+        restRemaining: 0,
+      }),
+    );
+
+    await expect(loadActiveSession()).resolves.toMatchObject({
+      activeElapsedSeconds: 0,
+    });
   });
 
   it("keeps valid history entries and safely formats bad dates", async () => {

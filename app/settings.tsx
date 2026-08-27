@@ -22,6 +22,8 @@ import {
 } from "@/lib/haptics";
 import { createBackup, pickBackup, restoreBackup } from "@/lib/backup";
 import { dismissAllLockScreenReminders } from "@/lib/lock-screen-reminders";
+import { updatePinnedNoteWidget } from "@/lib/lock-screen-widget";
+import { getPinnedLockScreenReminder, loadReminders } from "@/lib/reminders";
 
 const restOptions = [30, 60, 90, 120, 180];
 const languageOptions: {
@@ -36,6 +38,12 @@ const languageOptions: {
 
 function formatRest(seconds: number) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")} min`;
+}
+
+function widgetEmptyLabel(language: AppLanguage) {
+  if (language === "de") return "Notiz in Zaymax auswählen";
+  if (language === "pl") return "Wybierz notatkę w Zaymax";
+  return "Select a note in Zaymax";
 }
 
 export default function SettingsScreen() {
@@ -84,6 +92,11 @@ export default function SettingsScreen() {
   async function chooseLanguage(nextLanguage: AppLanguage) {
     try {
       await setLanguage(nextLanguage);
+      const notes = await loadReminders();
+      await updatePinnedNoteWidget(
+        getPinnedLockScreenReminder(notes)?.text,
+        widgetEmptyLabel(nextLanguage),
+      );
       hapticTap();
     } catch {
       showSettingsSaveError();
@@ -166,12 +179,17 @@ export default function SettingsScreen() {
               try {
                 await dismissAllLockScreenReminders().catch(() => undefined);
                 await restoreBackup(backup);
+                const restoredNotes = await loadReminders();
                 const savedLanguage = backup.data[LANGUAGE_STORAGE_KEY];
                 const restoredLanguage: AppLanguage =
                   savedLanguage === "en" || savedLanguage === "pl"
                     ? savedLanguage
                     : "de";
                 await setLanguage(restoredLanguage);
+                await updatePinnedNoteWidget(
+                  getPinnedLockScreenReminder(restoredNotes)?.text,
+                  widgetEmptyLabel(restoredLanguage),
+                );
                 hapticSuccess();
                 router.replace("/");
                 Alert.alert(
@@ -235,6 +253,7 @@ export default function SettingsScreen() {
               );
               if (zaymaxKeys.length) await AsyncStorage.multiRemove(zaymaxKeys);
               await dismissAllLockScreenReminders().catch(() => undefined);
+              await updatePinnedNoteWidget(undefined, widgetEmptyLabel("de"));
               await setLanguage("de");
               hapticSuccess();
               Alert.alert(

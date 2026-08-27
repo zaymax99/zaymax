@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AppState,
   Alert,
   Modal,
   Pressable,
@@ -55,8 +56,10 @@ import {
 } from "@/lib/haptics";
 import { useLanguage, usesDecimalComma } from "@/lib/i18n";
 import {
-  calculateWorkoutDurationSeconds,
+  calculateActiveWorkoutSeconds,
   formatWorkoutDuration,
+  formatWorkoutClock,
+  normalizeActiveWorkoutSeconds,
   normalizeWorkoutStartedAt,
 } from "@/lib/workout-duration";
 
@@ -119,6 +122,16 @@ function displayWeightGain(weightGainKg: number, unit: WeightUnit) {
   return Number(value.toFixed(1));
 }
 
+function restSecondsRemaining(
+  restEndsAt: string | undefined,
+  nowMs = Date.now(),
+) {
+  if (!restEndsAt) return 0;
+  const endMs = Date.parse(restEndsAt);
+  if (!Number.isFinite(endMs)) return 0;
+  return Math.max(0, Math.min(600, Math.ceil((endMs - nowMs) / 1000)));
+}
+
 export default function ActiveWorkoutScreen() {
   const colors = useColors("dark");
   const { language, t } = useLanguage();
@@ -128,10 +141,15 @@ export default function ActiveWorkoutScreen() {
   const [session, setSession] = useState<ActiveSession | null>(null);
   const [loadIssue, setLoadIssue] = useState<"missing" | "failed" | null>(null);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [restDisplayRemaining, setRestDisplayRemaining] = useState(0);
+  const [workoutElapsedSeconds, setWorkoutElapsedSeconds] = useState(0);
   const [weightUnit, setWeightUnit] = useState<WeightUnit>("kg");
   const [effortPromptVisible, setEffortPromptVisible] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const finishingRef = useRef(false);
+  const sessionRef = useRef<ActiveSession | null>(null);
+  const activeSegmentStartedAtRef = useRef<number | null>(null);
+  const workoutClockPausedRef = useRef(false);
   const [completionSummary, setCompletionSummary] =
     useState<CompletionSummary | null>(null);
   const [improvement, setImprovement] = useState<Improvement | null>(null);
@@ -144,6 +162,48 @@ export default function ActiveWorkoutScreen() {
   const progressStyle = useAnimatedStyle(() => ({
     width: `${progressFill.value}%` as `${number}%`,
   }));
+
+  const updateSession = useCallback(
+    (updater: (current: ActiveSession) => ActiveSession) => {
+      setSession((current) => {
+        if (!current) return current;
+        const next = updater(current);
+        sessionRef.current = next;
+        return next;
+      });
+    },
+    [],
+  );
+
+  const pauseWorkoutClock = useCallback((nowMs = Date.now()) => {
+    const current = sessionRef.current;
+    const activeSinceMs = activeSegmentStartedAtRef.current;
+    if (!current || activeSinceMs === null) return current;
+
+    const activeElapsedSeconds = calculateActiveWorkoutSeconds(
+      current.activeElapsedSeconds,
+      activeSinceMs,
+      nowMs,
+    );
+    const next = { ...current, activeElapsedSeconds };
+    activeSegmentStartedAtRef.current = null;
+    sessionRef.current = next;
+    setSession(next);
+    setWorkoutElapsedSeconds(activeElapsedSeconds);
+    void saveActiveSession(next).catch(() => undefined);
+    return next;
+  }, []);
+
+  const resumeWorkoutClock = useCallback(() => {
+    if (
+      AppState.currentState === "active" &&
+      sessionRef.current &&
+      activeSegmentStartedAtRef.current === null &&
+      !workoutClockPausedRef.current
+    ) {
+      activeSegmentStartedAtRef.current = Date.now();
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -168,11 +228,15 @@ export default function ActiveWorkoutScreen() {
           startedAt: canResume
             ? normalizeWorkoutStartedAt(existing.startedAt, openedAt)
             : openedAt,
+          activeElapsedSeconds: canResume
+            ? normalizeActiveWorkoutSeconds(existing.activeElapsedSeconds)
+            : 0,
           completedSets: {},
           setValues: {},
           baselineSetValues: {},
           restSeconds: settings.restSeconds || DEFAULT_REST,
           restRemaining: canResume ? (existing.restRemaining ?? 0) : 0,
+          restEndsAt: canResume ? existing.restEndsAt : undefined,
         };
 
         found.exercises.forEach((exercise) => {
@@ -227,11 +291,26 @@ export default function ActiveWorkoutScreen() {
           );
         });
 
+        const resumedRest = restSecondsRemaining(initial.restEndsAt);
+        if (resumedRest > 0) {
+          initial.restRemaining = resumedRest;
+        } else {
+          const pausedRest = initial.restEndsAt
+            ? 0
+            : Math.max(0, Math.min(600, initial.restRemaining));
+          initial.restEndsAt = undefined;
+          initial.restRemaining = pausedRest;
+        }
         await saveActiveSession(initial);
         if (!mounted) return;
         setWorkout(found);
         setWeightUnit(settings.weightUnit);
+        sessionRef.current = initial;
+        setWorkoutElapsedSeconds(initial.activeElapsedSeconds);
+        setRestDisplayRemaining(initial.restRemaining);
+        setTimerRunning(Boolean(initial.restEndsAt));
         setSession(initial);
+        resumeWorkoutClock();
       } catch {
         if (mounted) setLoadIssue("failed");
       }
@@ -239,35 +318,64 @@ export default function ActiveWorkoutScreen() {
     return () => {
       mounted = false;
     };
-  }, [id]);
+  }, [id, resumeWorkoutClock]);
 
-  useEffect(
-    () => () => {
-      if (improvementTimer.current) clearTimeout(improvementTimer.current);
-    },
-    [],
-  );
-
-  const restRemaining = session?.restRemaining ?? 0;
   useEffect(() => {
-    if (timerRunning && restRemaining === 0) {
-      setTimerRunning(false);
-      hapticWarning();
-      return;
-    }
-    if (!timerRunning || !restRemaining) return;
-    const interval = setInterval(() => {
-      setSession((current) =>
-        current
-          ? {
-              ...current,
-              restRemaining: Math.max(0, current.restRemaining - 1),
-            }
-          : current,
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") resumeWorkoutClock();
+      else pauseWorkoutClock();
+    });
+    return () => subscription.remove();
+  }, [pauseWorkoutClock, resumeWorkoutClock]);
+
+  useEffect(() => {
+    const updateClock = () => {
+      const current = sessionRef.current;
+      if (!current) return;
+      const nowMs = Date.now();
+      const activeSinceMs = activeSegmentStartedAtRef.current;
+      const elapsed = calculateActiveWorkoutSeconds(
+        current.activeElapsedSeconds,
+        activeSinceMs,
+        nowMs,
       );
+      setWorkoutElapsedSeconds(elapsed);
+
+      // Persist a lightweight checkpoint so an unexpected app termination
+      // loses at most a few seconds without writing storage every second.
+      if (activeSinceMs !== null && nowMs - activeSinceMs >= 15_000) {
+        const checkpoint = { ...current, activeElapsedSeconds: elapsed };
+        activeSegmentStartedAtRef.current = nowMs;
+        sessionRef.current = checkpoint;
+        setSession(checkpoint);
+      }
+    };
+    updateClock();
+    const interval = setInterval(updateClock, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!timerRunning || !session?.restEndsAt) return;
+    const tick = () => {
+      const remaining = restSecondsRemaining(session.restEndsAt);
+      setRestDisplayRemaining(remaining);
+      if (remaining > 0) return;
+
+      setTimerRunning(false);
+      updateSession((current) => ({
+        ...current,
+        restRemaining: 0,
+        restEndsAt: undefined,
+      }));
+      hapticWarning();
+    };
+    tick();
+    const interval = setInterval(() => {
+      tick();
     }, 1000);
     return () => clearInterval(interval);
-  }, [timerRunning, restRemaining]);
+  }, [session?.restEndsAt, timerRunning, updateSession]);
 
   useEffect(() => {
     if (!session) return;
@@ -288,6 +396,25 @@ export default function ActiveWorkoutScreen() {
       );
     });
   }, [session, t]);
+
+  useEffect(
+    () => () => {
+      if (improvementTimer.current) clearTimeout(improvementTimer.current);
+      const current = sessionRef.current;
+      if (!current) return;
+      const snapshot = {
+        ...current,
+        activeElapsedSeconds: calculateActiveWorkoutSeconds(
+          current.activeElapsedSeconds,
+          activeSegmentStartedAtRef.current,
+        ),
+      };
+      activeSegmentStartedAtRef.current = null;
+      sessionRef.current = snapshot;
+      void saveActiveSession(snapshot).catch(() => undefined);
+    },
+    [],
+  );
 
   const completedCount = useMemo(
     () =>
@@ -310,9 +437,7 @@ export default function ActiveWorkoutScreen() {
     100,
     (completedCount / Math.max(1, totalSets)) * 100,
   );
-  const timerText = session
-    ? `${String(Math.floor(session.restRemaining / 60)).padStart(2, "0")}:${String(session.restRemaining % 60).padStart(2, "0")}`
-    : "01:30";
+  const timerText = `${String(Math.floor(restDisplayRemaining / 60)).padStart(2, "0")}:${String(restDisplayRemaining % 60).padStart(2, "0")}`;
 
   useEffect(() => {
     progressFill.value = withTiming(progress, {
@@ -325,8 +450,7 @@ export default function ActiveWorkoutScreen() {
     setIndex: number,
     patch: Partial<ActiveSetValue>,
   ) {
-    setSession((current) => {
-      if (!current) return current;
+    updateSession((current) => {
       const values = [...(current.setValues[exerciseId] ?? [])];
       values[setIndex] = { ...values[setIndex], ...patch };
       return {
@@ -406,8 +530,7 @@ export default function ActiveWorkoutScreen() {
   }
 
   function addSet(exerciseId: string) {
-    setSession((current) => {
-      if (!current) return current;
+    updateSession((current) => {
       const values = [...(current.setValues[exerciseId] ?? [])];
       if (values.length >= 20) return current;
       const nextValue = { ...(values.at(-1) ?? { reps: 10, weightKg: null }) };
@@ -434,9 +557,8 @@ export default function ActiveWorkoutScreen() {
   }
 
   function removeSet(exerciseId: string) {
-    setSession((current) => {
-      if (!current || (current.setValues[exerciseId]?.length ?? 0) <= 1)
-        return current;
+    updateSession((current) => {
+      if ((current.setValues[exerciseId]?.length ?? 0) <= 1) return current;
       return {
         ...current,
         setValues: {
@@ -460,39 +582,85 @@ export default function ActiveWorkoutScreen() {
   }
 
   function toggleSet(exerciseId: string, setIndex: number) {
+    const currentSession = sessionRef.current;
+    if (!currentSession) return;
     hapticTap();
     const willBeChecked = !(
-      session?.completedSets[exerciseId]?.[setIndex] ?? false
+      currentSession.completedSets[exerciseId]?.[setIndex] ?? false
     );
-    if (willBeChecked) setTimerRunning(true);
-    setSession((current) => {
-      if (!current) return current;
+    updateSession((current) => {
       const checks = [...(current.completedSets[exerciseId] ?? [])];
       checks[setIndex] = !checks[setIndex];
       return {
         ...current,
         completedSets: { ...current.completedSets, [exerciseId]: checks },
-        restRemaining: checks[setIndex]
-          ? current.restSeconds
-          : current.restRemaining,
       };
     });
+    if (willBeChecked) runRest(currentSession.restSeconds);
+  }
+
+  function runRest(seconds: number) {
+    const duration = Math.max(1, Math.min(600, Math.round(seconds)));
+    const restEndsAt = new Date(Date.now() + duration * 1000).toISOString();
+    setRestDisplayRemaining(duration);
+    setTimerRunning(true);
+    updateSession((current) => ({
+      ...current,
+      restRemaining: duration,
+      restEndsAt,
+    }));
   }
 
   function startRest() {
+    const currentSession = sessionRef.current;
+    if (!currentSession) return;
     hapticTap();
-    setSession((current) =>
-      current ? { ...current, restRemaining: current.restSeconds } : current,
-    );
-    setTimerRunning(true);
+    runRest(currentSession.restSeconds);
+  }
+
+  function pauseRest() {
+    const currentSession = sessionRef.current;
+    if (!currentSession) return;
+    hapticTap();
+    const remaining = restSecondsRemaining(currentSession.restEndsAt);
+    setTimerRunning(false);
+    setRestDisplayRemaining(remaining);
+    updateSession((current) => ({
+      ...current,
+      restRemaining: remaining,
+      restEndsAt: undefined,
+    }));
+  }
+
+  function resumeRest() {
+    const currentSession = sessionRef.current;
+    if (!currentSession) return;
+    hapticTap();
+    runRest(restDisplayRemaining || currentSession.restSeconds);
   }
 
   function resetRest() {
     hapticSelection();
     setTimerRunning(false);
-    setSession((current) =>
-      current ? { ...current, restRemaining: 0 } : current,
-    );
+    setRestDisplayRemaining(0);
+    updateSession((current) => ({
+      ...current,
+      restRemaining: 0,
+      restEndsAt: undefined,
+    }));
+  }
+
+  function openEffortPrompt() {
+    workoutClockPausedRef.current = true;
+    pauseWorkoutClock();
+    setEffortPromptVisible(true);
+  }
+
+  function closeEffortPrompt() {
+    if (finishing) return;
+    setEffortPromptVisible(false);
+    workoutClockPausedRef.current = false;
+    resumeWorkoutClock();
   }
 
   function finish() {
@@ -511,17 +679,18 @@ export default function ActiveWorkoutScreen() {
           { text: t("Weiter trainieren", "Keep training"), style: "cancel" },
           {
             text: t("Trotzdem beenden", "Finish anyway"),
-            onPress: () => setEffortPromptVisible(true),
+            onPress: openEffortPrompt,
           },
         ],
       );
       return;
     }
-    setEffortPromptVisible(true);
+    openEffortPrompt();
   }
 
   async function completeWorkout(effort: WorkoutEffort) {
     if (!workout || !session || finishingRef.current) return;
+    const activeSession = pauseWorkoutClock() ?? session;
     finishingRef.current = true;
     setFinishing(true);
     try {
@@ -532,7 +701,7 @@ export default function ActiveWorkoutScreen() {
       ]);
       const historyExercises = workout.exercises
         .map((exercise) => {
-          const values = session.setValues[exercise.id] ?? [];
+          const values = activeSession.setValues[exercise.id] ?? [];
           const previousSets = history.flatMap((entry) =>
             entry.exercises
               .filter(
@@ -551,7 +720,8 @@ export default function ActiveWorkoutScreen() {
           const completedIndexes = values
             .map((_, setIndex) => setIndex)
             .filter(
-              (setIndex) => session.completedSets[exercise.id]?.[setIndex],
+              (setIndex) =>
+                activeSession.completedSets[exercise.id]?.[setIndex],
             );
           const currentBestReps = Math.max(
             0,
@@ -574,9 +744,11 @@ export default function ActiveWorkoutScreen() {
             exerciseId: exercise.id,
             name: exercise.name,
             sets: values.flatMap((value, setIndex) => {
-              if (!session.completedSets[exercise.id]?.[setIndex]) return [];
+              if (!activeSession.completedSets[exercise.id]?.[setIndex])
+                return [];
               const baseline =
-                session.baselineSetValues[exercise.id]?.[setIndex] ?? value;
+                activeSession.baselineSetValues[exercise.id]?.[setIndex] ??
+                value;
               const gains = gainsForSet(value, baseline);
               return [
                 {
@@ -599,9 +771,9 @@ export default function ActiveWorkoutScreen() {
       const completedHistorySets = historyExercises.flatMap(
         (exercise) => exercise.sets,
       );
-      const durationSeconds = calculateWorkoutDurationSeconds(
-        session.startedAt,
-        completedAt,
+      const durationSeconds = Math.max(
+        1,
+        normalizeActiveWorkoutSeconds(activeSession.activeElapsedSeconds),
       );
       const totalVolumeKg = completedHistorySets.reduce(
         (sum, set) => sum + set.reps * (set.weightKg ?? 0),
@@ -621,7 +793,7 @@ export default function ActiveWorkoutScreen() {
         id: uid(),
         workoutId: workout.id,
         workoutTitle: workout.title,
-        startedAt: session.startedAt,
+        startedAt: activeSession.startedAt,
         completedAt,
         durationSeconds,
         totalVolumeKg,
@@ -639,11 +811,12 @@ export default function ActiveWorkoutScreen() {
           updatedAt: completedAt,
           exercises: item.exercises.map((exercise) => {
             const values =
-              session.setValues[exercise.id] ?? setValuesForExercise(exercise);
+              activeSession.setValues[exercise.id] ??
+              setValuesForExercise(exercise);
             const completedValues = completedValuesForTemplate(
               exercise,
               values,
-              session.completedSets[exercise.id] ?? [],
+              activeSession.completedSets[exercise.id] ?? [],
             );
             return {
               ...exercise,
@@ -657,6 +830,8 @@ export default function ActiveWorkoutScreen() {
         };
       });
       await finalizeWorkoutStorage(updatedWorkouts, [historyEntry, ...history]);
+      sessionRef.current = null;
+      activeSegmentStartedAtRef.current = null;
       setEffortPromptVisible(false);
       setCompletionSummary({
         durationSeconds,
@@ -668,6 +843,9 @@ export default function ActiveWorkoutScreen() {
       });
       hapticSuccess();
     } catch {
+      workoutClockPausedRef.current = false;
+      setEffortPromptVisible(false);
+      resumeWorkoutClock();
       Alert.alert(
         t(
           "Training konnte nicht abgeschlossen werden",
@@ -787,6 +965,51 @@ export default function ActiveWorkoutScreen() {
               {workout.title}
             </Text>
           </View>
+          <View
+            accessibilityLabel={t(
+              `Trainingszeit ${formatWorkoutClock(workoutElapsedSeconds)}`,
+              `Workout time ${formatWorkoutClock(workoutElapsedSeconds)}`,
+              `Czas treningu ${formatWorkoutClock(workoutElapsedSeconds)}`,
+            )}
+            style={{
+              minWidth: 88,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 7,
+              borderWidth: 1,
+              borderColor: ZAYMAX_DESIGN.colors.goldLine,
+              borderRadius: ZAYMAX_DESIGN.radius.round,
+              backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
+              paddingHorizontal: 10,
+              paddingVertical: 8,
+            }}
+          >
+            <IconSymbol name="timer" size={16} color={GOLD} />
+            <View>
+              <Text
+                style={{
+                  color: colors.muted,
+                  fontSize: 8,
+                  fontWeight: "900",
+                  letterSpacing: 0.8,
+                }}
+              >
+                {t("ZEIT", "TIME", "CZAS")}
+              </Text>
+              <Text
+                style={{
+                  marginTop: 1,
+                  color: colors.foreground,
+                  fontSize: 14,
+                  fontWeight: "900",
+                  fontVariant: ["tabular-nums"],
+                }}
+              >
+                {formatWorkoutClock(workoutElapsedSeconds)}
+              </Text>
+            </View>
+          </View>
         </View>
 
         <View
@@ -897,12 +1120,8 @@ export default function ActiveWorkoutScreen() {
                     : t("Timer starten", "Start timer")
                 }
                 onPress={() => {
-                  if (timerRunning) {
-                    hapticTap();
-                    setTimerRunning(false);
-                  } else {
-                    startRest();
-                  }
+                  if (timerRunning) pauseRest();
+                  else resumeRest();
                 }}
                 style={({ pressed }) => [
                   {
@@ -1264,7 +1483,7 @@ export default function ActiveWorkoutScreen() {
         visible={effortPromptVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => !finishing && setEffortPromptVisible(false)}
+        onRequestClose={closeEffortPrompt}
       >
         <View
           style={{
@@ -1333,7 +1552,7 @@ export default function ActiveWorkoutScreen() {
               disabled={finishing}
               onPress={() => {
                 hapticTap();
-                setEffortPromptVisible(false);
+                closeEffortPrompt();
               }}
               style={({ pressed }) => [
                 {

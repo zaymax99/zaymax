@@ -31,6 +31,8 @@ const MAPPING = {
   "book.closed.fill": "menu-book",
   "lock.fill": "lock",
   "lock.open.fill": "lock-open",
+  "note.text": "sticky-note-2",
+  "pin.fill": "push-pin",
   "medal.fill": "workspace-premium",
   "dumbbell.fill": "fitness-center",
   plus: "add",

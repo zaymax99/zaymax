@@ -5,6 +5,7 @@ export type Reminder = {
   text: string;
   createdAt: string;
   updatedAt: string;
+  lockScreenPinned?: boolean;
   lockScreenNotificationId?: string;
 };
 export type Weekday =
@@ -27,6 +28,7 @@ export async function loadReminders(): Promise<Reminder[]> {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
     const seen = new Set<string>();
+    let pinnedSeen = false;
     return parsed.flatMap((item) => {
       if (
         !item ||
@@ -50,12 +52,15 @@ export async function loadReminders(): Promise<Reminder[]> {
         record.lockScreenNotificationId
           ? record.lockScreenNotificationId
           : undefined;
+      const lockScreenPinned = record.lockScreenPinned === true && !pinnedSeen;
+      if (lockScreenPinned) pinnedSeen = true;
       return [
         {
           id: item.id,
           text: item.text,
           createdAt,
           updatedAt,
+          ...(lockScreenPinned ? { lockScreenPinned: true } : {}),
           ...(lockScreenNotificationId ? { lockScreenNotificationId } : {}),
         },
       ];
@@ -77,7 +82,7 @@ export function stripLockScreenStateFromRemindersValue(value: string) {
       parsed.map((item) => {
         if (!item || typeof item !== "object" || Array.isArray(item))
           return item;
-        const { lockScreenNotificationId: _localState, ...rest } =
+        const { lockScreenNotificationId: _legacyNotification, ...rest } =
           item as Record<string, unknown>;
         return rest;
       }),
@@ -85,6 +90,31 @@ export function stripLockScreenStateFromRemindersValue(value: string) {
   } catch {
     return value;
   }
+}
+
+export function selectLockScreenReminder(
+  reminders: Reminder[],
+  reminderId: string | null,
+): Reminder[] {
+  return reminders.map((item) => {
+    const { lockScreenNotificationId: _legacyNotification, ...clean } = item;
+    return item.id === reminderId
+      ? { ...clean, lockScreenPinned: true }
+      : removePinnedState(clean);
+  });
+}
+
+export function getPinnedLockScreenReminder(
+  reminders: Reminder[],
+): Reminder | undefined {
+  return reminders.find((item) => item.lockScreenPinned);
+}
+
+function removePinnedState(
+  reminder: Omit<Reminder, "lockScreenNotificationId">,
+): Reminder {
+  const { lockScreenPinned: _pinned, ...rest } = reminder;
+  return rest;
 }
 
 export async function loadTrainingDays(): Promise<Weekday[]> {

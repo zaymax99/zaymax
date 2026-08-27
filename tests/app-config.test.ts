@@ -27,4 +27,12 @@ describe("App Store iOS configuration", () => {
       config.ios?.infoPlist?.NSAppTransportSecurity?.NSAllowsArbitraryLoads,
     ).toBe(false);
   });
+
+  it("configures the signed Lock Screen widget and shared App Group", () => {
+    expect(config.ios?.appleTeamId).toBe("5VY3JKR7A2");
+    expect(
+      config.ios?.entitlements?.["com.apple.security.application-groups"],
+    ).toContain("group.com.app.zaymax");
+    expect(config.plugins).toContain("@bacons/apple-targets");
+  });
 });

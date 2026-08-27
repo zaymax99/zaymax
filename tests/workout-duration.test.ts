@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  calculateActiveWorkoutSeconds,
   calculateWorkoutDurationSeconds,
   formatWorkoutDuration,
+  formatWorkoutClock,
+  normalizeActiveWorkoutSeconds,
   normalizeWorkoutStartedAt,
 } from "../lib/workout-duration";
 
@@ -32,5 +35,17 @@ describe("workout duration", () => {
     expect(
       normalizeWorkoutStartedAt("2026-08-26T17:30:00.000Z", openedAt),
     ).toBe("2026-08-26T17:30:00.000Z");
+  });
+
+  it("counts only the currently active foreground segment", () => {
+    expect(calculateActiveWorkoutSeconds(75, 1_000, 11_999)).toBe(85);
+    expect(calculateActiveWorkoutSeconds(75, null, 99_999)).toBe(75);
+  });
+
+  it("normalizes corrupt active time and formats the live clock", () => {
+    expect(normalizeActiveWorkoutSeconds(Number.NaN)).toBe(0);
+    expect(normalizeActiveWorkoutSeconds(-20)).toBe(0);
+    expect(formatWorkoutClock(65)).toBe("01:05");
+    expect(formatWorkoutClock(3665)).toBe("01:01:05");
   });
 });

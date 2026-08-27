@@ -2,9 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
-  Linking,
   Modal,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -35,17 +33,16 @@ import {
   hapticWarning,
 } from "@/lib/haptics";
 import { useLanguage } from "@/lib/i18n";
+import { dismissLockScreenReminder } from "@/lib/lock-screen-reminders";
+import { updatePinnedNoteWidget } from "@/lib/lock-screen-widget";
 import {
-  dismissLockScreenReminder,
-  getPresentedLockScreenReminderIds,
-  scheduleLockScreenReminder,
-} from "@/lib/lock-screen-reminders";
-import {
+  getPinnedLockScreenReminder,
   loadReminders,
   loadTrainingDays,
   reminderUid,
   saveReminders,
   saveTrainingDays,
+  selectLockScreenReminder,
   type Reminder,
   type Weekday,
 } from "@/lib/reminders";
@@ -143,32 +140,35 @@ export default function JournalScreen() {
       loadReminders(),
       loadTrainingDays(),
     ]);
-    let visibleNotes = notes;
-    if (
-      Platform.OS === "ios" &&
-      notes.some((note) => note.lockScreenNotificationId)
-    ) {
-      try {
-        const presentedIds = await getPresentedLockScreenReminderIds();
-        let changed = false;
-        visibleNotes = notes.map((note) => {
-          if (
-            !note.lockScreenNotificationId ||
-            presentedIds.has(note.lockScreenNotificationId)
-          ) {
-            return note;
-          }
-          changed = true;
-          return removeLockScreenStatus(note);
-        });
-        if (changed) await saveReminders(visibleNotes);
-      } catch {
-        // Keep the saved state if iOS cannot currently query Notification Center.
-      }
+    const legacyNotifications = notes.filter(
+      (note) => note.lockScreenNotificationId,
+    );
+    const preferredPinnedId =
+      getPinnedLockScreenReminder(notes)?.id ?? legacyNotifications[0]?.id;
+    const visibleNotes = legacyNotifications.length
+      ? selectLockScreenReminder(notes, preferredPinnedId ?? null)
+      : notes;
+
+    if (legacyNotifications.length) {
+      await Promise.allSettled(
+        legacyNotifications.map((note) =>
+          dismissLockScreenReminder(note.lockScreenNotificationId!),
+        ),
+      );
+      await saveReminders(visibleNotes);
     }
+
+    await updatePinnedNoteWidget(
+      getPinnedLockScreenReminder(visibleNotes)?.text,
+      t(
+        "Notiz in Zaymax auswählen",
+        "Select a note in Zaymax",
+        "Wybierz notatkę w Zaymax",
+      ),
+    );
     setReminders(visibleNotes);
     setTrainingDays(days);
-  }, []);
+  }, [t]);
   useFocusEffect(
     useCallback(() => {
       void refresh().catch(() => {
@@ -205,6 +205,14 @@ export default function JournalScreen() {
             ...current,
           ];
       await saveReminders(next);
+      await updatePinnedNoteWidget(
+        getPinnedLockScreenReminder(next)?.text,
+        t(
+          "Notiz in Zaymax auswählen",
+          "Select a note in Zaymax",
+          "Wybierz notatkę w Zaymax",
+        ),
+      );
       setReminders(next);
       setDraft("");
       setEditingId(null);
@@ -247,6 +255,14 @@ export default function JournalScreen() {
                   reminder.lockScreenNotificationId,
                 );
               }
+              await updatePinnedNoteWidget(
+                getPinnedLockScreenReminder(next)?.text,
+                t(
+                  "Notiz in Zaymax auswählen",
+                  "Select a note in Zaymax",
+                  "Wybierz notatkę w Zaymax",
+                ),
+              );
               if (editingId === reminder.id) cancelEdit();
               hapticWarning();
             } catch {
@@ -261,37 +277,27 @@ export default function JournalScreen() {
   async function toggleLockScreenReminder(reminder: Reminder) {
     if (lockScreenBusyId) return;
     setLockScreenBusyId(reminder.id);
+    let previous: Reminder[] = [];
     try {
       const current = await loadReminders();
+      previous = current;
       const storedReminder =
         current.find((item) => item.id === reminder.id) ?? reminder;
-
-      if (storedReminder.lockScreenNotificationId) {
-        await dismissLockScreenReminder(
-          storedReminder.lockScreenNotificationId,
-        );
-        const next = current.map((item) =>
-          item.id === reminder.id ? removeLockScreenStatus(item) : item,
-        );
-        await saveReminders(next);
-        setReminders(next);
-        hapticSelection();
-        return;
-      }
-
-      const result = await scheduleLockScreenReminder(
-        reminder.id,
-        storedReminder.text,
-        {
-          title: t("ZAYMAX · NOTIZ", "ZAYMAX · NOTE", "ZAYMAX · NOTATKA"),
-          subtitle: t(
-            "Aus deinem Tagebuch",
-            "From your journal",
-            "Z twojego dziennika",
-          ),
-        },
+      const willPin = !storedReminder.lockScreenPinned;
+      const next = selectLockScreenReminder(
+        current,
+        willPin ? storedReminder.id : null,
       );
-      if (result.status === "unsupported") {
+      const result = await updatePinnedNoteWidget(
+        getPinnedLockScreenReminder(next)?.text,
+        t(
+          "Notiz in Zaymax auswählen",
+          "Select a note in Zaymax",
+          "Wybierz notatkę w Zaymax",
+        ),
+      );
+
+      if (result === "unsupported") {
         Alert.alert(
           t(
             "Nur auf dem iPhone verfügbar",
@@ -299,49 +305,62 @@ export default function JournalScreen() {
             "Dostępne tylko na iPhonie",
           ),
           t(
-            "Sperrbildschirm-Erinnerungen werden derzeit nur von iOS unterstützt.",
-            "Lock Screen reminders are currently supported on iOS only.",
-            "Przypomnienia na ekranie blokady są obecnie obsługiwane tylko w iOS.",
+            "Das Zaymax-Sperrbildschirm-Widget ist nur auf dem iPhone verfügbar.",
+            "The Zaymax Lock Screen widget is available on iPhone only.",
+            "Widżet Zaymax na ekran blokady jest dostępny tylko na iPhonie.",
           ),
-        );
-        return;
-      }
-      if (result.status === "denied") {
-        Alert.alert(
-          t(
-            "Mitteilungen sind deaktiviert",
-            "Notifications are disabled",
-            "Powiadomienia są wyłączone",
-          ),
-          t(
-            "Erlaube Zaymax-Mitteilungen in den iPhone-Einstellungen, um diese Notiz auf dem Sperrbildschirm zu sehen.",
-            "Allow Zaymax notifications in iPhone Settings to see this note on the Lock Screen.",
-            "Zezwól na powiadomienia Zaymax w ustawieniach iPhone’a, aby zobaczyć tę notatkę na ekranie blokady.",
-          ),
-          [
-            { text: t("Abbrechen", "Cancel", "Anuluj"), style: "cancel" },
-            {
-              text: t("Einstellungen", "Settings", "Ustawienia"),
-              onPress: () => void Linking.openSettings(),
-            },
-          ],
         );
         return;
       }
 
-      const next = current.map((item) =>
-        item.id === reminder.id
-          ? { ...item, lockScreenNotificationId: result.identifier }
-          : item,
-      );
+      if (result === "requires-native-build") {
+        Alert.alert(
+          t(
+            "Neuer iPhone-Build erforderlich",
+            "New iPhone build required",
+            "Wymagana jest nowa wersja na iPhone’a",
+          ),
+          t(
+            "Das Widget ist im aktuell installierten Build noch nicht enthalten. Installiere den nächsten Zaymax-Build und wähle die Notiz danach erneut aus.",
+            "The widget is not included in the currently installed build yet. Install the next Zaymax build, then select the note again.",
+            "Widżet nie jest jeszcze zawarty w zainstalowanej wersji. Zainstaluj następną wersję Zaymax i ponownie wybierz notatkę.",
+          ),
+        );
+        return;
+      }
+
       try {
         await saveReminders(next);
       } catch (error) {
-        await dismissLockScreenReminder(result.identifier);
+        await updatePinnedNoteWidget(
+          getPinnedLockScreenReminder(previous)?.text,
+          t(
+            "Notiz in Zaymax auswählen",
+            "Select a note in Zaymax",
+            "Wybierz notatkę w Zaymax",
+          ),
+        );
         throw error;
       }
+      if (storedReminder.lockScreenNotificationId) {
+        await dismissLockScreenReminder(
+          storedReminder.lockScreenNotificationId,
+        );
+      }
       setReminders(next);
-      hapticSuccess();
+      if (willPin) {
+        hapticSuccess();
+        Alert.alert(
+          t("Widget vorbereitet", "Widget ready", "Widżet gotowy"),
+          t(
+            "Halte den iPhone-Sperrbildschirm gedrückt, tippe auf Anpassen → Sperrbildschirm und füge dort „Zaymax Notiz“ hinzu. Danach zeigt das Widget immer die hier ausgewählte Notiz.",
+            "Touch and hold the iPhone Lock Screen, tap Customize → Lock Screen, then add “Zaymax Note”. The widget will then always show the note selected here.",
+            "Przytrzymaj ekran blokady iPhone’a, wybierz Dostosuj → Ekran blokady i dodaj „Zaymax Notiz”. Widżet będzie odtąd pokazywał wybraną tutaj notatkę.",
+          ),
+        );
+      } else {
+        hapticSelection();
+      }
     } catch {
       hapticWarning();
       Alert.alert(
@@ -648,10 +667,10 @@ export default function JournalScreen() {
                 borderRadius: ZAYMAX_DESIGN.radius.nested,
                 borderWidth: 1,
                 borderColor:
-                  editingId === item.id || item.lockScreenNotificationId
+                  editingId === item.id || item.lockScreenPinned
                     ? colors.primary
                     : colors.border,
-                backgroundColor: item.lockScreenNotificationId
+                backgroundColor: item.lockScreenPinned
                   ? ZAYMAX_DESIGN.colors.goldSoft
                   : colors.surface,
                 padding: 16,
@@ -681,13 +700,13 @@ export default function JournalScreen() {
                 <Pressable
                   accessibilityRole="switch"
                   accessibilityState={{
-                    checked: Boolean(item.lockScreenNotificationId),
+                    checked: Boolean(item.lockScreenPinned),
                     disabled: lockScreenBusyId === item.id,
                   }}
                   accessibilityLabel={t(
-                    "Sperrbildschirm-Erinnerung",
-                    "Lock Screen reminder",
-                    "Przypomnienie na ekranie blokady",
+                    "Notiz für Sperrbildschirm-Widget auswählen",
+                    "Select note for Lock Screen widget",
+                    "Wybierz notatkę dla widżetu ekranu blokady",
                   )}
                   disabled={Boolean(lockScreenBusyId)}
                   onPress={() => void toggleLockScreenReminder(item)}
@@ -700,10 +719,10 @@ export default function JournalScreen() {
                     gap: 7,
                     borderRadius: ZAYMAX_DESIGN.radius.round,
                     borderWidth: 1,
-                    borderColor: item.lockScreenNotificationId
+                    borderColor: item.lockScreenPinned
                       ? colors.primary
                       : colors.border,
-                    backgroundColor: item.lockScreenNotificationId
+                    backgroundColor: item.lockScreenPinned
                       ? `${colors.primary}20`
                       : colors.background,
                     paddingHorizontal: 12,
@@ -712,36 +731,32 @@ export default function JournalScreen() {
                   })}
                 >
                   <IconSymbol
-                    name={
-                      item.lockScreenNotificationId ? "lock.fill" : "bell.fill"
-                    }
+                    name={item.lockScreenPinned ? "pin.fill" : "note.text"}
                     size={16}
                     color={
-                      item.lockScreenNotificationId
-                        ? colors.primary
-                        : colors.muted
+                      item.lockScreenPinned ? colors.primary : colors.muted
                     }
                   />
                   <Text
                     numberOfLines={1}
                     style={{
-                      color: item.lockScreenNotificationId
+                      color: item.lockScreenPinned
                         ? colors.primary
                         : colors.foreground,
                       fontSize: 12,
                       fontWeight: "800",
                     }}
                   >
-                    {item.lockScreenNotificationId
+                    {item.lockScreenPinned
                       ? t(
-                          "Am Sperrbildschirm",
-                          "On Lock Screen",
-                          "Na ekranie blokady",
+                          "Für Widget ausgewählt",
+                          "Selected for widget",
+                          "Wybrano do widżetu",
                         )
                       : t(
-                          "Am Sperrbildschirm merken",
-                          "Show on Lock Screen",
-                          "Pokaż na ekranie blokady",
+                          "Im Sperrbildschirm-Widget zeigen",
+                          "Show in Lock Screen widget",
+                          "Pokaż w widżecie ekranu blokady",
                         )}
                   </Text>
                 </Pressable>
@@ -913,15 +928,6 @@ function formatJournalDate(date: string, locale: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(parsed);
-}
-
-function removeLockScreenStatus(reminder: Reminder): Reminder {
-  return {
-    id: reminder.id,
-    text: reminder.text,
-    createdAt: reminder.createdAt,
-    updatedAt: reminder.updatedAt,
-  };
 }
 
 const WHITE_CONFETTI = [

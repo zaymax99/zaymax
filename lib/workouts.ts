@@ -26,11 +26,13 @@ export type SetGains = { repsGain: number; weightGainKg: number };
 export type ActiveSession = {
   workoutId: string;
   startedAt: string;
+  activeElapsedSeconds: number;
   completedSets: Record<string, boolean[]>;
   setValues: Record<string, ActiveSetValue[]>;
   baselineSetValues: Record<string, ActiveSetValue[]>;
   restSeconds: number;
   restRemaining: number;
+  restEndsAt?: string;
 };
 export type WorkoutHistorySet = {
   setNumber: number;
@@ -430,6 +432,13 @@ export async function loadActiveSession(): Promise<ActiveSession | null> {
     return {
       workoutId: parsed.workoutId,
       startedAt: parsed.startedAt,
+      activeElapsedSeconds: Math.max(
+        0,
+        Math.min(
+          24 * 60 * 60,
+          Math.floor(finiteNumber(parsed.activeElapsedSeconds)),
+        ),
+      ),
       completedSets: normalizeCompletedSetRecord(parsed.completedSets),
       setValues: normalizeSetValueRecord(parsed.setValues),
       baselineSetValues: normalizeSetValueRecord(parsed.baselineSetValues),
@@ -441,6 +450,7 @@ export async function loadActiveSession(): Promise<ActiveSession | null> {
         0,
         Math.min(600, Math.round(finiteNumber(parsed.restRemaining))),
       ),
+      restEndsAt: optionalString(parsed.restEndsAt),
     };
   } catch {
     return null;

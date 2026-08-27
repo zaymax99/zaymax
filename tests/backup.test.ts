@@ -60,6 +60,7 @@ describe("backup restoration", () => {
           {
             id: "note-1",
             text: "Gym-Tasche mitnehmen",
+            lockScreenPinned: true,
             lockScreenNotificationId: "old-device-notification",
           },
         ]),
@@ -69,7 +70,13 @@ describe("backup restoration", () => {
     expect(storage.multiSet).toHaveBeenCalledWith([
       [
         "zaymax.reminders.v1",
-        JSON.stringify([{ id: "note-1", text: "Gym-Tasche mitnehmen" }]),
+        JSON.stringify([
+          {
+            id: "note-1",
+            text: "Gym-Tasche mitnehmen",
+            lockScreenPinned: true,
+          },
+        ]),
       ],
     ]);
   });

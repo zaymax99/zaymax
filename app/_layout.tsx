@@ -5,7 +5,7 @@ import {
 } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import "@/lib/_core/nativewind-pressable";
@@ -13,7 +13,7 @@ import { ThemeProvider } from "@/lib/theme-provider";
 import { LanguageProvider } from "@/lib/i18n";
 import { KeyboardDismissButton } from "@/components/keyboard-dismiss-button";
 import { AppExperienceOverlay } from "@/components/app-experience-overlay";
-import { configureLockScreenReminderHandler } from "@/lib/lock-screen-reminders";
+import { dismissAllLockScreenReminders } from "@/lib/lock-screen-reminders";
 import {
   SafeAreaProvider,
   initialWindowMetrics,
@@ -37,9 +37,13 @@ export const unstable_settings = {
   anchor: "(tabs)",
 };
 
-configureLockScreenReminderHandler();
-
 export default function RootLayout() {
+  useEffect(() => {
+    // One-release migration: remove journal notifications created by older
+    // builds now that notes use the dedicated Lock Screen widget.
+    void dismissAllLockScreenReminders().catch(() => undefined);
+  }, []);
+
   const providerInitialMetrics = useMemo(() => {
     if (!initialWindowMetrics) return undefined;
     return {
