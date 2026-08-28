@@ -1,5 +1,6 @@
+import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
-import { Platform, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HapticTab } from "@/components/haptic-tab";
@@ -12,7 +13,7 @@ export default function TabLayout() {
   const colors = useColors("dark");
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  const bottomPadding = Platform.OS === "web" ? 12 : Math.max(insets.bottom, 8);
+  const bottomPadding = Platform.OS === "web" ? 10 : Math.max(insets.bottom, 8);
 
   return (
     <Tabs
@@ -26,20 +27,34 @@ export default function TabLayout() {
           config: { duration: ZAYMAX_DESIGN.motion.quick },
         },
         sceneStyle: { backgroundColor: colors.background },
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: colors.foreground,
         tabBarInactiveTintColor: colors.muted,
         tabBarButton: HapticTab,
         tabBarHideOnKeyboard: true,
+        tabBarBackground: () => (
+          <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+            <BlurView
+              tint="dark"
+              intensity={Platform.OS === "ios" ? 48 : 34}
+              style={[StyleSheet.absoluteFill, styles.barMaterial]}
+            />
+            <View style={[StyleSheet.absoluteFill, styles.barSmoke]} />
+            <View style={styles.barReflection} />
+          </View>
+        ),
         tabBarStyle: {
-          height: 72 + bottomPadding,
-          paddingTop: 8,
+          position: "absolute",
+          left: 12,
+          right: 12,
+          bottom: 6,
+          height: 60 + bottomPadding,
+          paddingTop: 7,
           paddingBottom: bottomPadding,
-          backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
-          borderTopColor: colors.border,
-          borderTopWidth: 0.75,
-          borderTopLeftRadius: ZAYMAX_DESIGN.radius.card,
-          borderTopRightRadius: ZAYMAX_DESIGN.radius.card,
-          overflow: "hidden",
+          backgroundColor: "transparent",
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: ZAYMAX_DESIGN.colors.borderStrong,
+          borderTopColor: ZAYMAX_DESIGN.colors.glassReflection,
+          borderRadius: ZAYMAX_DESIGN.radius.hero,
           ...ZAYMAX_DESIGN.shadow,
         },
         tabBarLabelStyle: {
@@ -47,8 +62,8 @@ export default function TabLayout() {
           lineHeight: 14,
           fontWeight: "700",
           letterSpacing: 0.2,
-          marginTop: 3,
-          marginBottom: 2,
+          marginTop: 2,
+          marginBottom: 1,
         },
         tabBarIconStyle: {
           height: 32,
@@ -63,17 +78,17 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View
               style={{
-                width: 32,
-                height: 32,
+                width: 36,
+                height: 30,
                 borderRadius: ZAYMAX_DESIGN.radius.round,
                 alignItems: "center",
                 justifyContent: "center",
-                borderWidth: focused ? 1 : 0,
+                borderWidth: focused ? StyleSheet.hairlineWidth : 0,
                 borderColor: focused
-                  ? ZAYMAX_DESIGN.colors.goldLine
+                  ? ZAYMAX_DESIGN.colors.borderStrong
                   : "transparent",
                 backgroundColor: focused
-                  ? ZAYMAX_DESIGN.colors.goldSoft
+                  ? "rgba(255, 255, 255, 0.075)"
                   : "transparent",
               }}
             >
@@ -89,17 +104,17 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View
               style={{
-                width: 32,
-                height: 32,
+                width: 36,
+                height: 30,
                 borderRadius: ZAYMAX_DESIGN.radius.round,
                 alignItems: "center",
                 justifyContent: "center",
-                borderWidth: focused ? 1 : 0,
+                borderWidth: focused ? StyleSheet.hairlineWidth : 0,
                 borderColor: focused
-                  ? ZAYMAX_DESIGN.colors.goldLine
+                  ? ZAYMAX_DESIGN.colors.borderStrong
                   : "transparent",
                 backgroundColor: focused
-                  ? ZAYMAX_DESIGN.colors.goldSoft
+                  ? "rgba(255, 255, 255, 0.075)"
                   : "transparent",
               }}
             >
@@ -115,17 +130,17 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View
               style={{
-                width: 32,
-                height: 32,
+                width: 36,
+                height: 30,
                 borderRadius: ZAYMAX_DESIGN.radius.round,
                 alignItems: "center",
                 justifyContent: "center",
-                borderWidth: focused ? 1 : 0,
+                borderWidth: focused ? StyleSheet.hairlineWidth : 0,
                 borderColor: focused
-                  ? ZAYMAX_DESIGN.colors.goldLine
+                  ? ZAYMAX_DESIGN.colors.borderStrong
                   : "transparent",
                 backgroundColor: focused
-                  ? ZAYMAX_DESIGN.colors.goldSoft
+                  ? "rgba(255, 255, 255, 0.075)"
                   : "transparent",
               }}
             >
@@ -137,3 +152,22 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  barMaterial: {
+    overflow: "hidden",
+    borderRadius: ZAYMAX_DESIGN.radius.hero,
+  },
+  barSmoke: {
+    borderRadius: ZAYMAX_DESIGN.radius.hero,
+    backgroundColor: ZAYMAX_DESIGN.colors.glassNavigation,
+  },
+  barReflection: {
+    position: "absolute",
+    top: 0,
+    right: 24,
+    left: 24,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: ZAYMAX_DESIGN.colors.glassReflection,
+  },
+});

@@ -3,6 +3,7 @@ import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useFocusEffect, useRouter, type Href } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import { GlassMaterial } from "@/components/glass-material";
 import { ScreenContainer } from "@/components/screen-container";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -565,9 +566,11 @@ export default function SettingsScreen() {
               minHeight: 82,
               flexDirection: "row",
               alignItems: "center",
+              position: "relative",
+              overflow: "hidden",
               borderWidth: 1,
               borderColor: colors.border,
-              backgroundColor: colors.surface,
+              backgroundColor: "transparent",
               padding: ZAYMAX_DESIGN.spacing.card,
               borderRadius: ZAYMAX_DESIGN.radius.card,
               ...ZAYMAX_DESIGN.shadow,
@@ -575,6 +578,7 @@ export default function SettingsScreen() {
             },
           ]}
         >
+          <GlassMaterial intensity={22} />
           <View
             style={{
               width: 46,
@@ -583,7 +587,7 @@ export default function SettingsScreen() {
               justifyContent: "center",
               borderRadius: ZAYMAX_DESIGN.radius.round,
               borderWidth: 1,
-              borderColor: ZAYMAX_DESIGN.colors.goldLine,
+              borderColor: colors.border,
               backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
             }}
           >
@@ -609,8 +613,8 @@ export default function SettingsScreen() {
             {
               marginTop: 14,
               borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
+              borderColor: ZAYMAX_DESIGN.colors.danger,
+              backgroundColor: ZAYMAX_DESIGN.colors.dangerSoft,
               padding: ZAYMAX_DESIGN.spacing.card,
               borderRadius: ZAYMAX_DESIGN.radius.card,
               opacity: pressed ? 0.6 : 1,
@@ -664,9 +668,11 @@ function SettingsPanel({
     <View
       style={[
         {
+          position: "relative",
+          overflow: "hidden",
           borderWidth: 1,
           borderColor: colors.border,
-          backgroundColor: colors.surface,
+          backgroundColor: "transparent",
           padding: ZAYMAX_DESIGN.spacing.card,
           borderRadius: ZAYMAX_DESIGN.radius.card,
           ...ZAYMAX_DESIGN.shadow,
@@ -674,6 +680,7 @@ function SettingsPanel({
         style,
       ]}
     >
+      <GlassMaterial intensity={25} />
       <Text
         style={{
           color: colors.muted,

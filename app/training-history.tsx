@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter, type Href } from "expo-router";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import Svg, { Circle, Line, Polyline } from "react-native-svg";
 
+import { GlassMaterial } from "@/components/glass-material";
 import { ScreenContainer } from "@/components/screen-container";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -21,7 +22,7 @@ import { hapticTap } from "@/lib/haptics";
 import { useLanguage, type AppLanguage } from "@/lib/i18n";
 import { formatWorkoutDuration } from "@/lib/workout-duration";
 
-const GOLD = ZAYMAX_DESIGN.colors.gold;
+const PROGRESS_GOLD = ZAYMAX_DESIGN.colors.gold;
 
 export default function TrainingHistoryScreen() {
   const colors = useColors("dark");
@@ -214,14 +215,17 @@ function HistoryOverview({
     <Animated.View
       entering={FadeIn.duration(ZAYMAX_DESIGN.motion.standard)}
       style={{
+        position: "relative",
+        overflow: "hidden",
         borderRadius: ZAYMAX_DESIGN.radius.hero,
         borderWidth: 1,
         borderColor: colors.border,
-        backgroundColor: colors.surface,
+        backgroundColor: "transparent",
         padding: 18,
         ...ZAYMAX_DESIGN.shadow,
       }}
     >
+      <GlassMaterial raised intensity={28} radius={ZAYMAX_DESIGN.radius.hero} />
       <Text className="text-[10px] font-black uppercase tracking-[2.5px] text-muted">
         {t("ÜBERSICHT", "OVERVIEW")}
       </Text>
@@ -287,7 +291,7 @@ function HistoryOverview({
                 cx={x}
                 cy={y}
                 r={index === values.length - 1 ? 4.5 : 3.5}
-                fill={index === values.length - 1 ? GOLD : colors.foreground}
+                fill={colors.foreground}
               />
             );
           })}
@@ -323,8 +327,10 @@ function HistoryMetric({
         justifyContent: "center",
         borderRadius: ZAYMAX_DESIGN.radius.nested,
         borderWidth: 1,
-        borderColor: colors.border,
-        backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
+        borderColor: accent ? ZAYMAX_DESIGN.colors.goldLine : colors.border,
+        backgroundColor: accent
+          ? ZAYMAX_DESIGN.colors.goldSoft
+          : ZAYMAX_DESIGN.colors.surfaceSoft,
         paddingHorizontal: 10,
       }}
     >
@@ -339,7 +345,7 @@ function HistoryMetric({
         adjustsFontSizeToFit
         style={{
           marginTop: 6,
-          color: accent ? GOLD : colors.foreground,
+          color: accent ? PROGRESS_GOLD : colors.foreground,
           fontSize: 18,
           fontWeight: "900",
         }}
@@ -377,12 +383,16 @@ function HistoryCard({
       )}
       className="mb-4 bg-surface"
       style={{
+        position: "relative",
+        overflow: "hidden",
         borderWidth: 1,
         borderColor: colors.border,
         borderRadius: ZAYMAX_DESIGN.radius.card,
+        backgroundColor: "transparent",
         padding: 16,
       }}
     >
+      <GlassMaterial intensity={24} />
       <View className="flex-row items-start justify-between">
         <View className="flex-1 pr-3">
           <Text className="text-xl font-black text-foreground">
@@ -436,93 +446,132 @@ function HistoryCard({
             key={exercise.exerciseId}
             className="mt-5 border-t border-border pt-4"
           >
-            <Pressable
-              accessibilityLabel={t(
-                `Fortschritt für ${exercise.name} öffnen`,
-                `Open progress for ${exercise.name}`,
-                `Otwórz postęp dla ćwiczenia ${exercise.name}`,
-              )}
-              onPress={() => {
-                hapticTap();
-                onOpenExercise(exercise.exerciseId, exercise.name);
-              }}
-              style={({ pressed }) => [
-                {
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  opacity: pressed ? 0.55 : 1,
-                },
-              ]}
-            >
+            {exercise.skipped ? (
               <View>
                 <Text className="font-bold text-foreground">
                   {exercise.name}
                 </Text>
-                <Text className="mt-1 text-xs text-muted">
-                  {t("Übungsfortschritt ansehen", "View exercise progress")}
+                <Text className="mt-1 text-xs font-black uppercase tracking-[1.4px] text-muted">
+                  {t("Übersprungen", "Skipped", "Pominięto")}
                 </Text>
               </View>
-              <IconSymbol name="chevron.right" size={19} color={colors.muted} />
-            </Pressable>
-            <View className="mt-3 gap-2">
-              {exercise.sets.map((set) => (
-                <View
-                  key={`${exercise.exerciseId}-${set.setNumber}`}
-                  className="flex-row items-start justify-between border border-border px-3 py-3"
-                  style={{
-                    borderRadius: ZAYMAX_DESIGN.radius.nested,
-                    backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
-                  }}
-                >
-                  <Text className="text-sm font-semibold text-muted">
-                    {t("Satz", "Set")} {set.setNumber}
+            ) : (
+              <Pressable
+                accessibilityLabel={t(
+                  `Fortschritt für ${exercise.name} öffnen`,
+                  `Open progress for ${exercise.name}`,
+                  `Otwórz postęp dla ćwiczenia ${exercise.name}`,
+                )}
+                onPress={() => {
+                  hapticTap();
+                  onOpenExercise(exercise.exerciseId, exercise.name);
+                }}
+                style={({ pressed }) => [
+                  {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    opacity: pressed ? 0.55 : 1,
+                  },
+                ]}
+              >
+                <View>
+                  <Text className="font-bold text-foreground">
+                    {exercise.name}
                   </Text>
-                  <View style={{ alignItems: "flex-end", flexShrink: 1 }}>
-                    <Text className="text-right text-sm font-bold text-foreground">
-                      {set.reps} {t("Wdh.", "reps")} ·{" "}
-                      {set.weightKg
-                        ? displayWeight(set.weightKg, unit)
-                        : t("ohne Gewicht", "no weight")}
-                    </Text>
-                    {set.repsGain || set.weightGainKg ? (
-                      <View
-                        style={{
-                          marginTop: 7,
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 9,
-                        }}
-                      >
-                        {set.repsGain ? (
-                          <HistoryProgressMark
-                            icon="medal.fill"
-                            value={`+${set.repsGain}`}
-                          />
-                        ) : null}
-                        {set.weightGainKg ? (
-                          <HistoryProgressMark
-                            icon="dumbbell.fill"
-                            value={`+${displayWeight(set.weightGainKg, unit)}`}
-                          />
-                        ) : null}
-                        {set.repsPersonalBest || set.weightPersonalBest ? (
-                          <Text
-                            style={{
-                              color: GOLD,
-                              fontSize: 11,
-                              fontWeight: "900",
-                            }}
-                          >
-                            PR
-                          </Text>
-                        ) : null}
-                      </View>
-                    ) : null}
-                  </View>
+                  <Text className="mt-1 text-xs text-muted">
+                    {t(
+                      "Übungsfortschritt ansehen",
+                      "View exercise progress",
+                      "Zobacz postęp ćwiczenia",
+                    )}
+                  </Text>
                 </View>
-              ))}
-            </View>
+                <IconSymbol
+                  name="chevron.right"
+                  size={19}
+                  color={colors.muted}
+                />
+              </Pressable>
+            )}
+            {exercise.skipped ? (
+              <View
+                style={{
+                  marginTop: 12,
+                  borderRadius: ZAYMAX_DESIGN.radius.nested,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
+                  padding: 13,
+                }}
+              >
+                <Text className="text-center text-sm font-bold text-muted">
+                  {t("Übersprungen", "Skipped", "Pominięto")}
+                </Text>
+              </View>
+            ) : (
+              <View className="mt-3 gap-2">
+                {exercise.sets.map((set) => (
+                  <View
+                    key={`${exercise.exerciseId}-${set.setNumber}`}
+                    className="flex-row items-start justify-between border border-border px-3 py-3"
+                    style={{
+                      borderRadius: ZAYMAX_DESIGN.radius.nested,
+                      backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
+                    }}
+                  >
+                    <Text className="text-sm font-semibold text-muted">
+                      {t("Satz", "Set")} {set.setNumber}
+                    </Text>
+                    <View style={{ alignItems: "flex-end", flexShrink: 1 }}>
+                      <Text className="text-right text-sm font-bold text-foreground">
+                        {set.reps} {t("Wdh.", "reps")} ·{" "}
+                        {set.weightKg
+                          ? displayWeight(set.weightKg, unit)
+                          : t("ohne Gewicht", "no weight")}
+                      </Text>
+                      {set.repsGain ||
+                      set.weightGainKg ||
+                      set.repsPersonalBest ||
+                      set.weightPersonalBest ? (
+                        <View
+                          style={{
+                            marginTop: 7,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 9,
+                          }}
+                        >
+                          {set.repsGain ? (
+                            <HistoryProgressMark
+                              icon="medal.fill"
+                              value={`+${set.repsGain}`}
+                            />
+                          ) : null}
+                          {set.weightGainKg ? (
+                            <HistoryProgressMark
+                              icon="dumbbell.fill"
+                              value={`+${displayWeight(set.weightGainKg, unit)}`}
+                            />
+                          ) : null}
+                          {set.repsPersonalBest || set.weightPersonalBest ? (
+                            <Text
+                              style={{
+                                color: PROGRESS_GOLD,
+                                fontSize: 11,
+                                fontWeight: "900",
+                              }}
+                            >
+                              PR
+                            </Text>
+                          ) : null}
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         ))
       ) : (
@@ -556,9 +605,14 @@ function HistoryProgressMark({
 }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center" }}>
-      <IconSymbol name={icon} size={15} color={GOLD} />
+      <IconSymbol name={icon} size={15} color={PROGRESS_GOLD} />
       <Text
-        style={{ marginLeft: 4, color: GOLD, fontSize: 12, fontWeight: "800" }}
+        style={{
+          marginLeft: 4,
+          color: PROGRESS_GOLD,
+          fontSize: 12,
+          fontWeight: "800",
+        }}
       >
         {value}
       </Text>

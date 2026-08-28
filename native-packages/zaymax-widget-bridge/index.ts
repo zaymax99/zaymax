@@ -1,7 +1,4 @@
-import {
-  requireOptionalNativeModule,
-  type NativeModule,
-} from "expo-modules-core";
+import { requireOptionalNativeModule, type NativeModule } from "expo";
 
 export type ZaymaxWidgetBridgeModule = NativeModule & {
   setString(key: string, value: string, suiteName: string): boolean;

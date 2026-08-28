@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 
-import { getZaymaxWidgetBridge } from "../modules/zaymax-widget-bridge";
+import { getZaymaxWidgetBridge } from "@/native-packages/zaymax-widget-bridge";
 
 export const ZAYMAX_APP_GROUP = "group.com.app.zaymax";
 export const ZAYMAX_NOTE_WIDGET_KIND = "ZaymaxPinnedNote";

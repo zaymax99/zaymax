@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   calculateActiveWorkoutSeconds,
+  calculateRunningWorkoutSeconds,
   calculateWorkoutDurationSeconds,
   formatWorkoutDuration,
   formatWorkoutClock,
@@ -37,9 +38,18 @@ describe("workout duration", () => {
     ).toBe("2026-08-26T17:30:00.000Z");
   });
 
-  it("counts only the currently active foreground segment", () => {
+  it("keeps legacy accumulated segments valid for stored sessions", () => {
     expect(calculateActiveWorkoutSeconds(75, 1_000, 11_999)).toBe(85);
     expect(calculateActiveWorkoutSeconds(75, null, 99_999)).toBe(75);
+  });
+
+  it("keeps counting from startedAt while the app is backgrounded", () => {
+    expect(
+      calculateRunningWorkoutSeconds(
+        "2026-08-26T18:00:00.000Z",
+        Date.parse("2026-08-26T18:42:15.000Z"),
+      ),
+    ).toBe(2535);
   });
 
   it("normalizes corrupt active time and formats the live clock", () => {

@@ -17,6 +17,7 @@ export function KeyboardDismissButton() {
 
   useEffect(() => {
     if (Platform.OS === "web" && typeof window !== "undefined") {
+      let blurTimeout: ReturnType<typeof setTimeout> | undefined;
       const isTextField = (target: EventTarget | null) => {
         const element = target as HTMLElement | null;
         return Boolean(
@@ -28,13 +29,14 @@ export function KeyboardDismissButton() {
         if (isTextField(event.target)) setIsVisible(true);
       };
       const handleFocusOut = () => {
-        window.setTimeout(() => {
+        blurTimeout = window.setTimeout(() => {
           if (!isTextField(document.activeElement)) setIsVisible(false);
         }, 120);
       };
       window.addEventListener("focusin", handleFocusIn);
       window.addEventListener("focusout", handleFocusOut);
       return () => {
+        if (blurTimeout) clearTimeout(blurTimeout);
         window.removeEventListener("focusin", handleFocusIn);
         window.removeEventListener("focusout", handleFocusOut);
       };

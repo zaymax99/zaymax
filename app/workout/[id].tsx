@@ -10,8 +10,9 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import Animated, { FadeIn, FadeInDown, Layout } from "react-native-reanimated";
+import Animated, { FadeIn } from "react-native-reanimated";
 
+import { GlassMaterial } from "@/components/glass-material";
 import { ScreenContainer } from "@/components/screen-container";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -101,9 +102,11 @@ export default function WorkoutEditorScreen() {
         : current,
     );
   }
-  function moveExercise(from: number, to: number) {
-    if (from === to || to < 0 || to >= exercises.length) return;
+  function moveExercise(exerciseId: string, direction: -1 | 1) {
     setExercises((current) => {
+      const from = current.findIndex((item) => item.id === exerciseId);
+      const to = from + direction;
+      if (from < 0 || to < 0 || to >= current.length) return current;
       const next = [...current];
       const [moved] = next.splice(from, 1);
       next.splice(to, 0, moved);
@@ -252,6 +255,11 @@ export default function WorkoutEditorScreen() {
         className="flex-1"
       >
         <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={
+            Platform.OS === "ios" ? "interactive" : "on-drag"
+          }
+          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 40 }}
         >
@@ -291,13 +299,17 @@ export default function WorkoutEditorScreen() {
             entering={FadeIn.duration(300)}
             className="bg-surface"
             style={{
+              position: "relative",
+              overflow: "hidden",
               borderWidth: 1,
               borderColor: colors.border,
               borderRadius: ZAYMAX_DESIGN.radius.card,
+              backgroundColor: "transparent",
               padding: ZAYMAX_DESIGN.spacing.card,
               ...ZAYMAX_DESIGN.shadow,
             }}
           >
+            <GlassMaterial intensity={26} />
             <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
               {t("Name", "Name")}
             </Text>
@@ -342,19 +354,18 @@ export default function WorkoutEditorScreen() {
             </Text>
           </View>
           {exercises.map((exercise, index) => (
-            <View key={exercise.id}>
-              <ExerciseCard
-                exercise={exercise}
-                index={index}
-                total={exercises.length}
-                colors={colors}
-                unit={weightUnit}
-                onChange={(patch) => updateExercise(exercise.id, patch)}
-                onRemove={() => removeExercise(exercise.id)}
-                onMoveUp={() => moveExercise(index, index - 1)}
-                onMoveDown={() => moveExercise(index, index + 1)}
-              />
-            </View>
+            <ExerciseCard
+              key={exercise.id}
+              exercise={exercise}
+              index={index}
+              total={exercises.length}
+              colors={colors}
+              unit={weightUnit}
+              onChange={(patch) => updateExercise(exercise.id, patch)}
+              onRemove={() => removeExercise(exercise.id)}
+              onMoveUp={() => moveExercise(exercise.id, -1)}
+              onMoveDown={() => moveExercise(exercise.id, 1)}
+            />
           ))}
           <Pressable
             onPress={() => {
@@ -402,7 +413,7 @@ export default function WorkoutEditorScreen() {
               {
                 marginTop: 10,
                 borderRadius: ZAYMAX_DESIGN.radius.round,
-                backgroundColor: `${colors.surface}CC`,
+                backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
                 borderWidth: 1,
                 borderColor: colors.border,
                 paddingVertical: 15,
@@ -443,17 +454,21 @@ function ExerciseCard({
 }) {
   const { t } = useLanguage();
   return (
-    <Animated.View
-      entering={FadeInDown.delay(index * 15).duration(150)}
-      layout={Layout.duration(90)}
+    <View
       className="mt-3 bg-surface"
       style={{
+        width: "100%",
+        flexShrink: 0,
+        position: "relative",
+        overflow: "hidden",
         borderWidth: 1,
         borderColor: colors.border,
         borderRadius: ZAYMAX_DESIGN.radius.card,
+        backgroundColor: "transparent",
         padding: 14,
       }}
     >
+      <GlassMaterial intensity={24} />
       <View className="flex-row items-center justify-between">
         <View
           style={{
@@ -507,7 +522,7 @@ function ExerciseCard({
                 opacity: pressed ? 0.55 : 1,
               })}
             >
-              <IconSymbol name="trash.fill" size={18} color={colors.muted} />
+              <IconSymbol name="trash.fill" size={18} color={colors.error} />
             </Pressable>
           ) : null}
         </View>
@@ -534,12 +549,19 @@ function ExerciseCard({
           fontWeight: "700",
         }}
       />
-      <View className="mt-3 w-24">
+      <View
+        style={{
+          width: 104,
+          marginTop: 12,
+          alignSelf: "flex-start",
+          flexShrink: 0,
+        }}
+      >
         <NumberField
           label={t("Sätze", "Sets")}
           value={exercise.sets}
           onChange={(value) => {
-            const sets = Math.min(20, Math.floor(value));
+            const sets = Math.min(20, Math.max(1, Math.floor(value)));
             const repsPerSet = resizeRepsPerSet(exercise, sets);
             const weightsPerSetKg = resizeWeightsPerSet(exercise, sets);
             onChange({
@@ -556,7 +578,14 @@ function ExerciseCard({
       <Text className="mt-4 text-[11px] font-black uppercase tracking-[1px] text-muted">
         {t("Werte pro Satz", "Values per set")}
       </Text>
-      <View className="mt-2 gap-1.5">
+      <View
+        style={{
+          width: "100%",
+          marginTop: 8,
+          gap: 6,
+          flexShrink: 0,
+        }}
+      >
         {resizeRepsPerSet(exercise, exercise.sets).map((reps, setIndex) => (
           <SetDetailRow
             key={setIndex}
@@ -584,7 +613,7 @@ function ExerciseCard({
           />
         ))}
       </View>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -619,7 +648,7 @@ function ExerciseMoveButton({
         borderColor: disabled ? colors.border : `${colors.primary}80`,
         backgroundColor: disabled
           ? "transparent"
-          : ZAYMAX_DESIGN.colors.goldSoft,
+          : ZAYMAX_DESIGN.colors.surfaceSoft,
         opacity: disabled ? 0.28 : pressed ? 0.58 : 1,
       })}
     >
@@ -644,16 +673,18 @@ function NumberField({
   colors: any;
 }) {
   return (
-    <View className="flex-1">
+    <View style={{ width: "100%", flexShrink: 0 }}>
       <Text className="mb-1 text-[11px] font-bold uppercase tracking-[1px] text-muted">
         {label}
       </Text>
       <TextInput
         value={value ? String(value) : ""}
+        selectTextOnFocus
+        maxLength={2}
         onChangeText={(text) =>
-          onChange(Number(text.replace(/[^0-9.]/g, "")) || 0)
+          onChange(Number(text.replace(/[^0-9]/g, "")) || 1)
         }
-        keyboardType="decimal-pad"
+        keyboardType="number-pad"
         placeholder="—"
         placeholderTextColor={colors.muted}
         style={{

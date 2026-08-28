@@ -1,6 +1,8 @@
 import { View, type ViewProps } from "react-native";
+import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 
+import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { cn } from "@/lib/utils";
 
 export interface ScreenContainerProps extends ViewProps {
@@ -52,6 +54,7 @@ export function ScreenContainer({
       className={cn("flex-1", "bg-background", containerClassName)}
       {...props}
     >
+      <SmokedGlassBackdrop />
       <SafeAreaView
         edges={edges}
         className={cn("flex-1", safeAreaClassName)}
@@ -59,6 +62,50 @@ export function ScreenContainer({
       >
         <View className={cn("flex-1", className)}>{children}</View>
       </SafeAreaView>
+    </View>
+  );
+}
+
+function SmokedGlassBackdrop() {
+  return (
+    <View
+      pointerEvents="none"
+      style={{ position: "absolute", inset: 0, overflow: "hidden" }}
+    >
+      <Svg width="100%" height="100%" preserveAspectRatio="none">
+        <Defs>
+          <RadialGradient id="topReflection" cx="10%" cy="0%" r="78%">
+            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.05} />
+            <Stop offset="44%" stopColor="#767983" stopOpacity={0.018} />
+            <Stop offset="100%" stopColor="#070707" stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id="sideReflection" cx="100%" cy="38%" r="68%">
+            <Stop offset="0%" stopColor="#777B86" stopOpacity={0.03} />
+            <Stop offset="100%" stopColor="#070707" stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Rect
+          x="0"
+          y="0"
+          width="100%"
+          height="100%"
+          fill={ZAYMAX_DESIGN.colors.background}
+        />
+        <Rect
+          x="0"
+          y="0"
+          width="100%"
+          height="100%"
+          fill="url(#topReflection)"
+        />
+        <Rect
+          x="0"
+          y="0"
+          width="100%"
+          height="100%"
+          fill="url(#sideReflection)"
+        />
+      </Svg>
     </View>
   );
 }

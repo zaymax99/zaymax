@@ -27,6 +27,7 @@ export type ActiveSession = {
   workoutId: string;
   startedAt: string;
   activeElapsedSeconds: number;
+  skippedExercises: Record<string, boolean>;
   completedSets: Record<string, boolean[]>;
   setValues: Record<string, ActiveSetValue[]>;
   baselineSetValues: Record<string, ActiveSetValue[]>;
@@ -46,6 +47,7 @@ export type WorkoutHistorySet = {
 export type WorkoutHistoryExercise = {
   exerciseId: string;
   name: string;
+  skipped?: boolean;
   sets: WorkoutHistorySet[];
 };
 export type WorkoutEffort = "leicht" | "gut" | "hart";
@@ -290,6 +292,15 @@ function normalizeCompletedSetRecord(value: unknown) {
   ) as Record<string, boolean[]>;
 }
 
+function normalizeSkippedExerciseRecord(value: unknown) {
+  if (!isRecord(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([exerciseId, skipped]) =>
+      skipped === true ? [[exerciseId, true]] : [],
+    ),
+  ) as Record<string, boolean>;
+}
+
 function normalizeHistorySet(value: unknown): WorkoutHistorySet | null {
   if (!isRecord(value)) return null;
   const setNumber = Math.round(Number(value.setNumber));
@@ -339,6 +350,7 @@ function normalizeHistoryEntry(value: unknown): WorkoutHistoryEntry | null {
       {
         exerciseId: exercise.exerciseId,
         name: exercise.name,
+        skipped: exercise.skipped === true ? true : undefined,
         sets: exercise.sets.flatMap((set) => {
           const normalized = normalizeHistorySet(set);
           return normalized ? [normalized] : [];
@@ -439,6 +451,7 @@ export async function loadActiveSession(): Promise<ActiveSession | null> {
           Math.floor(finiteNumber(parsed.activeElapsedSeconds)),
         ),
       ),
+      skippedExercises: normalizeSkippedExerciseRecord(parsed.skippedExercises),
       completedSets: normalizeCompletedSetRecord(parsed.completedSets),
       setValues: normalizeSetValueRecord(parsed.setValues),
       baselineSetValues: normalizeSetValueRecord(parsed.baselineSetValues),
@@ -530,7 +543,7 @@ export async function saveSettings(settings: AppSettings) {
   await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 }
 export function displayWeight(weightKg: number | undefined, unit: WeightUnit) {
-  if (!weightKg) return "";
+  if (weightKg === undefined || !Number.isFinite(weightKg)) return "";
   const value = unit === "lbs" ? weightKg * 2.20462 : weightKg;
   return `${Number(value.toFixed(2))} ${unit}`;
 }

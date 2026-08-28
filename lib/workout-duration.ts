@@ -37,6 +37,18 @@ export function calculateWorkoutDurationSeconds(
   return Math.max(1, Math.round((completedMs - startMs) / 1000));
 }
 
+export function calculateRunningWorkoutSeconds(
+  startedAt: string,
+  nowMs = Date.now(),
+) {
+  const startMs = Date.parse(startedAt);
+  if (!Number.isFinite(startMs) || !Number.isFinite(nowMs)) return 0;
+
+  return normalizeActiveWorkoutSeconds(
+    Math.max(0, Math.floor((nowMs - startMs) / 1000)),
+  );
+}
+
 export function normalizeActiveWorkoutSeconds(value: unknown) {
   if (typeof value !== "number" || !Number.isFinite(value)) return 0;
   return Math.min(MAX_ACTIVE_WORKOUT_SECONDS, Math.max(0, Math.floor(value)));

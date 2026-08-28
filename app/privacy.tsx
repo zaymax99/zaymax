@@ -2,6 +2,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 
+import { GlassMaterial } from "@/components/glass-material";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
@@ -55,7 +56,7 @@ export default function PrivacyScreen() {
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 1,
-            borderColor: ZAYMAX_DESIGN.colors.goldLine,
+            borderColor: colors.border,
             borderRadius: ZAYMAX_DESIGN.radius.round,
             backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
             opacity: pressed ? 0.65 : 1,
@@ -231,14 +232,17 @@ function PrivacyCard({
   return (
     <View
       style={{
+        position: "relative",
+        overflow: "hidden",
         marginBottom: 14,
         borderWidth: 1,
         borderColor: colors.border,
         borderRadius: ZAYMAX_DESIGN.radius.card,
-        backgroundColor: colors.surface,
+        backgroundColor: "transparent",
         padding: ZAYMAX_DESIGN.spacing.card,
       }}
     >
+      <GlassMaterial intensity={22} />
       <Text
         style={{
           color: colors.muted,

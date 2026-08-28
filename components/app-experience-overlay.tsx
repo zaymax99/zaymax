@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname } from "expo-router";
 import {
   Alert,
   AppState,
@@ -22,6 +23,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { GlassMaterial } from "@/components/glass-material";
 import { ProfileForm } from "@/components/profile-form";
 import { KeyboardDismissButton } from "@/components/keyboard-dismiss-button";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
@@ -35,25 +37,33 @@ import {
   saveProfile,
   type UserProfile,
 } from "@/lib/profile";
+import { loadActiveSession, loadWorkouts } from "@/lib/workouts";
 
 const CONFETTI_COLORS = [
+  ZAYMAX_DESIGN.colors.action,
   ZAYMAX_DESIGN.colors.gold,
+  "#B8B8BE",
   ZAYMAX_DESIGN.colors.goldBright,
-  "#F1EFEA",
-  "#96928A",
-  "#4A4843",
 ];
 
 export function AppExperienceOverlay() {
   const colors = useColors("dark");
   const { t } = useLanguage();
+  const pathname = usePathname();
+  const isActiveWorkout = pathname.startsWith("/workout/active/");
+  const isActiveWorkoutRef = useRef(isActiveWorkout);
+  isActiveWorkoutRef.current = isActiveWorkout;
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showBirthday, setShowBirthday] = useState(false);
   const profileSaveRef = useRef(false);
+  const birthdayCheckRef = useRef(false);
 
   const maybeOpenBirthday = useCallback(async (nextProfile: UserProfile) => {
+    if (isActiveWorkoutRef.current) return;
     if (!isBirthdayToday(nextProfile.birthDate)) return;
+    if (birthdayCheckRef.current) return;
+    birthdayCheckRef.current = true;
     try {
       const token = `${new Date().getFullYear()}-${nextProfile.birthDate}`;
       const lastToken = await AsyncStorage.getItem(BIRTHDAY_CELEBRATION_KEY);
@@ -63,13 +73,19 @@ export function AppExperienceOverlay() {
       setShowBirthday(true);
     } catch {
       // A celebration must never block normal app use.
+    } finally {
+      birthdayCheckRef.current = false;
     }
   }, []);
 
   useEffect(() => {
-    void loadProfile()
-      .then(async (loaded) => {
+    void Promise.all([loadProfile(), loadActiveSession(), loadWorkouts()])
+      .then(async ([loaded, activeSession, workouts]) => {
         setProfile(loaded);
+        const hasValidActiveWorkout = workouts.some(
+          (workout) => workout.id === activeSession?.workoutId,
+        );
+        if (hasValidActiveWorkout || isActiveWorkoutRef.current) return;
         if (!loaded.onboardingCompleted) {
           setShowOnboarding(true);
           return;
@@ -80,6 +96,20 @@ export function AppExperienceOverlay() {
         // Leave overlays closed if profile storage cannot be read.
       });
   }, [maybeOpenBirthday]);
+
+  useEffect(() => {
+    if (isActiveWorkout) {
+      setShowOnboarding(false);
+      setShowBirthday(false);
+      return;
+    }
+    if (!profile) return;
+    if (!profile.onboardingCompleted) {
+      setShowOnboarding(true);
+      return;
+    }
+    void maybeOpenBirthday(profile);
+  }, [isActiveWorkout, maybeOpenBirthday, profile]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
@@ -170,11 +200,18 @@ export function AppExperienceOverlay() {
               style={[
                 styles.onboardingCard,
                 {
+                  position: "relative",
+                  overflow: "hidden",
                   borderColor: colors.border,
-                  backgroundColor: colors.surface,
+                  backgroundColor: "transparent",
                 },
               ]}
             >
+              <GlassMaterial
+                raised
+                intensity={34}
+                radius={ZAYMAX_DESIGN.radius.hero}
+              />
               <View style={styles.stepPill}>
                 <Text
                   style={{
@@ -242,8 +279,16 @@ export function AppExperienceOverlay() {
           <BirthdayEffects />
           <Animated.View
             entering={FadeInDown.springify().damping(15)}
-            style={styles.birthdayCard}
+            style={[
+              styles.birthdayCard,
+              { position: "relative", overflow: "hidden" },
+            ]}
           >
+            <GlassMaterial
+              raised
+              intensity={34}
+              radius={ZAYMAX_DESIGN.radius.hero}
+            />
             <Text style={styles.birthdayEmoji}>✦</Text>
             <Text style={styles.birthdayEyebrow}>
               {t(
@@ -345,15 +390,15 @@ function FloatingBalloon({ index }: { index: number }) {
           justifyContent: "center",
           borderRadius: ZAYMAX_DESIGN.radius.round,
           borderWidth: 1,
-          borderColor: ZAYMAX_DESIGN.colors.goldLine,
-          backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
+          borderColor: `${CONFETTI_COLORS[index % CONFETTI_COLORS.length]}66`,
+          backgroundColor: `${CONFETTI_COLORS[index % CONFETTI_COLORS.length]}18`,
         },
         style,
       ]}
     >
       <Text
         style={{
-          color: ZAYMAX_DESIGN.colors.gold,
+          color: CONFETTI_COLORS[index % CONFETTI_COLORS.length],
           fontSize: 20,
           fontWeight: "900",
         }}
@@ -417,7 +462,6 @@ const styles = StyleSheet.create({
   onboardingCard: {
     width: "100%",
     maxWidth: 460,
-    maxHeight: "94%",
     borderRadius: ZAYMAX_DESIGN.radius.hero,
     borderWidth: 1,
     padding: 22,
@@ -426,7 +470,7 @@ const styles = StyleSheet.create({
   stepPill: {
     alignSelf: "flex-start",
     borderRadius: ZAYMAX_DESIGN.radius.round,
-    backgroundColor: ZAYMAX_DESIGN.colors.gold,
+    backgroundColor: ZAYMAX_DESIGN.colors.action,
     paddingHorizontal: 11,
     paddingVertical: 6,
   },
@@ -447,7 +491,7 @@ const styles = StyleSheet.create({
     borderRadius: ZAYMAX_DESIGN.radius.hero,
     borderWidth: 1,
     borderColor: ZAYMAX_DESIGN.colors.goldLine,
-    backgroundColor: ZAYMAX_DESIGN.colors.surface,
+    backgroundColor: "transparent",
     paddingHorizontal: 26,
     paddingVertical: 34,
     ...ZAYMAX_DESIGN.shadow,
@@ -465,7 +509,7 @@ const styles = StyleSheet.create({
   },
   birthdayTitle: {
     marginTop: 14,
-    color: "#F1EFEA",
+    color: ZAYMAX_DESIGN.colors.action,
     fontSize: 33,
     fontStyle: "italic",
     fontWeight: "900",
@@ -474,7 +518,7 @@ const styles = StyleSheet.create({
   },
   birthdayWish: {
     marginTop: 9,
-    color: "#96928A",
+    color: "#96969D",
     fontSize: 18,
     fontStyle: "italic",
     textAlign: "center",

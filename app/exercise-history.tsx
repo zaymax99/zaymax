@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import Svg, { Circle, Line, Polyline } from "react-native-svg";
 
+import { GlassMaterial } from "@/components/glass-material";
 import { ScreenContainer } from "@/components/screen-container";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -20,7 +21,7 @@ import { useColors } from "@/hooks/use-colors";
 import { hapticTap } from "@/lib/haptics";
 import { useLanguage, type AppLanguage } from "@/lib/i18n";
 
-const GOLD = ZAYMAX_DESIGN.colors.gold;
+const PROGRESS_GOLD = ZAYMAX_DESIGN.colors.gold;
 
 type ExerciseSession = {
   id: string;
@@ -86,19 +87,27 @@ export default function ExerciseHistoryScreen() {
     }, [refresh]),
   );
 
+  const performedSessions = useMemo(
+    () => sessions.filter((session) => !session.exercise.skipped),
+    [sessions],
+  );
+
   const stats = useMemo(
     () => ({
       bestWeightKg: Math.max(
         0,
-        ...sessions.map((session) => session.maxWeightKg),
+        ...performedSessions.map((session) => session.maxWeightKg),
       ),
-      bestReps: Math.max(0, ...sessions.map((session) => session.maxReps)),
-      totalVolumeKg: sessions.reduce(
+      bestReps: Math.max(
+        0,
+        ...performedSessions.map((session) => session.maxReps),
+      ),
+      totalVolumeKg: performedSessions.reduce(
         (sum, session) => sum + session.volumeKg,
         0,
       ),
     }),
-    [sessions],
+    [performedSessions],
   );
 
   return (
@@ -158,7 +167,7 @@ export default function ExerciseHistoryScreen() {
           />
           <StatCard
             label={t("Einheiten", "Sessions")}
-            value={String(sessions.length)}
+            value={String(performedSessions.length)}
             colors={colors}
           />
           <StatCard
@@ -175,27 +184,31 @@ export default function ExerciseHistoryScreen() {
         <View
           className="mt-4 bg-surface"
           style={{
+            position: "relative",
+            overflow: "hidden",
             borderWidth: 1,
             borderColor: colors.border,
             borderRadius: ZAYMAX_DESIGN.radius.card,
+            backgroundColor: "transparent",
             padding: ZAYMAX_DESIGN.spacing.card,
             ...ZAYMAX_DESIGN.shadow,
           }}
         >
+          <GlassMaterial intensity={26} />
           <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
             {t("ENTWICKLUNG", "DEVELOPMENT")}
           </Text>
           <Text className="mt-2 text-xl font-black uppercase text-foreground">
-            {sessions.some((session) => session.volumeKg > 0)
+            {performedSessions.some((session) => session.volumeKg > 0)
               ? t("Trainingsvolumen", "Training volume")
               : t("Wiederholungen", "Repetitions")}
           </Text>
-          <ProgressChart sessions={sessions} colors={colors} />
+          <ProgressChart sessions={performedSessions} colors={colors} />
           <Text className="mt-2 text-xs text-muted">
             {t(
-              `Die letzten ${Math.min(8, sessions.length)} Einheiten · älteste bis neueste`,
-              `Last ${Math.min(8, sessions.length)} sessions · oldest to newest`,
-              `Ostatnie ${Math.min(8, sessions.length)} jednostki · od najstarszej do najnowszej`,
+              `Die letzten ${Math.min(8, performedSessions.length)} Einheiten · älteste bis neueste`,
+              `Last ${Math.min(8, performedSessions.length)} sessions · oldest to newest`,
+              `Ostatnie ${Math.min(8, performedSessions.length)} jednostki · od najstarszej do najnowszej`,
             )}
           </Text>
         </View>
@@ -209,11 +222,15 @@ export default function ExerciseHistoryScreen() {
               key={session.id}
               className="mt-3 bg-surface p-4"
               style={{
+                position: "relative",
+                overflow: "hidden",
                 borderWidth: 1,
                 borderColor: colors.border,
                 borderRadius: ZAYMAX_DESIGN.radius.card,
+                backgroundColor: "transparent",
               }}
             >
+              <GlassMaterial intensity={22} />
               <View className="flex-row items-start justify-between">
                 <View>
                   <Text className="font-bold text-foreground">
@@ -226,13 +243,21 @@ export default function ExerciseHistoryScreen() {
                   </Text>
                 </View>
                 <Text className="text-sm font-bold text-foreground">
-                  {session.exercise.sets.length}{" "}
-                  {session.exercise.sets.length === 1
-                    ? t("Satz", "set")
-                    : t("Sätze", "sets")}
+                  {session.exercise.skipped
+                    ? t("Übersprungen", "Skipped", "Pominięto")
+                    : `${session.exercise.sets.length} ${
+                        session.exercise.sets.length === 1
+                          ? t("Satz", "set", "seria")
+                          : t("Sätze", "sets", "serie")
+                      }`}
                 </Text>
               </View>
-              <View className="mt-3 gap-2">
+              <View
+                className="mt-3 gap-2"
+                style={{
+                  display: session.exercise.skipped ? "none" : "flex",
+                }}
+              >
                 {session.exercise.sets.map((set) => (
                   <View
                     key={set.setNumber}
@@ -252,7 +277,7 @@ export default function ExerciseHistoryScreen() {
                         <Text
                           style={{
                             marginTop: 3,
-                            color: GOLD,
+                            color: PROGRESS_GOLD,
                             fontSize: 10,
                             fontWeight: "900",
                           }}
@@ -401,7 +426,7 @@ function ProgressChart({
               cx={x}
               cy={y}
               r="4"
-              fill={index === values.length - 1 ? GOLD : colors.foreground}
+              fill={colors.foreground}
             />
           );
         })}

@@ -1,4 +1,6 @@
 import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,9 +13,10 @@ import {
 const native = vi.hoisted(() => ({
   getBridge: vi.fn(),
 }));
+const testDirectory = dirname(fileURLToPath(import.meta.url));
 
 vi.mock("react-native", () => ({ Platform: { OS: "ios" } }));
-vi.mock("../modules/zaymax-widget-bridge", () => ({
+vi.mock("@/native-packages/zaymax-widget-bridge", () => ({
   getZaymaxWidgetBridge: native.getBridge,
 }));
 
@@ -30,19 +33,44 @@ describe("Lock Screen widget bridge", () => {
     ).resolves.toBe("requires-native-build");
   });
 
-  it("keeps the Swift bridge registered for iOS autolinking", () => {
+  it("keeps the Swift bridge registered as an installed Apple module", () => {
     const moduleConfig = JSON.parse(
       readFileSync(
-        new URL(
-          "../modules/zaymax-widget-bridge/expo-module.config.json",
-          import.meta.url,
+        resolve(
+          testDirectory,
+          "../native-packages/zaymax-widget-bridge/expo-module.config.json",
         ),
         "utf8",
       ),
     );
+    const bridgePackage = JSON.parse(
+      readFileSync(
+        resolve(
+          testDirectory,
+          "../native-packages/zaymax-widget-bridge/package.json",
+        ),
+        "utf8",
+      ),
+    );
+    const appPackage = JSON.parse(
+      readFileSync(resolve(testDirectory, "../package.json"), "utf8"),
+    );
+    const podspec = readFileSync(
+      resolve(
+        testDirectory,
+        "../native-packages/zaymax-widget-bridge/ios/ZaymaxWidgetBridge.podspec",
+      ),
+      "utf8",
+    );
 
-    expect(moduleConfig.platforms).toContain("ios");
-    expect(moduleConfig.ios.modules).toContain("ZaymaxWidgetBridgeModule");
+    expect(moduleConfig.platforms).toContain("apple");
+    expect(moduleConfig.apple.modules).toContain("ZaymaxWidgetBridgeModule");
+    expect(bridgePackage.name).toBe("zaymax-widget-bridge");
+    expect(appPackage.dependencies[bridgePackage.name]).toBeUndefined();
+    expect(appPackage.expo.autolinking.nativeModulesDir).toBe(
+      "./native-packages",
+    );
+    expect(podspec).toContain("s.platforms      = { :ios => '15.1' }");
   });
 
   it("writes and reloads the selected note through the App Group", async () => {

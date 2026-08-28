@@ -63,6 +63,7 @@ describe("workout set values", () => {
       "20.25/30.15/31.17 kg",
     );
     expect(displayWeight(31.17, "kg")).toBe("31.17 kg");
+    expect(displayWeight(0, "kg")).toBe("0 kg");
   });
 
   it("creates editable active values from every configured set", () => {

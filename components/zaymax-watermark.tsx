@@ -13,7 +13,7 @@ export function ZaymaxWatermark() {
         borderRadius: 999,
         backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
         borderWidth: 1,
-        borderColor: ZAYMAX_DESIGN.colors.goldLine,
+        borderColor: ZAYMAX_DESIGN.colors.border,
         overflow: "hidden",
         opacity: 1,
       }}

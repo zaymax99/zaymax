@@ -3,6 +3,7 @@ import {
   Alert,
   FlatList,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -20,6 +21,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { GlassMaterial } from "@/components/glass-material";
 import { ScreenContainer } from "@/components/screen-container";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -454,8 +456,11 @@ export default function JournalScreen() {
       <FlatList
         data={reminders}
         keyExtractor={(item) => item.id}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 34, flexGrow: 1 }}
+        contentContainerStyle={{ paddingBottom: 128, flexGrow: 1 }}
         ListHeaderComponent={
           <>
             <View className="flex-row items-start pt-3 pb-6">
@@ -481,12 +486,16 @@ export default function JournalScreen() {
             <View
               className="bg-surface p-[18px]"
               style={{
+                position: "relative",
+                overflow: "hidden",
                 borderWidth: 1,
                 borderColor: colors.border,
                 borderRadius: ZAYMAX_DESIGN.radius.card,
+                backgroundColor: "transparent",
                 ...ZAYMAX_DESIGN.shadow,
               }}
             >
+              <GlassMaterial intensity={26} />
               <View className="flex-row items-start justify-between">
                 <View className="flex-1 pr-3">
                   <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
@@ -549,8 +558,8 @@ export default function JournalScreen() {
                     marginTop: 16,
                     borderRadius: ZAYMAX_DESIGN.radius.round,
                     borderWidth: 1,
-                    borderColor: ZAYMAX_DESIGN.colors.goldLine,
-                    backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
+                    borderColor: colors.border,
+                    backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
                     paddingVertical: 13,
                     opacity: pressed ? 0.6 : 1,
                   },
@@ -570,11 +579,15 @@ export default function JournalScreen() {
               className="bg-surface p-[18px]"
               style={{
                 marginTop: 16,
+                position: "relative",
+                overflow: "hidden",
                 borderWidth: 1,
                 borderColor: colors.border,
                 borderRadius: ZAYMAX_DESIGN.radius.card,
+                backgroundColor: "transparent",
               }}
             >
+              <GlassMaterial intensity={24} />
               <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
                 {editingId
                   ? t("EINTRAG BEARBEITEN", "EDIT ENTRY")
@@ -680,18 +693,23 @@ export default function JournalScreen() {
             <View
               style={{
                 minHeight: 88,
+                position: "relative",
+                overflow: "hidden",
                 borderRadius: ZAYMAX_DESIGN.radius.nested,
                 borderWidth: 1,
                 borderColor:
                   editingId === item.id || item.lockScreenPinned
                     ? colors.primary
                     : colors.border,
-                backgroundColor: item.lockScreenPinned
-                  ? ZAYMAX_DESIGN.colors.goldSoft
-                  : colors.surface,
+                backgroundColor: "transparent",
                 padding: 16,
               }}
             >
+              <GlassMaterial
+                raised={Boolean(item.lockScreenPinned)}
+                intensity={22}
+                radius={ZAYMAX_DESIGN.radius.nested}
+              />
               <Pressable
                 accessibilityLabel={t(
                   "Tagebucheintrag bearbeiten",
@@ -798,7 +816,7 @@ export default function JournalScreen() {
                   <IconSymbol
                     name="trash.fill"
                     size={17}
-                    color={colors.muted}
+                    color={colors.error}
                   />
                 </Pressable>
               </View>
@@ -823,13 +841,20 @@ export default function JournalScreen() {
         >
           <View
             style={{
+              position: "relative",
+              overflow: "hidden",
               borderRadius: ZAYMAX_DESIGN.radius.hero,
               borderWidth: 1,
               borderColor: colors.border,
-              backgroundColor: colors.surface,
+              backgroundColor: "transparent",
               padding: 20,
             }}
           >
+            <GlassMaterial
+              raised
+              intensity={32}
+              radius={ZAYMAX_DESIGN.radius.hero}
+            />
             <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
               {t("TRAININGSWOCHE", "TRAINING WEEK")}
             </Text>

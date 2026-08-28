@@ -40,6 +40,7 @@ const MAPPING = {
   circle: "radio-button-unchecked",
   "keyboard.chevron.compact.down": "keyboard-arrow-down",
   "shoeprints.fill": "directions-walk",
+  "square.and.arrow.up": "ios-share",
 } as IconMapping;
 
 export function IconSymbol({

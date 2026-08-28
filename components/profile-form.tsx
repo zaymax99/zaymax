@@ -120,7 +120,7 @@ export function ProfileForm({
         birthday
       />
       {error ? (
-        <Text style={{ marginTop: 12, color: colors.primary, fontSize: 13 }}>
+        <Text style={{ marginTop: 12, color: colors.error, fontSize: 13 }}>
           {error}
         </Text>
       ) : null}

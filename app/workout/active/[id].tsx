@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  AppState,
   Alert,
   Modal,
+  PixelRatio,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,8 +21,12 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import * as Sharing from "expo-sharing";
+import { captureRef } from "react-native-view-shot";
 
+import { GlassMaterial } from "@/components/glass-material";
 import { ScreenContainer } from "@/components/screen-container";
+import { TrainingStory } from "@/components/training-story";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
@@ -56,16 +61,17 @@ import {
   hapticWarning,
 } from "@/lib/haptics";
 import { useLanguage, usesDecimalComma } from "@/lib/i18n";
+import { createSerialTaskQueue } from "@/lib/serial-task-queue";
 import {
-  calculateActiveWorkoutSeconds,
+  calculateRunningWorkoutSeconds,
+  calculateWorkoutDurationSeconds,
   formatWorkoutDuration,
   formatWorkoutClock,
-  normalizeActiveWorkoutSeconds,
   normalizeWorkoutStartedAt,
 } from "@/lib/workout-duration";
 
 const DEFAULT_REST = 90;
-const GOLD = ZAYMAX_DESIGN.colors.gold;
+const PROGRESS_GOLD = ZAYMAX_DESIGN.colors.gold;
 const EFFORT_OPTIONS: {
   value: WorkoutEffort;
   deLabel: string;
@@ -110,6 +116,9 @@ type Improvement = SetGains & {
   sequence: number;
 };
 type CompletionSummary = {
+  workoutTitle: string;
+  exerciseCount: number;
+  skippedExerciseCount: number;
   durationSeconds: number;
   completedSets: number;
   totalVolumeKg: number;
@@ -148,18 +157,24 @@ export default function ActiveWorkoutScreen() {
   const [effortPromptVisible, setEffortPromptVisible] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [aborting, setAborting] = useState(false);
+  const [sharePreviewVisible, setSharePreviewVisible] = useState(false);
+  const [sharingStory, setSharingStory] = useState(false);
   const finishingRef = useRef(false);
+  const abortingRef = useRef(false);
   const sessionRef = useRef<ActiveSession | null>(null);
-  const activeSegmentStartedAtRef = useRef<number | null>(null);
-  const workoutClockPausedRef = useRef(false);
+  const sessionWriteQueue = useRef(createSerialTaskQueue()).current;
+  const finishRequestedAtRef = useRef<number | null>(null);
+  const storyRef = useRef<View>(null);
   const [completionSummary, setCompletionSummary] =
     useState<CompletionSummary | null>(null);
   const [improvement, setImprovement] = useState<Improvement | null>(null);
   const improvementTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const improvementSequence = useRef(0);
   const saveWarningShown = useRef(false);
-  const goldFlash = useSharedValue(0);
-  const goldStyle = useAnimatedStyle(() => ({ opacity: goldFlash.value }));
+  const emeraldFlash = useSharedValue(0);
+  const emeraldStyle = useAnimatedStyle(() => ({
+    opacity: emeraldFlash.value,
+  }));
   const progressFill = useSharedValue(0);
   const progressStyle = useAnimatedStyle(() => ({
     width: `${progressFill.value}%` as `${number}%`,
@@ -167,45 +182,15 @@ export default function ActiveWorkoutScreen() {
 
   const updateSession = useCallback(
     (updater: (current: ActiveSession) => ActiveSession) => {
-      setSession((current) => {
-        if (!current) return current;
-        const next = updater(current);
-        sessionRef.current = next;
-        return next;
-      });
+      if (finishingRef.current || abortingRef.current) return;
+      const current = sessionRef.current;
+      if (!current) return;
+      const next = updater(current);
+      sessionRef.current = next;
+      setSession(next);
     },
     [],
   );
-
-  const pauseWorkoutClock = useCallback((nowMs = Date.now()) => {
-    const current = sessionRef.current;
-    const activeSinceMs = activeSegmentStartedAtRef.current;
-    if (!current || activeSinceMs === null) return current;
-
-    const activeElapsedSeconds = calculateActiveWorkoutSeconds(
-      current.activeElapsedSeconds,
-      activeSinceMs,
-      nowMs,
-    );
-    const next = { ...current, activeElapsedSeconds };
-    activeSegmentStartedAtRef.current = null;
-    sessionRef.current = next;
-    setSession(next);
-    setWorkoutElapsedSeconds(activeElapsedSeconds);
-    void saveActiveSession(next).catch(() => undefined);
-    return next;
-  }, []);
-
-  const resumeWorkoutClock = useCallback(() => {
-    if (
-      AppState.currentState === "active" &&
-      sessionRef.current &&
-      activeSegmentStartedAtRef.current === null &&
-      !workoutClockPausedRef.current
-    ) {
-      activeSegmentStartedAtRef.current = Date.now();
-    }
-  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -217,6 +202,21 @@ export default function ActiveWorkoutScreen() {
           loadSettings(),
           loadWorkoutHistory(),
         ]);
+        if (existing?.workoutId && existing.workoutId !== id) {
+          const existingWorkout = allWorkouts.find(
+            (item) => item.id === existing.workoutId,
+          );
+          if (existingWorkout) {
+            if (mounted) {
+              router.replace({
+                pathname: "/workout/active/[id]",
+                params: { id: existingWorkout.id },
+              });
+            }
+            return;
+          }
+          await clearActiveSession();
+        }
         const found = allWorkouts.find((item) => item.id === id);
         if (!found) {
           if (mounted) setLoadIssue("missing");
@@ -230,9 +230,12 @@ export default function ActiveWorkoutScreen() {
           startedAt: canResume
             ? normalizeWorkoutStartedAt(existing.startedAt, openedAt)
             : openedAt,
-          activeElapsedSeconds: canResume
-            ? normalizeActiveWorkoutSeconds(existing.activeElapsedSeconds)
-            : 0,
+          // Kept in storage for backwards compatibility. The visible and
+          // final duration is derived from startedAt so iOS suspension counts.
+          activeElapsedSeconds: 0,
+          skippedExercises: canResume
+            ? { ...(existing.skippedExercises ?? {}) }
+            : {},
           completedSets: {},
           setValues: {},
           baselineSetValues: {},
@@ -308,11 +311,15 @@ export default function ActiveWorkoutScreen() {
         setWorkout(found);
         setWeightUnit(settings.weightUnit);
         sessionRef.current = initial;
-        setWorkoutElapsedSeconds(initial.activeElapsedSeconds);
+        setWorkoutElapsedSeconds(
+          calculateRunningWorkoutSeconds(
+            initial.startedAt,
+            Date.parse(openedAt),
+          ),
+        );
         setRestDisplayRemaining(initial.restRemaining);
         setTimerRunning(Boolean(initial.restEndsAt));
         setSession(initial);
-        resumeWorkoutClock();
       } catch {
         if (mounted) setLoadIssue("failed");
       }
@@ -320,37 +327,17 @@ export default function ActiveWorkoutScreen() {
     return () => {
       mounted = false;
     };
-  }, [id, resumeWorkoutClock]);
-
-  useEffect(() => {
-    const subscription = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "active") resumeWorkoutClock();
-      else pauseWorkoutClock();
-    });
-    return () => subscription.remove();
-  }, [pauseWorkoutClock, resumeWorkoutClock]);
+  }, [id, router]);
 
   useEffect(() => {
     const updateClock = () => {
       const current = sessionRef.current;
       if (!current) return;
-      const nowMs = Date.now();
-      const activeSinceMs = activeSegmentStartedAtRef.current;
-      const elapsed = calculateActiveWorkoutSeconds(
-        current.activeElapsedSeconds,
-        activeSinceMs,
-        nowMs,
+      const elapsed = calculateRunningWorkoutSeconds(
+        current.startedAt,
+        finishRequestedAtRef.current ?? Date.now(),
       );
       setWorkoutElapsedSeconds(elapsed);
-
-      // Persist a lightweight checkpoint so an unexpected app termination
-      // loses at most a few seconds without writing storage every second.
-      if (activeSinceMs !== null && nowMs - activeSinceMs >= 15_000) {
-        const checkpoint = { ...current, activeElapsedSeconds: elapsed };
-        activeSegmentStartedAtRef.current = nowMs;
-        sessionRef.current = checkpoint;
-        setSession(checkpoint);
-      }
     };
     updateClock();
     const interval = setInterval(updateClock, 1000);
@@ -380,40 +367,30 @@ export default function ActiveWorkoutScreen() {
   }, [session?.restEndsAt, timerRunning, updateSession]);
 
   useEffect(() => {
-    if (!session) return;
-    void saveActiveSession(session).catch(() => {
-      if (saveWarningShown.current) return;
-      saveWarningShown.current = true;
-      Alert.alert(
-        t(
-          "Training konnte nicht zwischengespeichert werden",
-          "Workout could not be saved temporarily",
-          "Nie udało się tymczasowo zapisać treningu",
-        ),
-        t(
-          "Lasse das Training geöffnet und versuche es gleich erneut.",
-          "Keep the workout open and try again shortly.",
-          "Pozostaw trening otwarty i spróbuj ponownie za chwilę.",
-        ),
-      );
-    });
-  }, [session, t]);
+    if (!session || finishingRef.current || abortingRef.current) return;
+    void sessionWriteQueue
+      .enqueue(() => saveActiveSession(session))
+      .catch(() => {
+        if (saveWarningShown.current) return;
+        saveWarningShown.current = true;
+        Alert.alert(
+          t(
+            "Training konnte nicht zwischengespeichert werden",
+            "Workout could not be saved temporarily",
+            "Nie udało się tymczasowo zapisać treningu",
+          ),
+          t(
+            "Lasse das Training geöffnet und versuche es gleich erneut.",
+            "Keep the workout open and try again shortly.",
+            "Pozostaw trening otwarty i spróbuj ponownie za chwilę.",
+          ),
+        );
+      });
+  }, [session, sessionWriteQueue, t]);
 
   useEffect(
     () => () => {
       if (improvementTimer.current) clearTimeout(improvementTimer.current);
-      const current = sessionRef.current;
-      if (!current) return;
-      const snapshot = {
-        ...current,
-        activeElapsedSeconds: calculateActiveWorkoutSeconds(
-          current.activeElapsedSeconds,
-          activeSegmentStartedAtRef.current,
-        ),
-      };
-      activeSegmentStartedAtRef.current = null;
-      sessionRef.current = snapshot;
-      void saveActiveSession(snapshot).catch(() => undefined);
     },
     [],
   );
@@ -421,24 +398,29 @@ export default function ActiveWorkoutScreen() {
   const completedCount = useMemo(
     () =>
       session
-        ? Object.values(session.completedSets).flat().filter(Boolean).length
+        ? Object.entries(session.completedSets).reduce(
+            (sum, [exerciseId, sets]) =>
+              session.skippedExercises[exerciseId]
+                ? sum
+                : sum + sets.filter(Boolean).length,
+            0,
+          )
         : 0,
     [session],
   );
   const totalSets = useMemo(
     () =>
       session
-        ? Object.values(session.setValues).reduce(
-            (sum, values) => sum + values.length,
+        ? Object.entries(session.setValues).reduce(
+            (sum, [exerciseId, values]) =>
+              session.skippedExercises[exerciseId] ? sum : sum + values.length,
             0,
           )
         : 0,
     [session],
   );
-  const progress = Math.min(
-    100,
-    (completedCount / Math.max(1, totalSets)) * 100,
-  );
+  const progress =
+    totalSets === 0 ? 100 : Math.min(100, (completedCount / totalSets) * 100);
   const timerText = `${String(Math.floor(restDisplayRemaining / 60)).padStart(2, "0")}:${String(restDisplayRemaining % 60).padStart(2, "0")}`;
 
   useEffect(() => {
@@ -468,7 +450,7 @@ export default function ActiveWorkoutScreen() {
     value: ActiveSetValue,
   ) {
     const baseline =
-      session?.baselineSetValues[exerciseId]?.[setIndex] ?? value;
+      sessionRef.current?.baselineSetValues[exerciseId]?.[setIndex] ?? value;
     const gains = gainsForSet(value, baseline);
     if (!gains.repsGain && !gains.weightGainKg) return;
     improvementSequence.current += 1;
@@ -478,7 +460,7 @@ export default function ActiveWorkoutScreen() {
       ...gains,
       sequence: improvementSequence.current,
     });
-    goldFlash.value = withSequence(
+    emeraldFlash.value = withSequence(
       withTiming(1, { duration: 120 }),
       withDelay(520, withTiming(0, { duration: 420 })),
     );
@@ -489,13 +471,15 @@ export default function ActiveWorkoutScreen() {
 
   function changeReps(exerciseId: string, setIndex: number, reps: number) {
     const safeReps = Math.max(0, Math.min(999, Math.round(reps)));
-    const currentValue = session?.setValues[exerciseId]?.[setIndex] ?? {
+    const currentSession = sessionRef.current;
+    const currentValue = currentSession?.setValues[exerciseId]?.[setIndex] ?? {
       reps: 0,
       weightKg: null,
     };
     const previous = currentValue.reps;
     const baseline =
-      session?.baselineSetValues[exerciseId]?.[setIndex]?.reps ?? previous;
+      currentSession?.baselineSetValues[exerciseId]?.[setIndex]?.reps ??
+      previous;
     updateSetValue(exerciseId, setIndex, { reps: safeReps });
     const gain = safeReps - baseline;
     if (safeReps > previous && gain > 0)
@@ -512,13 +496,14 @@ export default function ActiveWorkoutScreen() {
   ) {
     const safeValue = Math.max(0, Math.min(5000, displayValue));
     const nextWeightKg = safeValue > 0 ? toKg(safeValue, weightUnit) : null;
-    const currentValue = session?.setValues[exerciseId]?.[setIndex] ?? {
+    const currentSession = sessionRef.current;
+    const currentValue = currentSession?.setValues[exerciseId]?.[setIndex] ?? {
       reps: 0,
       weightKg: null,
     };
     const previousWeightKg = currentValue.weightKg ?? 0;
     const baselineWeightKg =
-      session?.baselineSetValues[exerciseId]?.[setIndex]?.weightKg ?? 0;
+      currentSession?.baselineSetValues[exerciseId]?.[setIndex]?.weightKg ?? 0;
     updateSetValue(exerciseId, setIndex, { weightKg: nextWeightKg });
     if (
       (nextWeightKg ?? 0) > previousWeightKg &&
@@ -529,6 +514,23 @@ export default function ActiveWorkoutScreen() {
         weightKg: nextWeightKg,
       });
     }
+  }
+
+  function adjustReps(exerciseId: string, setIndex: number, delta: number) {
+    const current =
+      sessionRef.current?.setValues[exerciseId]?.[setIndex]?.reps ?? 0;
+    changeReps(exerciseId, setIndex, current + delta);
+  }
+
+  function adjustWeight(exerciseId: string, setIndex: number, delta: number) {
+    const weightKg =
+      sessionRef.current?.setValues[exerciseId]?.[setIndex]?.weightKg ?? 0;
+    const displayed = weightUnit === "lbs" ? weightKg * 2.20462 : weightKg;
+    changeWeight(
+      exerciseId,
+      setIndex,
+      Number(Math.max(0, displayed + delta).toFixed(2)),
+    );
   }
 
   function addSet(exerciseId: string) {
@@ -581,6 +583,20 @@ export default function ActiveWorkoutScreen() {
       };
     });
     hapticTap();
+  }
+
+  function toggleExerciseSkipped(exerciseId: string) {
+    updateSession((current) => {
+      const skipped = !current.skippedExercises[exerciseId];
+      return {
+        ...current,
+        skippedExercises: {
+          ...current.skippedExercises,
+          [exerciseId]: skipped,
+        },
+      };
+    });
+    hapticSelection();
   }
 
   function toggleSet(exerciseId: string, setIndex: number) {
@@ -653,16 +669,21 @@ export default function ActiveWorkoutScreen() {
   }
 
   function openEffortPrompt() {
-    workoutClockPausedRef.current = true;
-    pauseWorkoutClock();
+    const requestedAt = Date.now();
+    finishRequestedAtRef.current = requestedAt;
+    const current = sessionRef.current;
+    if (current) {
+      setWorkoutElapsedSeconds(
+        calculateRunningWorkoutSeconds(current.startedAt, requestedAt),
+      );
+    }
     setEffortPromptVisible(true);
   }
 
   function closeEffortPrompt() {
     if (finishing) return;
     setEffortPromptVisible(false);
-    workoutClockPausedRef.current = false;
-    resumeWorkoutClock();
+    finishRequestedAtRef.current = null;
   }
 
   function confirmAbortWorkout() {
@@ -690,20 +711,25 @@ export default function ActiveWorkoutScreen() {
   }
 
   async function abortWorkout() {
-    if (aborting || finishing) return;
+    if (abortingRef.current || finishingRef.current) return;
+    abortingRef.current = true;
     setAborting(true);
-    workoutClockPausedRef.current = true;
-    activeSegmentStartedAtRef.current = null;
+    finishRequestedAtRef.current = Date.now();
     setTimerRunning(false);
     try {
+      await sessionWriteQueue.invalidateAndDrain();
       await clearActiveSession();
       sessionRef.current = null;
       setSession(null);
       hapticSuccess();
       router.replace("/");
     } catch {
-      workoutClockPausedRef.current = false;
-      resumeWorkoutClock();
+      finishRequestedAtRef.current = null;
+      const activeRestEnd = sessionRef.current?.restEndsAt;
+      if (activeRestEnd && restSecondsRemaining(activeRestEnd) > 0) {
+        setRestDisplayRemaining(restSecondsRemaining(activeRestEnd));
+        setTimerRunning(true);
+      }
       hapticWarning();
       Alert.alert(
         t(
@@ -718,6 +744,7 @@ export default function ActiveWorkoutScreen() {
         ),
       );
     } finally {
+      abortingRef.current = false;
       setAborting(false);
     }
   }
@@ -748,18 +775,32 @@ export default function ActiveWorkoutScreen() {
   }
 
   async function completeWorkout(effort: WorkoutEffort) {
-    if (!workout || !session || finishingRef.current) return;
-    const activeSession = pauseWorkoutClock() ?? session;
+    if (!workout || !session || finishingRef.current || abortingRef.current)
+      return;
+    const activeSession = sessionRef.current ?? session;
     finishingRef.current = true;
     setFinishing(true);
     try {
-      const completedAt = new Date().toISOString();
+      await sessionWriteQueue.invalidateAndDrain();
+      await saveActiveSession(activeSession);
+      const completedAt = new Date(
+        finishRequestedAtRef.current ?? Date.now(),
+      ).toISOString();
       const [all, history] = await Promise.all([
         loadWorkouts(),
         loadWorkoutHistory(),
       ]);
       const historyExercises = workout.exercises
         .map((exercise) => {
+          const skipped = Boolean(activeSession.skippedExercises[exercise.id]);
+          if (skipped) {
+            return {
+              exerciseId: exercise.id,
+              name: exercise.name,
+              skipped: true,
+              sets: [],
+            };
+          }
           const values = activeSession.setValues[exercise.id] ?? [];
           const previousSets = history.flatMap((entry) =>
             entry.exercises
@@ -802,6 +843,7 @@ export default function ActiveWorkoutScreen() {
           return {
             exerciseId: exercise.id,
             name: exercise.name,
+            skipped: undefined,
             sets: values.flatMap((value, setIndex) => {
               if (!activeSession.completedSets[exercise.id]?.[setIndex])
                 return [];
@@ -826,13 +868,13 @@ export default function ActiveWorkoutScreen() {
             }),
           };
         })
-        .filter((exercise) => exercise.sets.length > 0);
+        .filter((exercise) => exercise.skipped || exercise.sets.length > 0);
       const completedHistorySets = historyExercises.flatMap(
         (exercise) => exercise.sets,
       );
       const durationSeconds = Math.max(
         1,
-        normalizeActiveWorkoutSeconds(activeSession.activeElapsedSeconds),
+        calculateWorkoutDurationSeconds(activeSession.startedAt, completedAt),
       );
       const totalVolumeKg = completedHistorySets.reduce(
         (sum, set) => sum + set.reps * (set.weightKg ?? 0),
@@ -869,6 +911,7 @@ export default function ActiveWorkoutScreen() {
           completedAt,
           updatedAt: completedAt,
           exercises: item.exercises.map((exercise) => {
+            if (activeSession.skippedExercises[exercise.id]) return exercise;
             const values =
               activeSession.setValues[exercise.id] ??
               setValuesForExercise(exercise);
@@ -890,9 +933,16 @@ export default function ActiveWorkoutScreen() {
       });
       await finalizeWorkoutStorage(updatedWorkouts, [historyEntry, ...history]);
       sessionRef.current = null;
-      activeSegmentStartedAtRef.current = null;
+      finishRequestedAtRef.current = null;
       setEffortPromptVisible(false);
       setCompletionSummary({
+        workoutTitle: workout.title,
+        exerciseCount: historyExercises.filter(
+          (exercise) => !exercise.skipped && exercise.sets.length > 0,
+        ).length,
+        skippedExerciseCount: historyExercises.filter(
+          (exercise) => exercise.skipped,
+        ).length,
         durationSeconds,
         completedSets: completedHistorySets.length,
         totalVolumeKg,
@@ -902,9 +952,8 @@ export default function ActiveWorkoutScreen() {
       });
       hapticSuccess();
     } catch {
-      workoutClockPausedRef.current = false;
+      finishRequestedAtRef.current = null;
       setEffortPromptVisible(false);
-      resumeWorkoutClock();
       Alert.alert(
         t(
           "Training konnte nicht abgeschlossen werden",
@@ -920,6 +969,69 @@ export default function ActiveWorkoutScreen() {
     } finally {
       finishingRef.current = false;
       setFinishing(false);
+    }
+  }
+
+  async function shareTrainingStory() {
+    if (!completionSummary || !storyRef.current || sharingStory) return;
+    setSharingStory(true);
+    try {
+      const pixelRatio = PixelRatio.get();
+      const width = 1080 / pixelRatio;
+      const height = 1920 / pixelRatio;
+
+      if (Platform.OS === "web") {
+        const dataUri = await captureRef(storyRef.current, {
+          format: "png",
+          quality: 1,
+          result: "data-uri",
+          width,
+          height,
+        });
+        const anchor = document.createElement("a");
+        anchor.href = dataUri;
+        anchor.download = "zaymax-training-story.png";
+        anchor.click();
+        hapticSuccess();
+        return;
+      }
+
+      if (!(await Sharing.isAvailableAsync())) {
+        throw new Error("sharing-unavailable");
+      }
+      const uri = await captureRef(storyRef.current, {
+        format: "png",
+        quality: 1,
+        result: "tmpfile",
+        width,
+        height,
+      });
+      await Sharing.shareAsync(uri, {
+        mimeType: "image/png",
+        UTI: "public.png",
+        dialogTitle: t(
+          "Training teilen",
+          "Share workout",
+          "Udostępnij trening",
+        ),
+      });
+      hapticSuccess();
+    } catch {
+      hapticWarning();
+      Alert.alert(
+        t(
+          "Story konnte nicht erstellt werden",
+          "Story could not be created",
+          "Nie udało się utworzyć relacji",
+        ),
+        t(
+          "Bitte versuche es erneut. Dein gespeichertes Training bleibt erhalten.",
+          "Please try again. Your saved workout remains available.",
+          "Spróbuj ponownie. Zapisany trening pozostaje dostępny.",
+        ),
+      );
+    } finally {
+      setSharingStory(false);
     }
   }
 
@@ -989,6 +1101,8 @@ export default function ActiveWorkoutScreen() {
     <ScreenContainer className="px-5" containerClassName="bg-background">
       <ScrollView
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 38 }}
       >
@@ -1037,14 +1151,14 @@ export default function ActiveWorkoutScreen() {
               justifyContent: "center",
               gap: 7,
               borderWidth: 1,
-              borderColor: ZAYMAX_DESIGN.colors.goldLine,
+              borderColor: colors.border,
               borderRadius: ZAYMAX_DESIGN.radius.round,
-              backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
+              backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
               paddingHorizontal: 10,
               paddingVertical: 8,
             }}
           >
-            <IconSymbol name="timer" size={16} color={GOLD} />
+            <IconSymbol name="timer" size={16} color={colors.foreground} />
             <View>
               <Text
                 style={{
@@ -1074,12 +1188,16 @@ export default function ActiveWorkoutScreen() {
         <View
           className="bg-surface p-[18px]"
           style={{
+            position: "relative",
+            overflow: "hidden",
             borderWidth: 1,
             borderColor: colors.border,
             borderRadius: ZAYMAX_DESIGN.radius.card,
+            backgroundColor: "transparent",
             ...ZAYMAX_DESIGN.shadow,
           }}
         >
+          <GlassMaterial intensity={28} />
           <View className="flex-row items-end justify-between">
             <View>
               <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
@@ -1100,7 +1218,7 @@ export default function ActiveWorkoutScreen() {
                   alignItems: "center",
                   gap: 9,
                   borderWidth: 1,
-                  borderColor: GOLD,
+                  borderColor: ZAYMAX_DESIGN.colors.goldLine,
                   backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
                   borderRadius: ZAYMAX_DESIGN.radius.round,
                   paddingHorizontal: 9,
@@ -1144,8 +1262,11 @@ export default function ActiveWorkoutScreen() {
             <Animated.View
               style={[
                 StyleSheet.absoluteFill,
-                { pointerEvents: "none", backgroundColor: GOLD },
-                goldStyle,
+                {
+                  pointerEvents: "none",
+                  backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
+                },
+                emeraldStyle,
               ]}
             />
           </View>
@@ -1154,11 +1275,15 @@ export default function ActiveWorkoutScreen() {
         <View
           className="mt-3 bg-surface p-[18px]"
           style={{
+            position: "relative",
+            overflow: "hidden",
             borderWidth: 1,
             borderColor: colors.border,
             borderRadius: ZAYMAX_DESIGN.radius.card,
+            backgroundColor: "transparent",
           }}
         >
+          <GlassMaterial intensity={25} />
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center">
               <ZaymaxWatermark />
@@ -1239,6 +1364,7 @@ export default function ActiveWorkoutScreen() {
         {workout.exercises.map((exercise, exerciseIndex) => {
           const values = session.setValues[exercise.id] ?? [];
           const checkedSets = session.completedSets[exercise.id] ?? [];
+          const skipped = Boolean(session.skippedExercises[exercise.id]);
           return (
             <Animated.View
               key={exercise.id}
@@ -1248,26 +1374,35 @@ export default function ActiveWorkoutScreen() {
               layout={Layout.duration(ZAYMAX_DESIGN.motion.quick)}
               className="mt-3 bg-surface p-4"
               style={{
+                position: "relative",
+                overflow: "hidden",
                 borderWidth: 1,
-                borderColor: colors.border,
+                borderColor: skipped ? colors.muted : colors.border,
                 borderRadius: ZAYMAX_DESIGN.radius.card,
+                backgroundColor: "transparent",
               }}
             >
+              <GlassMaterial intensity={skipped ? 15 : 24} />
               <View className="flex-row items-center justify-between">
                 <View className="flex-1 pr-3">
                   <Text className="text-lg font-black text-foreground">
                     {exercise.name}
                   </Text>
                   <Text className="mt-1 text-sm text-muted">
-                    {checkedSets.filter(Boolean).length}/{values.length}{" "}
-                    {t("geschafft", "completed")}
+                    {skipped
+                      ? t("Übersprungen", "Skipped", "Pominięto")
+                      : `${checkedSets.filter(Boolean).length}/${values.length} ${t(
+                          "geschafft",
+                          "completed",
+                          "ukończono",
+                        )}`}
                   </Text>
                 </View>
                 <View className="flex-row gap-2">
                   <Pressable
                     accessibilityLabel={t("Satz entfernen", "Remove set")}
                     onPress={() => removeSet(exercise.id)}
-                    disabled={values.length <= 1}
+                    disabled={skipped || values.length <= 1}
                     style={({ pressed }) => [
                       {
                         width: 38,
@@ -1277,7 +1412,12 @@ export default function ActiveWorkoutScreen() {
                         borderRadius: ZAYMAX_DESIGN.radius.round,
                         borderWidth: 1,
                         borderColor: colors.border,
-                        opacity: values.length <= 1 ? 0.3 : pressed ? 0.55 : 1,
+                        opacity:
+                          skipped || values.length <= 1
+                            ? 0.3
+                            : pressed
+                              ? 0.55
+                              : 1,
                       },
                     ]}
                   >
@@ -1290,7 +1430,7 @@ export default function ActiveWorkoutScreen() {
                   <Pressable
                     accessibilityLabel={t("Satz hinzufügen", "Add set")}
                     onPress={() => addSet(exercise.id)}
-                    disabled={values.length >= 20}
+                    disabled={skipped || values.length >= 20}
                     style={({ pressed }) => [
                       {
                         width: 38,
@@ -1300,7 +1440,12 @@ export default function ActiveWorkoutScreen() {
                         borderRadius: ZAYMAX_DESIGN.radius.round,
                         borderWidth: 1,
                         borderColor: colors.primary,
-                        opacity: values.length >= 20 ? 0.3 : pressed ? 0.55 : 1,
+                        opacity:
+                          skipped || values.length >= 20
+                            ? 0.3
+                            : pressed
+                              ? 0.55
+                              : 1,
                       },
                     ]}
                   >
@@ -1313,7 +1458,74 @@ export default function ActiveWorkoutScreen() {
                 </View>
               </View>
 
-              <View className="mt-4 gap-2">
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: skipped }}
+                accessibilityLabel={
+                  skipped
+                    ? t(
+                        "Übung heute doch trainieren",
+                        "Train exercise today",
+                        "Wykonaj ćwiczenie dzisiaj",
+                      )
+                    : t(
+                        "Übung heute auslassen",
+                        "Skip exercise today",
+                        "Pomiń ćwiczenie dzisiaj",
+                      )
+                }
+                onPress={() => toggleExerciseSkipped(exercise.id)}
+                style={({ pressed }) => ({
+                  minHeight: 42,
+                  marginTop: 13,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  borderRadius: ZAYMAX_DESIGN.radius.round,
+                  borderWidth: 1,
+                  borderColor: skipped ? colors.foreground : colors.border,
+                  backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
+                  opacity: pressed ? 0.6 : 1,
+                })}
+              >
+                <IconSymbol
+                  name={skipped ? "arrow.counterclockwise" : "chevron.right"}
+                  size={18}
+                  color={colors.foreground}
+                />
+                <Text className="text-sm font-black text-foreground">
+                  {skipped
+                    ? t("Doch trainieren", "Train it", "Wykonaj ćwiczenie")
+                    : t("Heute auslassen", "Skip today", "Pomiń dzisiaj")}
+                </Text>
+              </Pressable>
+
+              {skipped ? (
+                <View
+                  style={{
+                    marginTop: 12,
+                    borderRadius: ZAYMAX_DESIGN.radius.nested,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    backgroundColor: colors.background,
+                    padding: 14,
+                  }}
+                >
+                  <Text className="text-center text-sm font-bold text-muted">
+                    {t(
+                      "Diese Übung wird heute nicht gewertet und bleibt in deinem Workout erhalten.",
+                      "This exercise will not count today and stays in your workout.",
+                      "To ćwiczenie nie będzie dziś liczone i pozostanie w Twoim treningu.",
+                    )}
+                  </Text>
+                </View>
+              ) : null}
+
+              <View
+                className="mt-4 gap-2"
+                style={{ display: skipped ? "none" : "flex" }}
+              >
                 {values.map((value, setIndex) => {
                   const checked = checkedSets[setIndex] ?? false;
                   const baseline =
@@ -1335,7 +1547,7 @@ export default function ActiveWorkoutScreen() {
                         borderRadius: ZAYMAX_DESIGN.radius.nested,
                         borderWidth: 1,
                         borderColor: checked
-                          ? ZAYMAX_DESIGN.colors.goldLine
+                          ? ZAYMAX_DESIGN.colors.emeraldLine
                           : colors.border,
                         backgroundColor: checked
                           ? ZAYMAX_DESIGN.colors.successSoft
@@ -1347,7 +1559,7 @@ export default function ActiveWorkoutScreen() {
                       improvement.setIndex === setIndex &&
                       improvement.repsGain > 0 &&
                       improvement.weightGainKg > 0 ? (
-                        <GoldConfetti burst={improvement.sequence} />
+                        <EmeraldConfetti burst={improvement.sequence} />
                       ) : null}
                       <View className="flex-row items-center">
                         <Pressable
@@ -1408,7 +1620,7 @@ export default function ActiveWorkoutScreen() {
                               alignItems: "center",
                               gap: 7,
                               borderWidth: 1,
-                              borderColor: `${GOLD}99`,
+                              borderColor: ZAYMAX_DESIGN.colors.goldLine,
                               backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
                               borderRadius: ZAYMAX_DESIGN.radius.round,
                               paddingHorizontal: 7,
@@ -1440,14 +1652,10 @@ export default function ActiveWorkoutScreen() {
                           integer
                           colors={colors}
                           onDecrease={() =>
-                            changeReps(
-                              exercise.id,
-                              setIndex,
-                              Math.max(0, value.reps - 1),
-                            )
+                            adjustReps(exercise.id, setIndex, -1)
                           }
                           onIncrease={() =>
-                            changeReps(exercise.id, setIndex, value.reps + 1)
+                            adjustReps(exercise.id, setIndex, 1)
                           }
                           onChange={(nextValue) =>
                             changeReps(exercise.id, setIndex, nextValue)
@@ -1463,21 +1671,11 @@ export default function ActiveWorkoutScreen() {
                           colors={colors}
                           onDecrease={() => {
                             const step = weightUnit === "kg" ? 0.5 : 1;
-                            changeWeight(
-                              exercise.id,
-                              setIndex,
-                              Number(
-                                Math.max(0, shownWeight - step).toFixed(2),
-                              ),
-                            );
+                            adjustWeight(exercise.id, setIndex, -step);
                           }}
                           onIncrease={() => {
                             const step = weightUnit === "kg" ? 0.5 : 1;
-                            changeWeight(
-                              exercise.id,
-                              setIndex,
-                              Number((shownWeight + step).toFixed(2)),
-                            );
+                            adjustWeight(exercise.id, setIndex, step);
                           }}
                           onChange={(nextValue) =>
                             changeWeight(exercise.id, setIndex, nextValue)
@@ -1508,6 +1706,7 @@ export default function ActiveWorkoutScreen() {
                   {
                     marginTop: 13,
                     alignSelf: "flex-start",
+                    display: skipped ? "none" : "flex",
                     opacity: pressed ? 0.55 : 1,
                   },
                 ]}
@@ -1572,24 +1771,32 @@ export default function ActiveWorkoutScreen() {
         animationType="fade"
         onRequestClose={closeEffortPrompt}
       >
-        <View
-          style={{
-            flex: 1,
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={{ flex: 1, backgroundColor: ZAYMAX_DESIGN.colors.overlay }}
+          contentContainerStyle={{
+            flexGrow: 1,
             justifyContent: "center",
             padding: 22,
-            backgroundColor: ZAYMAX_DESIGN.colors.overlay,
           }}
         >
           <View
             style={{
+              position: "relative",
+              overflow: "hidden",
               borderRadius: ZAYMAX_DESIGN.radius.hero,
               borderWidth: 1,
               borderColor: colors.border,
-              backgroundColor: colors.surface,
+              backgroundColor: "transparent",
               padding: 20,
               ...ZAYMAX_DESIGN.shadow,
             }}
           >
+            <GlassMaterial
+              raised
+              intensity={34}
+              radius={ZAYMAX_DESIGN.radius.hero}
+            />
             <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
               {t("TRAINING ABGESCHLOSSEN", "WORKOUT COMPLETED")}
             </Text>
@@ -1656,34 +1863,42 @@ export default function ActiveWorkoutScreen() {
               </Text>
             </Pressable>
           </View>
-        </View>
+        </ScrollView>
       </Modal>
 
       <Modal
-        visible={Boolean(completionSummary)}
+        visible={Boolean(completionSummary) && !sharePreviewVisible}
         transparent
         animationType="fade"
         onRequestClose={() => {}}
       >
-        <View
-          style={{
-            flex: 1,
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={{ flex: 1, backgroundColor: ZAYMAX_DESIGN.colors.overlay }}
+          contentContainerStyle={{
+            flexGrow: 1,
             justifyContent: "center",
             padding: 22,
-            backgroundColor: ZAYMAX_DESIGN.colors.overlay,
           }}
         >
           {completionSummary ? (
             <View
               style={{
+                position: "relative",
+                overflow: "hidden",
                 borderRadius: ZAYMAX_DESIGN.radius.hero,
                 borderWidth: 1,
                 borderColor: colors.border,
-                backgroundColor: colors.surface,
+                backgroundColor: "transparent",
                 padding: 20,
                 ...ZAYMAX_DESIGN.shadow,
               }}
             >
+              <GlassMaterial
+                raised
+                intensity={34}
+                radius={ZAYMAX_DESIGN.radius.hero}
+              />
               <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
                 {t("WORKOUT GESPEICHERT", "WORKOUT SAVED")}
               </Text>
@@ -1769,6 +1984,39 @@ export default function ActiveWorkoutScreen() {
               </View>
               <Pressable
                 accessibilityLabel={t(
+                  "Training als Story teilen",
+                  "Share workout as a story",
+                  "Udostępnij trening jako relację",
+                )}
+                onPress={() => {
+                  hapticTap();
+                  setSharePreviewVisible(true);
+                }}
+                style={({ pressed }) => ({
+                  minHeight: 50,
+                  marginTop: 18,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 9,
+                  borderRadius: ZAYMAX_DESIGN.radius.round,
+                  borderWidth: 1,
+                  borderColor: colors.foreground,
+                  backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
+                  opacity: pressed ? 0.65 : 1,
+                })}
+              >
+                <IconSymbol
+                  name="square.and.arrow.up"
+                  size={19}
+                  color={colors.foreground}
+                />
+                <Text className="font-black tracking-[0.3px] text-foreground">
+                  {t("Training teilen", "Share workout", "Udostępnij trening")}
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityLabel={t(
                   "Zusammenfassung schließen",
                   "Close summary",
                 )}
@@ -1778,7 +2026,7 @@ export default function ActiveWorkoutScreen() {
                 }}
                 style={({ pressed }) => [
                   {
-                    marginTop: 18,
+                    marginTop: 10,
                     borderRadius: ZAYMAX_DESIGN.radius.round,
                     backgroundColor: ZAYMAX_DESIGN.colors.action,
                     paddingVertical: 15,
@@ -1792,7 +2040,128 @@ export default function ActiveWorkoutScreen() {
               </Pressable>
             </View>
           ) : null}
-        </View>
+        </ScrollView>
+      </Modal>
+
+      <Modal
+        visible={sharePreviewVisible && Boolean(completionSummary)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!sharingStory) setSharePreviewVisible(false);
+        }}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={{ flex: 1, backgroundColor: ZAYMAX_DESIGN.colors.overlay }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 18,
+          }}
+        >
+          {completionSummary ? (
+            <View
+              style={{
+                position: "relative",
+                overflow: "hidden",
+                width: "100%",
+                maxWidth: 390,
+                borderRadius: ZAYMAX_DESIGN.radius.hero,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: "transparent",
+                padding: 16,
+                ...ZAYMAX_DESIGN.shadow,
+              }}
+            >
+              <GlassMaterial
+                raised
+                intensity={34}
+                radius={ZAYMAX_DESIGN.radius.hero}
+              />
+              <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
+                {t("STORY-VORSCHAU", "STORY PREVIEW", "PODGLĄD RELACJI")}
+              </Text>
+              <View
+                style={{
+                  width: "72%",
+                  maxWidth: 286,
+                  marginTop: 13,
+                  alignSelf: "center",
+                  overflow: "hidden",
+                  borderRadius: ZAYMAX_DESIGN.radius.nested,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <TrainingStory
+                  ref={storyRef}
+                  data={completionSummary}
+                  language={language}
+                />
+              </View>
+              <Pressable
+                accessibilityLabel={t(
+                  "Story jetzt teilen",
+                  "Share story now",
+                  "Udostępnij relację teraz",
+                )}
+                disabled={sharingStory}
+                onPress={() => void shareTrainingStory()}
+                style={({ pressed }) => ({
+                  minHeight: 50,
+                  marginTop: 14,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 9,
+                  borderRadius: ZAYMAX_DESIGN.radius.round,
+                  backgroundColor: ZAYMAX_DESIGN.colors.action,
+                  opacity: sharingStory ? 0.45 : pressed ? 0.75 : 1,
+                })}
+              >
+                <IconSymbol
+                  name="square.and.arrow.up"
+                  size={19}
+                  color={colors.background}
+                />
+                <Text className="font-black text-background">
+                  {sharingStory
+                    ? t(
+                        "Bild wird erstellt …",
+                        "Creating image …",
+                        "Tworzenie obrazu …",
+                      )
+                    : t(
+                        "App zum Teilen auswählen",
+                        "Choose an app to share",
+                        "Wybierz aplikację do udostępnienia",
+                      )}
+                </Text>
+              </Pressable>
+              <Pressable
+                disabled={sharingStory}
+                onPress={() => {
+                  hapticTap();
+                  setSharePreviewVisible(false);
+                }}
+                style={({ pressed }) => ({
+                  minHeight: 42,
+                  marginTop: 5,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: sharingStory ? 0.3 : pressed ? 0.55 : 1,
+                })}
+              >
+                <Text className="text-sm font-bold text-muted">
+                  {t("Zurück", "Back", "Wróć")}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+        </ScrollView>
       </Modal>
     </ScreenContainer>
   );
@@ -1822,8 +2191,10 @@ function SummaryMetric({
         width: wide ? "100%" : "48.5%",
         borderRadius: ZAYMAX_DESIGN.radius.nested,
         borderWidth: 1,
-        borderColor: colors.border,
-        backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
+        borderColor: accent ? ZAYMAX_DESIGN.colors.goldLine : colors.border,
+        backgroundColor: accent
+          ? ZAYMAX_DESIGN.colors.goldSoft
+          : ZAYMAX_DESIGN.colors.surfaceSoft,
         padding: 13,
       }}
     >
@@ -1842,7 +2213,7 @@ function SummaryMetric({
           marginTop: 6,
           fontSize: 18,
           fontWeight: "800",
-          color: accent ? GOLD : colors.foreground,
+          color: accent ? PROGRESS_GOLD : colors.foreground,
         }}
       >
         {value}
@@ -1862,9 +2233,14 @@ function ProgressMark({
 }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center" }}>
-      <IconSymbol name={icon} size={size} color={GOLD} />
+      <IconSymbol name={icon} size={size} color={PROGRESS_GOLD} />
       <Text
-        style={{ marginLeft: 4, color: GOLD, fontSize: 12, fontWeight: "800" }}
+        style={{
+          marginLeft: 4,
+          color: PROGRESS_GOLD,
+          fontSize: 12,
+          fontWeight: "800",
+        }}
       >
         {value}
       </Text>
@@ -1883,7 +2259,7 @@ const CONFETTI_PIECES = [
   { x: 82, y: 59, rotate: 100 },
 ] as const;
 
-function GoldConfetti({ burst }: { burst: number }) {
+function EmeraldConfetti({ burst }: { burst: number }) {
   return (
     <View
       style={[StyleSheet.absoluteFill, { pointerEvents: "none", zIndex: 2 }]}
@@ -1930,7 +2306,8 @@ function ConfettiPiece({
           width: index % 2 ? 8 : 6,
           height: index % 2 ? 8 : 6,
           borderRadius: 999,
-          backgroundColor: index % 2 ? GOLD : "#E2CA79",
+          backgroundColor:
+            index % 2 ? ZAYMAX_DESIGN.colors.gold : ZAYMAX_DESIGN.colors.action,
         },
         style,
       ]}

@@ -114,6 +114,7 @@ describe("workout storage recovery", () => {
     expect(session?.restSeconds).toBe(600);
     expect(session?.restRemaining).toBe(0);
     expect(session?.activeElapsedSeconds).toBe(24 * 60 * 60);
+    expect(session?.skippedExercises).toEqual({});
     expect(session?.restEndsAt).toBe("2026-08-26T18:01:30.000Z");
   });
 
@@ -132,6 +133,30 @@ describe("workout storage recovery", () => {
 
     await expect(loadActiveSession()).resolves.toMatchObject({
       activeElapsedSeconds: 0,
+      skippedExercises: {},
+    });
+  });
+
+  it("keeps only explicit skipped-exercise flags", async () => {
+    storage.getItem.mockResolvedValue(
+      JSON.stringify({
+        workoutId: "push",
+        startedAt: "2026-08-26T18:00:00.000Z",
+        completedSets: {},
+        skippedExercises: {
+          bench: true,
+          row: false,
+          invalid: "true",
+        },
+        setValues: {},
+        baselineSetValues: {},
+        restSeconds: 90,
+        restRemaining: 0,
+      }),
+    );
+
+    await expect(loadActiveSession()).resolves.toMatchObject({
+      skippedExercises: { bench: true },
     });
   });
 
@@ -151,5 +176,39 @@ describe("workout storage recovery", () => {
 
     await expect(loadWorkoutHistory()).resolves.toHaveLength(1);
     expect(formatDateTime("not-a-date")).toBe("—");
+  });
+
+  it("preserves skipped exercises in workout history", async () => {
+    storage.getItem.mockResolvedValue(
+      JSON.stringify([
+        {
+          id: "history-skipped",
+          workoutId: "push",
+          workoutTitle: "Push",
+          completedAt: "2026-08-26T19:00:00.000Z",
+          exercises: [
+            {
+              exerciseId: "bench",
+              name: "Brustpresse",
+              skipped: true,
+              sets: [],
+            },
+          ],
+        },
+      ]),
+    );
+
+    await expect(loadWorkoutHistory()).resolves.toMatchObject([
+      {
+        exercises: [
+          {
+            exerciseId: "bench",
+            name: "Brustpresse",
+            skipped: true,
+            sets: [],
+          },
+        ],
+      },
+    ]);
   });
 });

@@ -13,23 +13,25 @@ import { ThemeProvider } from "@/lib/theme-provider";
 import { LanguageProvider } from "@/lib/i18n";
 import { KeyboardDismissButton } from "@/components/keyboard-dismiss-button";
 import { AppExperienceOverlay } from "@/components/app-experience-overlay";
+import { StartupExperience } from "@/components/startup-experience";
+import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { dismissAllLockScreenReminders } from "@/lib/lock-screen-reminders";
 import {
   SafeAreaProvider,
   initialWindowMetrics,
 } from "react-native-safe-area-context";
 
-const APP_BACKGROUND = "#0D0D0D";
+const APP_BACKGROUND = ZAYMAX_DESIGN.colors.background;
 const NAVIGATION_THEME = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    primary: "#D4B86A",
+    primary: ZAYMAX_DESIGN.colors.action,
     background: APP_BACKGROUND,
-    card: "#1B1B1A",
-    text: "#F1EFEA",
-    border: "#302F2C",
-    notification: "#D4B86A",
+    card: ZAYMAX_DESIGN.colors.surface,
+    text: ZAYMAX_DESIGN.colors.action,
+    border: ZAYMAX_DESIGN.colors.border,
+    notification: ZAYMAX_DESIGN.colors.action,
   },
 };
 
@@ -72,6 +74,7 @@ export default function RootLayout() {
         </Stack>
         <KeyboardDismissButton />
         <AppExperienceOverlay />
+        <StartupExperience />
         <StatusBar style="light" backgroundColor={APP_BACKGROUND} />
       </NavigationThemeProvider>
     </GestureHandlerRootView>

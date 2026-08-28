@@ -13,6 +13,7 @@ import {
 import Animated, { FadeInDown } from "react-native-reanimated";
 import Svg, { Line } from "react-native-svg";
 
+import { GlassMaterial } from "@/components/glass-material";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZaymaxWatermark } from "@/components/zaymax-watermark";
@@ -163,7 +164,7 @@ export default function StepsScreen() {
             />
           ) : undefined
         }
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: 128 }}
       >
         <View className="flex-row items-start pt-3 pb-6">
           <ZaymaxWatermark />
@@ -188,14 +189,21 @@ export default function StepsScreen() {
             <Animated.View
               entering={FadeInDown.duration(280)}
               style={{
+                position: "relative",
+                overflow: "hidden",
                 borderWidth: 1,
                 borderColor: colors.border,
                 borderRadius: ZAYMAX_DESIGN.radius.hero,
-                backgroundColor: colors.surface,
+                backgroundColor: "transparent",
                 padding: 18,
                 ...ZAYMAX_DESIGN.shadow,
               }}
             >
+              <GlassMaterial
+                raised
+                intensity={30}
+                radius={ZAYMAX_DESIGN.radius.hero}
+              />
               <View className="flex-row items-start justify-between">
                 <View>
                   <Text className="text-[10px] font-black uppercase tracking-[2.5px] text-muted">
@@ -217,7 +225,7 @@ export default function StepsScreen() {
                     alignItems: "center",
                     justifyContent: "center",
                     borderWidth: 1,
-                    borderColor: ZAYMAX_DESIGN.colors.goldLine,
+                    borderColor: colors.border,
                     backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
                   }}
                 >
@@ -299,13 +307,16 @@ export default function StepsScreen() {
               entering={FadeInDown.delay(70).duration(280)}
               style={{
                 marginTop: 14,
+                position: "relative",
+                overflow: "hidden",
                 borderWidth: 1,
                 borderColor: colors.border,
                 borderRadius: ZAYMAX_DESIGN.radius.card,
-                backgroundColor: colors.surface,
+                backgroundColor: "transparent",
                 padding: 18,
               }}
             >
+              <GlassMaterial intensity={24} />
               <View className="flex-row items-end justify-between">
                 <View>
                   <Text className="text-[10px] font-black uppercase tracking-[2.5px] text-muted">
@@ -448,15 +459,18 @@ function ConnectionCard({
     <View
       style={{
         minHeight: 340,
+        position: "relative",
+        overflow: "hidden",
         alignItems: "center",
         justifyContent: "center",
         borderWidth: 1,
         borderColor: colors.border,
         borderRadius: ZAYMAX_DESIGN.radius.hero,
-        backgroundColor: colors.surface,
+        backgroundColor: "transparent",
         padding: 24,
       }}
     >
+      <GlassMaterial raised intensity={30} radius={ZAYMAX_DESIGN.radius.hero} />
       <View
         style={{
           width: 86,
@@ -464,7 +478,7 @@ function ConnectionCard({
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 1,
-          borderColor: ZAYMAX_DESIGN.colors.goldLine,
+          borderColor: colors.border,
           borderRadius: ZAYMAX_DESIGN.radius.round,
           backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
         }}
