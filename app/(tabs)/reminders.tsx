@@ -23,9 +23,9 @@ import Animated, {
 
 import { GlassMaterial } from "@/components/glass-material";
 import { ScreenContainer } from "@/components/screen-container";
-import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ProfileBmiCard } from "@/components/profile-bmi-card";
+import { ZaymaxWordmark } from "@/components/zaymax-wordmark";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { useColors } from "@/hooks/use-colors";
 import {
@@ -463,12 +463,9 @@ export default function JournalScreen() {
         contentContainerStyle={{ paddingBottom: 128, flexGrow: 1 }}
         ListHeaderComponent={
           <>
-            <View className="flex-row items-start pt-3 pb-6">
-              <ZaymaxWatermark />
-              <View className="ml-3 flex-1">
-                <Text className="text-xs font-bold uppercase tracking-[2px] text-muted">
-                  ZAYMAX
-                </Text>
+            <View className="pt-3 pb-6">
+              <ZaymaxWordmark />
+              <View>
                 <Text className="mt-1 text-3xl font-black text-foreground">
                   {t("Tagebuch", "Journal")}
                 </Text>

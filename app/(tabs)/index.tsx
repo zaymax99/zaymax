@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
-import { Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useFocusEffect, useRouter, type Href } from "expo-router";
 import Animated, { FadeIn, FadeInDown, Layout } from "react-native-reanimated";
 
 import { GlassMaterial } from "@/components/glass-material";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { ZaymaxWordmark } from "@/components/zaymax-wordmark";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { useLanguage, type AppLanguage } from "@/lib/i18n";
 import {
@@ -25,8 +26,6 @@ import {
   hapticTap,
   hapticWarning,
 } from "@/lib/haptics";
-
-const wordmark = require("../../assets/images/zaymax-wordmark.png");
 
 export default function HomeScreen() {
   const colors = useColors("dark");
@@ -235,11 +234,7 @@ export default function HomeScreen() {
           style={{ position: "relative" }}
         >
           <View style={{ paddingRight: 92 }}>
-            <Image
-              source={wordmark}
-              resizeMode="contain"
-              style={{ width: 112, height: 18 }}
-            />
+            <ZaymaxWordmark />
             <View>
               <Text className="mt-1 text-[22px] font-black text-foreground">
                 {greeting}

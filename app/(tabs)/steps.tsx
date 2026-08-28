@@ -16,7 +16,7 @@ import Svg, { Line } from "react-native-svg";
 import { GlassMaterial } from "@/components/glass-material";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { ZaymaxWatermark } from "@/components/zaymax-watermark";
+import { ZaymaxWordmark } from "@/components/zaymax-wordmark";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { useColors } from "@/hooks/use-colors";
 import {
@@ -166,12 +166,9 @@ export default function StepsScreen() {
         }
         contentContainerStyle={{ paddingBottom: 128 }}
       >
-        <View className="flex-row items-start pt-3 pb-6">
-          <ZaymaxWatermark />
-          <View className="ml-3 flex-1">
-            <Text className="text-xs font-black uppercase tracking-[3px] text-muted">
-              ZAYMAX / APPLE HEALTH
-            </Text>
+        <View className="pt-3 pb-6">
+          <ZaymaxWordmark />
+          <View>
             <Text className="mt-1 text-3xl font-black text-foreground">
               {t("Schritte", "Steps")}
             </Text>

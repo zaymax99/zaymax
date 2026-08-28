@@ -62,6 +62,9 @@ Thumbs.db
 *.tar.gz
 .cache/
 
+# Locally generated promo and wallpaper exports
+/output/
+
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
 .project-config.json
