@@ -14,7 +14,6 @@ import Animated, { FadeIn } from "react-native-reanimated";
 
 import { GlassMaterial } from "@/components/glass-material";
 import { ScreenContainer } from "@/components/screen-container";
-import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import {
@@ -264,7 +263,6 @@ export default function WorkoutEditorScreen() {
           contentContainerStyle={{ paddingBottom: 40 }}
         >
           <View className="flex-row items-center pt-3 pb-6">
-            <ZaymaxWatermark />
             <Pressable
               accessibilityLabel={t("Zurück", "Back")}
               onPress={() => {

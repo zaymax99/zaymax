@@ -28,17 +28,22 @@ function ZaymaxTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const colors = useColors("dark");
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
-  const bottomPadding = Platform.OS === "web" ? 8 : Math.max(insets.bottom, 6);
-  const barWidth = Math.min(Math.max(screenWidth - 36, 0), 560);
-  const barLeft = Math.max((screenWidth - barWidth) / 2, 18);
+  const barBottom =
+    Platform.OS === "web" ? 8 : Math.max(Math.min(insets.bottom, 10), 8);
+  const horizontalMargin = screenWidth < 360 ? 20 : 26;
+  const barWidth = Math.min(
+    Math.max(screenWidth - horizontalMargin * 2, 0),
+    500,
+  );
+  const barLeft = Math.max((screenWidth - barWidth) / 2, horizontalMargin);
 
   return (
     <View
       style={[
         styles.barShell,
         {
-          bottom: 7,
-          height: 50 + bottomPadding,
+          bottom: barBottom,
+          height: 56,
           left: barLeft,
           width: barWidth,
         },
@@ -54,7 +59,7 @@ function ZaymaxTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         <View style={styles.barReflection} />
       </View>
 
-      <View style={[styles.tabRow, { paddingBottom: bottomPadding }]}>
+      <View style={styles.tabRow}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const focused = state.index === index;
@@ -101,7 +106,7 @@ function ZaymaxTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
                 <IconSymbol
                   color={color}
                   name={TAB_ICONS[route.name] ?? "circle.fill"}
-                  size={18}
+                  size={16}
                 />
               </View>
               <Text
@@ -182,6 +187,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     flexDirection: "row",
     paddingTop: 4,
+    paddingBottom: 8,
   },
   tabButton: {
     flex: 1,
@@ -195,8 +201,8 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.97 }],
   },
   iconFrame: {
-    width: 32,
-    height: 26,
+    width: 28,
+    height: 21,
     borderRadius: ZAYMAX_DESIGN.radius.round,
     alignItems: "center",
     justifyContent: "center",
@@ -211,8 +217,8 @@ const styles = StyleSheet.create({
   tabLabel: {
     width: "100%",
     textAlign: "center",
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 10,
+    lineHeight: 12,
     fontWeight: "700",
     letterSpacing: 0.2,
   },

@@ -27,7 +27,6 @@ import { captureRef } from "react-native-view-shot";
 import { GlassMaterial } from "@/components/glass-material";
 import { ScreenContainer } from "@/components/screen-container";
 import { TrainingStory } from "@/components/training-story";
-import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import {
@@ -1107,7 +1106,6 @@ export default function ActiveWorkoutScreen() {
         contentContainerStyle={{ paddingBottom: 38 }}
       >
         <View className="flex-row items-center pt-3 pb-6">
-          <ZaymaxWatermark />
           <Pressable
             accessibilityLabel={t("Zurück", "Back")}
             onPress={() => {
@@ -1286,7 +1284,20 @@ export default function ActiveWorkoutScreen() {
           <GlassMaterial intensity={25} />
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center">
-              <ZaymaxWatermark />
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: ZAYMAX_DESIGN.radius.round,
+                  backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
+                }}
+              >
+                <IconSymbol name="timer" size={18} color={colors.foreground} />
+              </View>
               <View className="ml-3">
                 <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
                   {t("PAUSENTIMER", "REST TIMER")}

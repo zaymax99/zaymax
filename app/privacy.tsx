@@ -5,7 +5,6 @@ import { useRouter } from "expo-router";
 import { GlassMaterial } from "@/components/glass-material";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { useColors } from "@/hooks/use-colors";
 import { hapticTap } from "@/lib/haptics";
@@ -30,8 +29,7 @@ export default function PrivacyScreen() {
         contentContainerStyle={{ paddingBottom: 28 }}
       >
         <View className="flex-row items-start pt-3 pb-6">
-          <ZaymaxWatermark />
-          <View className="ml-3 flex-1">
+          <View className="flex-1">
             <Text className="text-xs font-black uppercase tracking-[3px] text-muted">
               ZAYMAX / PRIVACY
             </Text>

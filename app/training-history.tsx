@@ -6,7 +6,6 @@ import Svg, { Circle, Line, Polyline } from "react-native-svg";
 
 import { GlassMaterial } from "@/components/glass-material";
 import { ScreenContainer } from "@/components/screen-container";
-import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import {
@@ -72,7 +71,6 @@ export default function TrainingHistoryScreen() {
         ListHeaderComponent={
           <View>
             <View className="flex-row items-center pt-3 pb-7">
-              <ZaymaxWatermark />
               <Pressable
                 accessibilityLabel={t("Zurück", "Back")}
                 onPress={() => {
