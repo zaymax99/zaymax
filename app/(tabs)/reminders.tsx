@@ -329,6 +329,22 @@ export default function JournalScreen() {
         return;
       }
 
+      if (result === "storage-unavailable") {
+        Alert.alert(
+          t(
+            "Widget konnte nicht aktualisiert werden",
+            "Widget could not be updated",
+            "Nie udało się zaktualizować widżetu",
+          ),
+          t(
+            "Die Notiz konnte nicht in der gemeinsamen iPhone-App-Gruppe gespeichert werden. Starte Zaymax neu und versuche es erneut.",
+            "The note could not be saved to the shared iPhone App Group. Restart Zaymax and try again.",
+            "Nie udało się zapisać notatki we wspólnej grupie aplikacji iPhone’a. Uruchom Zaymax ponownie i spróbuj jeszcze raz.",
+          ),
+        );
+        return;
+      }
+
       try {
         await saveReminders(next);
       } catch (error) {

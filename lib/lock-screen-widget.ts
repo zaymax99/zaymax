@@ -1,5 +1,7 @@
 import { Platform } from "react-native";
 
+import { getZaymaxWidgetBridge } from "../modules/zaymax-widget-bridge";
+
 export const ZAYMAX_APP_GROUP = "group.com.app.zaymax";
 export const ZAYMAX_NOTE_WIDGET_KIND = "ZaymaxPinnedNote";
 
@@ -9,7 +11,8 @@ const EMPTY_NOTE_LABEL_KEY = "zaymax.widget.empty-label";
 export type LockScreenWidgetUpdateStatus =
   | "updated"
   | "unsupported"
-  | "requires-native-build";
+  | "requires-native-build"
+  | "storage-unavailable";
 
 export async function updatePinnedNoteWidget(
   note: string | undefined,
@@ -17,27 +20,30 @@ export async function updatePinnedNoteWidget(
 ): Promise<LockScreenWidgetUpdateStatus> {
   if (Platform.OS !== "ios") return "unsupported";
 
+  const bridge = getZaymaxWidgetBridge();
+  if (!bridge) return "requires-native-build";
+
   try {
-    const { ExtensionStorage } = await import("@bacons/apple-targets");
-    const storage = new ExtensionStorage(ZAYMAX_APP_GROUP);
     const value = note?.trim() ?? "";
+    const wroteNote = bridge.setString(
+      PINNED_NOTE_KEY,
+      value,
+      ZAYMAX_APP_GROUP,
+    );
+    const wroteLabel = bridge.setString(
+      EMPTY_NOTE_LABEL_KEY,
+      emptyLabel,
+      ZAYMAX_APP_GROUP,
+    );
+    const storedValue = bridge.getString(PINNED_NOTE_KEY, ZAYMAX_APP_GROUP);
 
-    storage.set(PINNED_NOTE_KEY, value);
-    storage.set(EMPTY_NOTE_LABEL_KEY, emptyLabel);
-
-    // The JS part can arrive through an OTA update before the native widget
-    // module exists. Reading the value back prevents a false success state.
-    const storedValue = storage.get(PINNED_NOTE_KEY) as
-      | string
-      | null
-      | undefined;
-    if (storedValue === undefined || storedValue !== value) {
-      return "requires-native-build";
+    if (!wroteNote || !wroteLabel || storedValue !== value) {
+      return "storage-unavailable";
     }
 
-    ExtensionStorage.reloadWidget(ZAYMAX_NOTE_WIDGET_KIND);
+    bridge.reloadWidget(ZAYMAX_NOTE_WIDGET_KIND);
     return "updated";
   } catch {
-    return "requires-native-build";
+    return "storage-unavailable";
   }
 }
