@@ -1,0 +1,34 @@
+name: Verbesserung vorschlagen
+description: Eine Idee für eine spätere ZAYMAX-Version teilen
+title: "[Idee] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Welches Problem soll gelöst werden?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Gewünschte Lösung
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Bereich
+      options:
+        - Workout-Erstellung
+        - Aktives Training
+        - Historie
+        - Tagebuch
+        - Schritte / Apple Health
+        - Widget
+        - Backup
+        - Design
+        - Sonstiges
+    validations:
+      required: true

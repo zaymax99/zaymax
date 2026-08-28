@@ -1,8 +1,16 @@
+---
+title: Datenschutzerklärung – ZAYMAX
+---
+
 # Datenschutzerklärung für ZAYMAX
 
-**Stand: 23. August 2026**
+**Stand: 28. August 2026**
 
-Der Schutz Ihrer Daten ist uns wichtig. ZAYMAX wurde so entwickelt, dass die App ohne Benutzerkonto und grundsätzlich ohne Übermittlung persönlicher Daten an den Entwickler oder an externe Server verwendet werden kann.
+**Gültig für ZAYMAX 1.0.2 und neuer**
+
+[Support](support.html) · [English](privacy-en.html) · [Polski](privacy-pl.html)
+
+Der Schutz Ihrer Daten ist uns wichtig. ZAYMAX wurde so entwickelt, dass die App ohne Benutzerkonto und ohne eigene Server des Entwicklers verwendet werden kann. Persönliche App-Daten werden grundsätzlich lokal auf Ihrem iPhone verarbeitet.
 
 ## 1. Verantwortlicher
 
@@ -10,91 +18,123 @@ Verantwortlich für ZAYMAX:
 
 **Blazej Doszczeczko**
 
-E-Mail: **[blazej.doszczeczko@gmail.com](mailto:blazej.doszczeczko@gmail.com)**
+E-Mail: [blazej.doszczeczko@gmail.com](mailto:blazej.doszczeczko@gmail.com)
 
 ## 2. Grundsätze der Datenverarbeitung
 
-Für die Nutzung von ZAYMAX ist keine Registrierung und kein Benutzerkonto erforderlich.
+Für die Nutzung von ZAYMAX ist keine Registrierung und kein Benutzerkonto erforderlich. ZAYMAX betreibt keine eigene Cloud-Datenbank für Nutzer-, Trainings- oder Gesundheitsdaten.
 
-ZAYMAX verwendet keine eigenen Server für die Speicherung von Nutzer- oder Trainingsdaten. Die innerhalb der App eingegebenen Informationen werden auf dem Gerät des Nutzers verarbeitet und im lokalen App-Speicher abgelegt. Sie werden nicht an den Entwickler übertragen.
+Die in der App eingegebenen Informationen werden auf Ihrem Gerät verarbeitet und im lokalen App-Speicher abgelegt. Der Entwickler erhält diese Daten nicht. Eine Weitergabe an einen von Ihnen ausgewählten Dienst findet nur statt, wenn Sie selbst eine Export- oder Teilen-Funktion starten und im iOS-Teilen-Menü ein Ziel auswählen.
 
-Eine Übertragung an einen vom Nutzer ausgewählten Dienst findet nur statt, wenn der Nutzer selbst die Backup-Funktion startet und die erstellte Datei über das Teilen-Menü des Betriebssystems weitergibt.
+Abhängig von Ihren persönlichen iCloud- beziehungsweise Gerätebackup-Einstellungen kann iOS lokale App-Daten im Rahmen eines Apple-Gerätebackups verarbeiten. Diese Verarbeitung erfolgt durch Apple nach dessen Bedingungen und wird nicht von ZAYMAX gesteuert.
 
 ## 3. Lokal gespeicherte Trainings- und App-Daten
 
 Je nach Nutzung können insbesondere folgende Informationen lokal gespeichert werden:
 
-* selbst erstellte Workouts und Übungen
-* Sätze, Wiederholungen und Gewichte
-* absolvierte Trainingseinheiten, Trainingshistorie und persönliche Fortschritte
-* das nach einem Training ausgewählte Trainingsgefühl
-* Tagebucheinträge, Notizen und ausgewählte Trainingstage
-* App-Einstellungen, beispielsweise die ausgewählte Sprache
+- selbst erstellte Workouts und Übungen;
+- Sätze, Wiederholungen und Gewichte;
+- aktive und abgeschlossene Trainingseinheiten, Trainingsdauer, Trainingshistorie und Fortschritte;
+- übersprungene Übungen, persönliche Bestleistungen und das nach einem Training gewählte Trainingsgefühl;
+- Tagebucheinträge, Notizen und ausgewählte Trainingstage;
+- App-Einstellungen, beispielsweise Sprache, Gewichtseinheit und Pausenzeit.
 
-Diese Daten dienen ausschließlich dazu, die vom Nutzer ausgewählten Funktionen innerhalb der App bereitzustellen.
+Diese Daten werden ausschließlich verwendet, um die von Ihnen ausgewählten Funktionen innerhalb von ZAYMAX bereitzustellen.
 
 ## 4. Optionale Körper- und Geburtstagsdaten
 
-Nutzer können freiwillig ihr Körpergewicht, ihre Körpergröße und ihr Geburtsdatum eingeben. Das Onboarding kann übersprungen werden; diese Angaben sind für die grundlegende Nutzung der App nicht erforderlich und können später innerhalb der App geändert oder gelöscht werden.
+Sie können freiwillig Körpergewicht, Körpergröße und Geburtsdatum eingeben. Das Onboarding kann übersprungen werden; die Angaben sind für die grundlegende Nutzung nicht erforderlich und können später geändert oder gelöscht werden.
 
-Körpergewicht und Körpergröße werden ausschließlich auf dem Gerät verwendet, um einen Body-Mass-Index (BMI) zu berechnen und übersichtlich darzustellen. Das Geburtsdatum wird ausschließlich lokal verwendet, um den Geburtstag zu erkennen und an diesem Tag einen Geburtstagsgruß innerhalb der App anzuzeigen.
+Körpergewicht und Körpergröße werden ausschließlich auf dem Gerät verwendet, um den Body-Mass-Index (BMI) zu berechnen und darzustellen. Das Geburtsdatum wird lokal verwendet, um das Alter zu berechnen und am Geburtstag einen Gruß in der App anzuzeigen.
 
-Der BMI und die dazu angezeigten Bereiche sind lediglich allgemeine Orientierungshilfen. Sie stellen keine medizinische Beratung, Diagnose oder Behandlung dar.
+Der BMI und seine Darstellung sind nur allgemeine Orientierungshilfen. Sie stellen keine medizinische Beratung, Diagnose oder Behandlung dar.
 
-## 5. Lokales Backup, Export und Wiederherstellung
+## 5. Apple Health und Schrittzahlen
 
-In den Einstellungen kann der Nutzer selbst ein lokales Backup anfordern. Erst durch diese bewusste Aktion erstellt ZAYMAX im lokalen App-Speicher eine JSON-Datei mit den gespeicherten App-Daten und öffnet das Teilen-Menü des Betriebssystems.
+Die Schritte-Funktion kann nach Ihrer ausdrücklichen Erlaubnis die Datenart **Schrittzahl** aus Apple Health über HealthKit lesen. ZAYMAX verwendet diese Werte ausschließlich, um Tages- und Wochenübersichten innerhalb der App anzuzeigen.
 
-Der Nutzer entscheidet selbst, ob die Datei weitergegeben wird und welches Ziel, beispielsweise die Dateien-App, ein Cloud-Speicher oder ein anderer Teilendienst, dafür ausgewählt wird. ZAYMAX überträgt das Backup nicht automatisch und der Entwickler erhält keine Kopie der Datei. Für die Verarbeitung durch den vom Nutzer ausgewählten Speicher- oder Teilendienst gelten die Datenschutzbestimmungen des jeweiligen Anbieters.
+- ZAYMAX liest keine anderen Gesundheitsdaten.
+- ZAYMAX schreibt keine Daten in Apple Health.
+- Schrittzahlen werden nicht an den Entwickler oder an externe Server übertragen.
+- Schrittzahlen werden nicht für Werbung, Marketing, Profilerstellung oder Datenhandel verwendet.
+- HealthKit-Schrittwerte werden nicht in das von ZAYMAX erzeugte JSON-Backup aufgenommen.
 
-Bei einer Wiederherstellung wählt der Nutzer selbst eine zuvor erstellte JSON-Backup-Datei aus. Die darin enthaltenen Daten werden lokal in ZAYMAX eingelesen.
+Die Health-Berechtigung ist freiwillig. Wenn Sie sie ablehnen, bleiben Workout, Historie und Tagebuch nutzbar. Sie können die Berechtigung jederzeit in der Health-App oder in den iOS-Datenschutzeinstellungen für ZAYMAX ändern beziehungsweise widerrufen.
 
-Da eine Backup-Datei persönliche Trainings-, Tagebuch- oder optionale Körperdaten enthalten kann, sollte sie vom Nutzer sicher aufbewahrt und nur an vertrauenswürdige Ziele weitergegeben werden.
+Apple verarbeitet Health-Daten im Rahmen seiner eigenen Systemdienste und Datenschutzbestimmungen.
 
-## 6. Analyse und Tracking
+## 6. Sperrbildschirm-Widget und lokale Mitteilungen
 
-ZAYMAX verwendet keine Analyse- oder Trackingdienste.
+Wenn Sie eine Notiz für den Sperrbildschirm auswählen, speichert ZAYMAX den benötigten Notiztext und seine Kennung lokal in einer gemeinsam genutzten iOS-App-Gruppe. Diese App-Gruppe dient ausschließlich dazu, dass die ZAYMAX-App und ihre Widget-Erweiterung dieselbe ausgewählte Notiz darstellen können. Eine Übertragung an den Entwickler oder an einen ZAYMAX-Server findet nicht statt.
 
-Es werden keine Nutzerprofile erstellt und das Nutzungsverhalten wird nicht zu Werbe- oder Marketingzwecken ausgewertet.
+Falls Sie eine optionale lokale Erinnerungsmitteilung aktivieren, kann der ausgewählte Notiztext entsprechend Ihren iOS-Einstellungen auf dem Sperrbildschirm oder in der Mitteilungszentrale sichtbar sein. Die Mitteilung wird lokal über iOS geplant; es gibt keinen Remote-Push durch ZAYMAX. Sie können Mitteilungen und ihre Vorschau jederzeit unter **iOS-Einstellungen → Mitteilungen → ZAYMAX** ändern oder deaktivieren. Entfernen Sie die Sperrbildschirm-Auswahl in ZAYMAX, wenn die Notiz nicht mehr im Widget erscheinen soll.
 
-## 7. Werbung
+Beachten Sie, dass Personen mit Zugriff auf Ihren Sperrbildschirm den dort angezeigten Text sehen können.
 
-ZAYMAX enthält keine Werbung und verwendet keine Werbenetzwerke.
+## 7. Lokales Backup, Export und Wiederherstellung
 
-## 8. Käufe und Abonnements
+In den Einstellungen können Sie selbst ein lokales Backup anfordern. Erst durch diese bewusste Aktion erstellt ZAYMAX eine JSON-Datei mit den dafür vorgesehenen lokalen App-Daten und öffnet das iOS-Teilen-Menü.
 
-ZAYMAX bietet derzeit keine In-App-Käufe oder kostenpflichtigen Abonnements an.
+Die JSON-Datei ist nicht verschlüsselt und kann persönliche Trainings-, Tagebuch-, Profil- und Einstellungsdaten enthalten. Bewahren Sie sie daher sicher auf und geben Sie sie nur an vertrauenswürdige Ziele weiter.
 
-## 9. Gerätezugriffe und Gesundheitsdienste
+Sie entscheiden selbst, ob die Datei weitergegeben wird und welches Ziel – beispielsweise die Dateien-App, iCloud Drive oder ein anderer Dienst – Sie auswählen. ZAYMAX überträgt das Backup nicht automatisch, und der Entwickler erhält keine Kopie. Für eine Verarbeitung durch das ausgewählte Ziel gelten die Datenschutzbestimmungen dieses Anbieters.
 
-ZAYMAX benötigt keinen Zugriff auf Standort, Kamera, Mikrofon, Kontakte oder Fotos und greift nicht auf Apple Health beziehungsweise HealthKit zu.
+Bei der Wiederherstellung wählen Sie selbst eine zuvor erstellte JSON-Datei aus. Die darin enthaltenen Daten werden lokal in ZAYMAX eingelesen. Eine Wiederherstellung kann die aktuell in ZAYMAX gespeicherten lokalen Daten ersetzen.
 
-Das Teilen oder Auswählen einer Backup-Datei erfolgt nur nach einer entsprechenden Aktion des Nutzers über die dafür vorgesehenen Funktionen des Betriebssystems.
+## 8. Teilen einer Trainingszusammenfassung
 
-## 10. Weitergabe von Daten
+Nach einem Training kann ZAYMAX auf Ihrem Gerät ein grafisches Trainingsbild mit Angaben zur Trainingseinheit erzeugen. Nur wenn Sie die Teilen-Funktion verwenden, öffnet die App das iOS-Teilen-Menü. Sie bestimmen anschließend selbst, ob und an welche App oder Person das Bild weitergegeben wird. ZAYMAX lädt es nicht automatisch hoch, und der Entwickler erhält keine Kopie.
 
-ZAYMAX gibt keine personenbezogenen Daten an den Entwickler oder durch den Entwickler beauftragte Dritte weiter.
+Für Dienste wie Instagram, WhatsApp, iCloud Drive oder andere von Ihnen ausgewählte Ziele gelten deren eigene Datenschutzbestimmungen.
 
-Wenn ein Nutzer eine Backup-Datei über das Teilen-Menü an einen selbst ausgewählten Dienst übermittelt, handelt es sich um eine vom Nutzer veranlasste Weitergabe. Der ausgewählte Anbieter verarbeitet die Datei nach seinen eigenen Datenschutzbestimmungen.
+## 9. Analyse, Tracking, Werbung und Käufe
 
-## 11. Löschung und Verlust lokaler Daten
+ZAYMAX verwendet keine Analyse- oder Trackingdienste, erstellt keine Werbeprofile und enthält keine Werbung oder Werbenetzwerke. Gesundheits- oder Fitnessdaten werden niemals für Werbung oder Marketing verwendet.
 
-Einzelne Workouts, Tagebucheinträge und weitere Inhalte können innerhalb der App gelöscht werden, soweit die jeweilige Funktion dies ermöglicht. Über **Einstellungen → Alle lokalen Daten löschen** können die von ZAYMAX gespeicherten Workouts, die Historie, Tagebucheinträge, eine aktive Trainingseinheit, optionale Körperdaten und App-Einstellungen entfernt werden.
+ZAYMAX bietet derzeit keine In-App-Käufe und keine kostenpflichtigen Abonnements an.
 
-Bereits erstellte Backup-Dateien werden durch diese Funktion nicht automatisch gelöscht. Durch das Löschen der App wird auch ihr lokaler App-Speicher entfernt. Eine zuvor über das Teilen-Menü außerhalb der App gespeicherte Backup-Datei bleibt davon unberührt und muss gegebenenfalls am gewählten Speicherort separat entfernt werden.
+## 10. Geräteberechtigungen
 
-Da kein Benutzerkonto und keine serverseitige Speicherung existieren, befinden sich beim Entwickler keine entsprechenden Nutzer- oder Trainingsdaten, deren Löschung beantragt werden müsste.
+Je nach verwendeter Funktion kann ZAYMAX um folgende Systemberechtigungen bitten:
 
-## 12. Änderungen dieser Datenschutzerklärung
+- **Apple Health:** freiwilliger Lesezugriff ausschließlich auf Schrittzahlen;
+- **Mitteilungen:** freiwillig für lokale Erinnerungen;
+- **Teilen beziehungsweise Dateiauswahl:** nur nach Ihrer Aktion für Backup, Wiederherstellung oder Trainingsbild.
 
-Diese Datenschutzerklärung kann angepasst werden, wenn sich die Funktionen von ZAYMAX oder die Art der Datenverarbeitung ändern.
+ZAYMAX benötigt keinen Zugriff auf Standort, Kontakte, Kamera oder Mikrofon. Die App greift für das Erzeugen eines Trainingsbildes nicht selbstständig auf Ihre Fotomediathek zu.
 
-Die jeweils aktuelle Version wird über die öffentlich zugängliche Datenschutzseite von ZAYMAX bereitgestellt.
+## 11. Empfänger und Drittanbieter
 
-## 13. Kontakt
+Der Entwickler erhält die lokal verarbeiteten App- oder Health-Daten nicht und gibt sie daher auch nicht an Dritte weiter. ZAYMAX bindet keine Analyse-, Werbe- oder Trackinganbieter ein.
 
-Bei Fragen zum Datenschutz oder zu ZAYMAX:
+Wenn Sie über das iOS-Teilen-Menü selbst einen externen Dienst auswählen, handelt es sich um eine von Ihnen veranlasste Weitergabe. Der ausgewählte Anbieter verarbeitet die Datei oder das Bild nach seinen eigenen Bedingungen.
+
+Wenn Sie den Support per E-Mail kontaktieren, werden die freiwillig übermittelten Angaben sowie technische E-Mail-Daten durch den verwendeten E-Mail-Anbieter verarbeitet. Die Angaben werden nur zur Bearbeitung Ihrer Anfrage verwendet und gelöscht, sobald sie nicht mehr benötigt werden, soweit keine gesetzlichen Pflichten entgegenstehen. Bitte senden Sie keine sensiblen Gesundheitsdaten oder vollständigen Backup-Dateien, sofern dies nicht unbedingt erforderlich ist.
+
+## 12. Speicherdauer, Löschung und Datenverlust
+
+Lokale Daten bleiben grundsätzlich gespeichert, bis Sie einzelne Inhalte, alle lokalen Daten oder die App löschen. Über **Einstellungen → Alle lokalen Daten löschen** können die von ZAYMAX verwalteten Trainings-, Profil-, Tagebuch- und Einstellungsdaten sowie die ausgewählte Widget-Notiz entfernt werden.
+
+Außerhalb der App gespeicherte Backup-Dateien und bereits geteilte Trainingsbilder werden dadurch nicht gelöscht und müssen am jeweiligen Speicherort separat entfernt werden. Da kein Benutzerkonto und keine serverseitige ZAYMAX-Speicherung existieren, kann der Entwickler keine lokale Kopie für Sie wiederherstellen oder serverseitig löschen.
+
+Erstellen Sie vor dem Löschen oder Neuinstallieren der App ein Backup, wenn Sie Ihre Daten behalten möchten.
+
+## 13. Datenschutzrechte und Widerruf
+
+Sie können freiwillige Berechtigungen jederzeit in iOS widerrufen und lokale Inhalte in der App löschen. Da der Entwickler keine Nutzerkonten führt und die beschriebenen Inhalte nicht auf eigenen Servern speichert, liegen ihm in der Regel keine entsprechenden personenbezogenen App-Daten vor, die herausgegeben, berichtigt oder gelöscht werden könnten.
+
+Bei Fragen zu Ihren Rechten oder zu dieser Erklärung können Sie den Verantwortlichen über die oben genannte E-Mail-Adresse kontaktieren.
+
+## 14. Hosting dieser Website
+
+Diese öffentliche Datenschutz- und Supportseite wird über **GitHub Pages**, einen Dienst von GitHub, Inc., bereitgestellt. Beim Aufruf kann GitHub technische Zugriffsdaten wie IP-Adresse, Zeitpunkt, Browser- und Geräteinformationen in Serverprotokollen verarbeiten. Diese Website setzt selbst keine Analyse- oder Werbeskripte ein. Weitere Informationen enthält die [GitHub-Datenschutzerklärung](https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement).
+
+## 15. Änderungen dieser Datenschutzerklärung
+
+Diese Erklärung kann angepasst werden, wenn sich Funktionen oder Datenverarbeitungen ändern. Die jeweils aktuelle Fassung wird auf dieser öffentlich zugänglichen Seite bereitgestellt.
+
+## 16. Kontakt
 
 **Blazej Doszczeczko**
 
-**E-Mail: [blazej.doszczeczko@gmail.com](mailto:blazej.doszczeczko@gmail.com)**
+E-Mail: [blazej.doszczeczko@gmail.com](mailto:blazej.doszczeczko@gmail.com)

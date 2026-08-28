@@ -1,0 +1,61 @@
+name: Fehler melden
+description: Einen reproduzierbaren Fehler in ZAYMAX melden
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke für die Meldung. Bitte keine Gesundheits-, Tagebuch- oder Backup-Daten einfügen.
+  - type: input
+    id: version
+    attributes:
+      label: ZAYMAX-Version und Build
+      placeholder: "z. B. 1.0.2 (25)"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: iPhone und iOS-Version
+      placeholder: "z. B. iPhone 16 Pro, iOS 26.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: App-Sprache
+      options:
+        - Deutsch
+        - English
+        - Polski
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zum Nachstellen
+      placeholder: |
+        1. …
+        2. …
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Erwartetes Verhalten
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Tatsächliches Verhalten
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Zusätzliche Hinweise
+      description: Optionaler Screenshot ohne private Inhalte.

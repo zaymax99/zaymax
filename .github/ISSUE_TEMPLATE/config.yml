@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Datenschutz- oder Sicherheitsproblem
+    url: mailto:blazej.doszczeczko@gmail.com
+    about: Bitte sensible Meldungen vertraulich per E-Mail senden.
+  - name: ZAYMAX Support
+    url: https://zaymax99.github.io/zaymax/support.html
+    about: Hilfe zu Apple Health, Widget, Backup und allgemeinen Fragen.

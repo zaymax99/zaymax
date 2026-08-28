@@ -1,0 +1,6 @@
+.expo/
+.pnpm-store/
+dist/
+node_modules/
+output/
+expo-env.d.ts
