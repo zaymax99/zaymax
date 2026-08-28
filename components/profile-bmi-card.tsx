@@ -209,7 +209,12 @@ export function ProfileBmiCard() {
                       borderRadius: ZAYMAX_DESIGN.radius.round,
                       borderWidth: 1,
                       borderColor: BMI_COLORS[level],
-                      backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
+                      backgroundColor:
+                        level === "healthy"
+                          ? ZAYMAX_DESIGN.colors.successSoft
+                          : level === "elevated"
+                            ? ZAYMAX_DESIGN.colors.goldSoft
+                            : ZAYMAX_DESIGN.colors.surfaceRaised,
                     }}
                   >
                     <Text
@@ -271,7 +276,7 @@ export function ProfileBmiCard() {
                 alignItems: "center",
                 justifyContent: "center",
                 borderRadius: ZAYMAX_DESIGN.radius.round,
-                backgroundColor: colors.primary,
+                backgroundColor: ZAYMAX_DESIGN.colors.action,
                 opacity: pressed ? 0.7 : 1,
               })}
             >
@@ -400,7 +405,7 @@ function BmiScale({ bmi, colors }: { bmi: number; colors: any }) {
         >
           <View style={{ flex: 4.5, backgroundColor: colors.border }} />
           <View
-            style={{ flex: 6.5, backgroundColor: ZAYMAX_DESIGN.colors.gold }}
+            style={{ flex: 6.5, backgroundColor: ZAYMAX_DESIGN.colors.success }}
           />
           <View
             style={{ flex: 5, backgroundColor: ZAYMAX_DESIGN.colors.goldLine }}

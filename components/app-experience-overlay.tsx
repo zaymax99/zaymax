@@ -273,7 +273,7 @@ export function AppExperienceOverlay() {
                 alignItems: "center",
                 justifyContent: "center",
                 borderRadius: ZAYMAX_DESIGN.radius.round,
-                backgroundColor: ZAYMAX_DESIGN.colors.gold,
+                backgroundColor: ZAYMAX_DESIGN.colors.action,
                 paddingHorizontal: 28,
                 opacity: pressed ? 0.78 : 1,
               })}

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  clearActiveSession,
   formatDateTime,
   loadActiveSession,
   loadWorkoutHistory,
@@ -20,6 +21,8 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 describe("workout storage recovery", () => {
   beforeEach(() => {
     storage.getItem.mockReset();
+    storage.removeItem.mockReset();
+    storage.removeItem.mockResolvedValue(undefined);
   });
 
   it("keeps valid workouts when another stored entry is broken", async () => {
@@ -74,6 +77,14 @@ describe("workout storage recovery", () => {
     storage.getItem.mockResolvedValue("{not-json");
 
     await expect(loadActiveSession()).resolves.toBeNull();
+  });
+
+  it("cancels a workout by removing only the active session", async () => {
+    await clearActiveSession();
+
+    expect(storage.removeItem).toHaveBeenCalledTimes(1);
+    expect(storage.removeItem).toHaveBeenCalledWith("zaymax.active-session.v1");
+    expect(storage.setItem).not.toHaveBeenCalled();
   });
 
   it("sanitizes recoverable active-session values", async () => {

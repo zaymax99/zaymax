@@ -532,7 +532,7 @@ export async function saveSettings(settings: AppSettings) {
 export function displayWeight(weightKg: number | undefined, unit: WeightUnit) {
   if (!weightKg) return "";
   const value = unit === "lbs" ? weightKg * 2.20462 : weightKg;
-  return `${Number(value.toFixed(1))} ${unit}`;
+  return `${Number(value.toFixed(2))} ${unit}`;
 }
 export function toKg(value: number, unit: WeightUnit) {
   return unit === "lbs" ? value / 2.20462 : value;
@@ -584,7 +584,7 @@ export function exerciseSummary(
     (weight) => typeof weight === "number" && weight > 0,
   );
   const weight = hasWeight
-    ? ` · ${weights.map((value) => (value ? Number((unit === "lbs" ? value * 2.20462 : value).toFixed(1)) : "—")).join("/")} ${unit}`
+    ? ` · ${weights.map((value) => (value ? Number((unit === "lbs" ? value * 2.20462 : value).toFixed(2)) : "—")).join("/")} ${unit}`
     : "";
   const reps =
     exercise.repsPerSet.length && new Set(exercise.repsPerSet).size > 1

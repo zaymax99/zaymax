@@ -132,7 +132,7 @@ export function ProfileForm({
           alignItems: "center",
           justifyContent: "center",
           borderRadius: ZAYMAX_DESIGN.radius.round,
-          backgroundColor: colors.primary,
+          backgroundColor: ZAYMAX_DESIGN.colors.action,
           opacity: pressed ? 0.72 : 1,
         })}
       >

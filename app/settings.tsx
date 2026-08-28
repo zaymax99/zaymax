@@ -516,7 +516,7 @@ export default function SettingsScreen() {
                   alignItems: "center",
                   justifyContent: "center",
                   borderRadius: ZAYMAX_DESIGN.radius.round,
-                  backgroundColor: colors.primary,
+                  backgroundColor: ZAYMAX_DESIGN.colors.action,
                   opacity: backupBusy ? 0.45 : pressed ? 0.72 : 1,
                 },
               ]}

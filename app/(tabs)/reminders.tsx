@@ -618,7 +618,7 @@ export default function JournalScreen() {
                   style={({ pressed }) => [
                     {
                       borderRadius: ZAYMAX_DESIGN.radius.round,
-                      backgroundColor: colors.primary,
+                      backgroundColor: ZAYMAX_DESIGN.colors.action,
                       paddingHorizontal: 18,
                       paddingVertical: 11,
                       opacity: pressed ? 0.7 : 1,
@@ -884,7 +884,7 @@ export default function JournalScreen() {
                 {
                   marginTop: 16,
                   borderRadius: ZAYMAX_DESIGN.radius.round,
-                  backgroundColor: colors.primary,
+                  backgroundColor: ZAYMAX_DESIGN.colors.action,
                   paddingVertical: 14,
                   opacity: pressed ? 0.7 : 1,
                 },

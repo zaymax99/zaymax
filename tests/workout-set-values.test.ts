@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   completedValuesForTemplate,
+  displayWeight,
   exerciseSummary,
   gainsForSet,
   resizeRepsPerSet,
@@ -46,6 +47,22 @@ describe("workout set values", () => {
     expect(exerciseSummary(exercise, "kg")).toBe(
       "3 Sätze · 12/10/8 Wdh. · 40/50/45 kg",
     );
+  });
+
+  it("preserves and displays two weight decimal places", () => {
+    const preciseExercise = {
+      ...exercise,
+      weightKg: 20.25,
+      weightsPerSetKg: [20.25, 30.15, 31.17],
+    };
+
+    expect(resizeWeightsPerSet(preciseExercise, 3)).toEqual([
+      20.25, 30.15, 31.17,
+    ]);
+    expect(exerciseSummary(preciseExercise, "kg")).toContain(
+      "20.25/30.15/31.17 kg",
+    );
+    expect(displayWeight(31.17, "kg")).toBe("31.17 kg");
   });
 
   it("creates editable active values from every configured set", () => {

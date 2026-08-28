@@ -233,7 +233,7 @@ export default function WorkoutEditorScreen() {
             minWidth: 190,
             alignItems: "center",
             borderRadius: ZAYMAX_DESIGN.radius.round,
-            backgroundColor: colors.primary,
+            backgroundColor: ZAYMAX_DESIGN.colors.action,
             paddingVertical: 14,
             paddingHorizontal: 20,
             opacity: pressed ? 0.75 : 1,
@@ -383,7 +383,7 @@ export default function WorkoutEditorScreen() {
               {
                 marginTop: 20,
                 borderRadius: ZAYMAX_DESIGN.radius.round,
-                backgroundColor: colors.primary,
+                backgroundColor: ZAYMAX_DESIGN.colors.action,
                 paddingVertical: 16,
                 opacity: saving ? 0.5 : pressed ? 0.8 : 1,
               },
@@ -691,7 +691,7 @@ function SetDetailRow({
 }) {
   const { t } = useLanguage();
   const shownWeight = weightKg
-    ? Number((unit === "lbs" ? weightKg * 2.20462 : weightKg).toFixed(1))
+    ? Number((unit === "lbs" ? weightKg * 2.20462 : weightKg).toFixed(2))
     : 0;
   return (
     <View
@@ -828,7 +828,7 @@ function DecimalWeightInput({
 
 function formatDecimalWeight(value: number, language: AppLanguage) {
   return value
-    ? String(Number(value.toFixed(1))).replace(
+    ? String(Number(value.toFixed(2))).replace(
         ".",
         usesDecimalComma(language) ? "," : ".",
       )

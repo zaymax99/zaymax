@@ -26,6 +26,7 @@ import { ZaymaxWatermark } from "@/components/zaymax-watermark";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import {
+  clearActiveSession,
   completedValuesForTemplate,
   displayWeight,
   finalizeWorkoutStorage,
@@ -119,7 +120,7 @@ type CompletionSummary = {
 
 function displayWeightGain(weightGainKg: number, unit: WeightUnit) {
   const value = unit === "lbs" ? weightGainKg * 2.20462 : weightGainKg;
-  return Number(value.toFixed(1));
+  return Number(value.toFixed(2));
 }
 
 function restSecondsRemaining(
@@ -146,6 +147,7 @@ export default function ActiveWorkoutScreen() {
   const [weightUnit, setWeightUnit] = useState<WeightUnit>("kg");
   const [effortPromptVisible, setEffortPromptVisible] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [aborting, setAborting] = useState(false);
   const finishingRef = useRef(false);
   const sessionRef = useRef<ActiveSession | null>(null);
   const activeSegmentStartedAtRef = useRef<number | null>(null);
@@ -663,6 +665,63 @@ export default function ActiveWorkoutScreen() {
     resumeWorkoutClock();
   }
 
+  function confirmAbortWorkout() {
+    if (aborting || finishing) return;
+    hapticWarning();
+    Alert.alert(
+      t("Training abbrechen?", "Cancel workout?", "Przerwać trening?"),
+      t(
+        "Die laufende Trainingseinheit wird verworfen. Änderungen aus diesem Training erscheinen nicht in deiner Historie und verändern deinen Trainingsplan nicht.",
+        "The active workout will be discarded. Changes from this session will not appear in your history or modify your workout plan.",
+        "Bieżący trening zostanie odrzucony. Zmiany z tej sesji nie pojawią się w historii ani nie zmienią planu treningowego.",
+      ),
+      [
+        {
+          text: t("Weiter trainieren", "Keep training", "Kontynuuj trening"),
+          style: "cancel",
+        },
+        {
+          text: t("Training abbrechen", "Cancel workout", "Przerwij trening"),
+          style: "destructive",
+          onPress: () => void abortWorkout(),
+        },
+      ],
+    );
+  }
+
+  async function abortWorkout() {
+    if (aborting || finishing) return;
+    setAborting(true);
+    workoutClockPausedRef.current = true;
+    activeSegmentStartedAtRef.current = null;
+    setTimerRunning(false);
+    try {
+      await clearActiveSession();
+      sessionRef.current = null;
+      setSession(null);
+      hapticSuccess();
+      router.replace("/");
+    } catch {
+      workoutClockPausedRef.current = false;
+      resumeWorkoutClock();
+      hapticWarning();
+      Alert.alert(
+        t(
+          "Training nicht abgebrochen",
+          "Workout not cancelled",
+          "Nie przerwano treningu",
+        ),
+        t(
+          "Die laufende Einheit bleibt erhalten. Bitte versuche es erneut.",
+          "The active session is still saved. Please try again.",
+          "Bieżąca sesja nadal jest zapisana. Spróbuj ponownie.",
+        ),
+      );
+    } finally {
+      setAborting(false);
+    }
+  }
+
   function finish() {
     if (!workout || !session) return;
     hapticAction();
@@ -902,7 +961,7 @@ export default function ActiveWorkoutScreen() {
             minWidth: 190,
             alignItems: "center",
             borderRadius: ZAYMAX_DESIGN.radius.round,
-            backgroundColor: colors.primary,
+            backgroundColor: ZAYMAX_DESIGN.colors.action,
             paddingVertical: 14,
             paddingHorizontal: 20,
             opacity: pressed ? 0.75 : 1,
@@ -1408,7 +1467,7 @@ export default function ActiveWorkoutScreen() {
                               exercise.id,
                               setIndex,
                               Number(
-                                Math.max(0, shownWeight - step).toFixed(1),
+                                Math.max(0, shownWeight - step).toFixed(2),
                               ),
                             );
                           }}
@@ -1417,7 +1476,7 @@ export default function ActiveWorkoutScreen() {
                             changeWeight(
                               exercise.id,
                               setIndex,
-                              Number((shownWeight + step).toFixed(1)),
+                              Number((shownWeight + step).toFixed(2)),
                             );
                           }}
                           onChange={(nextValue) =>
@@ -1463,18 +1522,46 @@ export default function ActiveWorkoutScreen() {
 
         <Pressable
           onPress={finish}
+          disabled={aborting || finishing}
           style={({ pressed }) => [
             {
               marginTop: 20,
               borderRadius: ZAYMAX_DESIGN.radius.round,
-              backgroundColor: colors.primary,
+              backgroundColor: ZAYMAX_DESIGN.colors.action,
               paddingVertical: 16,
-              opacity: pressed ? 0.8 : 1,
+              opacity: aborting || finishing ? 0.4 : pressed ? 0.8 : 1,
             },
           ]}
         >
           <Text className="text-center font-black tracking-[0.4px] text-background">
             {t("Workout beenden", "Finish workout")}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityLabel={t(
+            "Training ohne Speichern abbrechen",
+            "Cancel workout without saving",
+            "Przerwij trening bez zapisywania",
+          )}
+          disabled={aborting || finishing}
+          onPress={confirmAbortWorkout}
+          style={({ pressed }) => [
+            {
+              marginTop: 10,
+              borderRadius: ZAYMAX_DESIGN.radius.round,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+              paddingVertical: 14,
+              opacity: aborting || finishing ? 0.4 : pressed ? 0.62 : 1,
+            },
+          ]}
+        >
+          <Text className="text-center font-bold text-muted">
+            {aborting
+              ? t("Wird abgebrochen …", "Cancelling …", "Przerywanie …")
+              : t("Training abbrechen", "Cancel workout", "Przerwij trening")}
           </Text>
         </Pressable>
       </ScrollView>
@@ -1693,7 +1780,7 @@ export default function ActiveWorkoutScreen() {
                   {
                     marginTop: 18,
                     borderRadius: ZAYMAX_DESIGN.radius.round,
-                    backgroundColor: colors.primary,
+                    backgroundColor: ZAYMAX_DESIGN.colors.action,
                     paddingVertical: 15,
                     opacity: pressed ? 0.75 : 1,
                   },
@@ -1713,7 +1800,7 @@ export default function ActiveWorkoutScreen() {
 
 function formatVolume(volumeKg: number, unit: WeightUnit) {
   const value = unit === "lbs" ? volumeKg * 2.20462 : volumeKg;
-  return `${Number(value.toFixed(1))} ${unit}`;
+  return `${Number(value.toFixed(2))} ${unit}`;
 }
 
 function SummaryMetric({
@@ -1872,7 +1959,7 @@ function NumberField({
   const formattedValue = integer
     ? String(Math.round(value))
     : value > 0
-      ? String(Number(value.toFixed(1))).replace(
+      ? String(Number(value.toFixed(2))).replace(
           ".",
           usesDecimalComma(language) ? "," : ".",
         )
@@ -1949,7 +2036,7 @@ function NumberField({
         accessibilityLabel={label}
         value={draft}
         selectTextOnFocus
-        maxLength={integer ? 3 : 6}
+        maxLength={integer ? 3 : 7}
         keyboardType={integer ? "number-pad" : "decimal-pad"}
         onFocus={() => setFocused(true)}
         onBlur={() => {
@@ -1957,9 +2044,15 @@ function NumberField({
           setDraft(formattedValue);
         }}
         onChangeText={(text) => {
-          const normalized = integer
+          const sanitized = integer
             ? text.replace(/\D/g, "")
             : text.replace(",", ".").replace(/[^0-9.]/g, "");
+          const [whole = "", ...decimalParts] = sanitized.split(".");
+          const normalized = integer
+            ? sanitized
+            : decimalParts.length
+              ? `${whole}.${decimalParts.join("").slice(0, 2)}`
+              : whole;
           setDraft(
             integer
               ? normalized
