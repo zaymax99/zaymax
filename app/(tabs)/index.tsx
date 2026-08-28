@@ -26,7 +26,7 @@ import {
   hapticWarning,
 } from "@/lib/haptics";
 
-const logo = require("../../assets/images/icon.png");
+const wordmark = require("../../assets/images/zaymax-wordmark.png");
 
 export default function HomeScreen() {
   const colors = useColors("dark");
@@ -234,28 +234,13 @@ export default function HomeScreen() {
           className="flex-row items-center justify-between pt-3 pb-5"
           style={{ position: "relative" }}
         >
-          <View className="flex-row items-center" style={{ paddingRight: 82 }}>
-            <View
-              className="mr-3 h-11 w-11 overflow-hidden rounded-full"
-              style={{
-                borderWidth: 1,
-                borderColor: colors.border,
-                backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
-              }}
-            >
-              <Image
-                source={logo}
-                resizeMode="contain"
-                style={{ width: "100%", height: "100%" }}
-              />
-            </View>
+          <View style={{ paddingRight: 92 }}>
+            <Image
+              source={wordmark}
+              resizeMode="contain"
+              style={{ width: 112, height: 18 }}
+            />
             <View>
-              <Text
-                className="text-[10px] font-black tracking-[3px]"
-                style={{ color: colors.primary }}
-              >
-                ZAYMAX
-              </Text>
               <Text className="mt-1 text-[22px] font-black text-foreground">
                 {greeting}
               </Text>

@@ -1,6 +1,6 @@
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HapticTab } from "@/components/haptic-tab";
@@ -9,11 +9,28 @@ import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { useColors } from "@/hooks/use-colors";
 import { useLanguage } from "@/lib/i18n";
 
+type TabIconProps = {
+  color: string;
+  focused: boolean;
+  name: React.ComponentProps<typeof IconSymbol>["name"];
+};
+
+function TabIcon({ color, focused, name }: TabIconProps) {
+  return (
+    <View style={[styles.iconFrame, focused && styles.iconFrameFocused]}>
+      <IconSymbol name={name} size={18} color={color} />
+    </View>
+  );
+}
+
 export default function TabLayout() {
   const colors = useColors("dark");
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  const bottomPadding = Platform.OS === "web" ? 10 : Math.max(insets.bottom, 8);
+  const { width: screenWidth } = useWindowDimensions();
+  const bottomPadding = Platform.OS === "web" ? 8 : Math.max(insets.bottom, 6);
+  const barWidth = Math.min(Math.max(screenWidth - 36, 0), 560);
+  const barLeft = Math.max((screenWidth - barWidth) / 2, 18);
 
   return (
     <Tabs
@@ -31,6 +48,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.muted,
         tabBarButton: HapticTab,
         tabBarHideOnKeyboard: true,
+        tabBarLabelPosition: "below-icon",
         tabBarBackground: () => (
           <View pointerEvents="none" style={StyleSheet.absoluteFill}>
             <BlurView
@@ -44,11 +62,12 @@ export default function TabLayout() {
         ),
         tabBarStyle: {
           position: "absolute",
-          left: 12,
-          right: 12,
-          bottom: 6,
-          height: 60 + bottomPadding,
-          paddingTop: 7,
+          left: barLeft,
+          right: undefined,
+          width: barWidth,
+          bottom: 7,
+          height: 50 + bottomPadding,
+          paddingTop: 4,
           paddingBottom: bottomPadding,
           backgroundColor: "transparent",
           borderWidth: StyleSheet.hairlineWidth,
@@ -59,15 +78,24 @@ export default function TabLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          lineHeight: 14,
+          lineHeight: 13,
           fontWeight: "700",
           letterSpacing: 0.2,
-          marginTop: 2,
-          marginBottom: 1,
+          marginTop: 0,
+          marginBottom: 0,
         },
         tabBarIconStyle: {
-          height: 32,
-          marginTop: 1,
+          width: "100%",
+          height: 27,
+          marginTop: 0,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        tabBarItemStyle: {
+          height: 46,
+          padding: 0,
+          alignItems: "center",
+          justifyContent: "center",
         },
       }}
     >
@@ -76,24 +104,7 @@ export default function TabLayout() {
         options={{
           title: t("Heute", "Today"),
           tabBarIcon: ({ color, focused }) => (
-            <View
-              style={{
-                width: 36,
-                height: 30,
-                borderRadius: ZAYMAX_DESIGN.radius.round,
-                alignItems: "center",
-                justifyContent: "center",
-                borderWidth: focused ? StyleSheet.hairlineWidth : 0,
-                borderColor: focused
-                  ? ZAYMAX_DESIGN.colors.borderStrong
-                  : "transparent",
-                backgroundColor: focused
-                  ? "rgba(255, 255, 255, 0.075)"
-                  : "transparent",
-              }}
-            >
-              <IconSymbol name="house.fill" size={18} color={color} />
-            </View>
+            <TabIcon color={color} focused={focused} name="house.fill" />
           ),
         }}
       />
@@ -102,24 +113,7 @@ export default function TabLayout() {
         options={{
           title: t("Tagebuch", "Journal"),
           tabBarIcon: ({ color, focused }) => (
-            <View
-              style={{
-                width: 36,
-                height: 30,
-                borderRadius: ZAYMAX_DESIGN.radius.round,
-                alignItems: "center",
-                justifyContent: "center",
-                borderWidth: focused ? StyleSheet.hairlineWidth : 0,
-                borderColor: focused
-                  ? ZAYMAX_DESIGN.colors.borderStrong
-                  : "transparent",
-                backgroundColor: focused
-                  ? "rgba(255, 255, 255, 0.075)"
-                  : "transparent",
-              }}
-            >
-              <IconSymbol name="pencil" size={18} color={color} />
-            </View>
+            <TabIcon color={color} focused={focused} name="pencil" />
           ),
         }}
       />
@@ -128,24 +122,7 @@ export default function TabLayout() {
         options={{
           title: t("Schritte", "Steps"),
           tabBarIcon: ({ color, focused }) => (
-            <View
-              style={{
-                width: 36,
-                height: 30,
-                borderRadius: ZAYMAX_DESIGN.radius.round,
-                alignItems: "center",
-                justifyContent: "center",
-                borderWidth: focused ? StyleSheet.hairlineWidth : 0,
-                borderColor: focused
-                  ? ZAYMAX_DESIGN.colors.borderStrong
-                  : "transparent",
-                backgroundColor: focused
-                  ? "rgba(255, 255, 255, 0.075)"
-                  : "transparent",
-              }}
-            >
-              <IconSymbol name="shoeprints.fill" size={18} color={color} />
-            </View>
+            <TabIcon color={color} focused={focused} name="shoeprints.fill" />
           ),
         }}
       />
@@ -154,6 +131,20 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
+  iconFrame: {
+    width: 32,
+    height: 26,
+    borderRadius: ZAYMAX_DESIGN.radius.round,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "transparent",
+    backgroundColor: "transparent",
+  },
+  iconFrameFocused: {
+    borderColor: ZAYMAX_DESIGN.colors.borderStrong,
+    backgroundColor: "rgba(255, 255, 255, 0.075)",
+  },
   barMaterial: {
     overflow: "hidden",
     borderRadius: ZAYMAX_DESIGN.radius.hero,
