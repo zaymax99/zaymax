@@ -4,6 +4,8 @@ import {
   bmiLevel,
   calculateAge,
   calculateBmi,
+  formatBirthDate,
+  formatBirthDateInput,
   isBirthdayToday,
   parseBirthDateInput,
   parseDecimalInput,
@@ -18,6 +20,22 @@ describe("profile calculations", () => {
   it("parses and validates German birthday input", () => {
     expect(parseBirthDateInput("07.04.1998")).toBe("1998-04-07");
     expect(parseBirthDateInput("31.02.2000")).toBeUndefined();
+  });
+
+  it.each(["1999-07-10", "1999-07-27", "2000-02-29"])(
+    "preserves birthday %s when reopening and saving the English profile",
+    (birthDate) => {
+      const editableDate = formatBirthDateInput(birthDate);
+      expect(parseBirthDateInput(editableDate)).toBe(birthDate);
+      expect(editableDate).toMatch(/^\d{2}\.\d{2}\.\d{4}$/);
+    },
+  );
+
+  it("keeps English display dates localized without using them as editable input", () => {
+    expect(formatBirthDate("1999-07-10", "en-US")).toBe("07/10/1999");
+    expect(formatBirthDateInput("1999-07-10")).toBe("10.07.1999");
+    expect(formatBirthDateInput()).toBe("");
+    expect(formatBirthDateInput("invalid")).toBe("");
   });
 
   it("calculates BMI and its visual range", () => {

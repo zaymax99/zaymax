@@ -1,8 +1,10 @@
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 
 import { GlassMaterial } from "@/components/glass-material";
+import { GlassButton } from "@/components/glass-button";
+import { GoldAccent } from "@/components/gold-accent";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
@@ -30,16 +32,19 @@ export default function PrivacyScreen() {
       >
         <View className="flex-row items-start pt-3 pb-6">
           <View className="flex-1">
-            <Text className="text-xs font-black uppercase tracking-[3px] text-muted">
-              ZAYMAX / PRIVACY
-            </Text>
+            <View className="flex-row items-center gap-2">
+              <Text className="text-xs font-black uppercase tracking-[3px] text-muted">
+                ZAYMAX / PRIVACY
+              </Text>
+              <GoldAccent />
+            </View>
             <Text className="mt-1 text-3xl font-black text-foreground">
               {t("Datenschutz & Hilfe", "Privacy & help")}
             </Text>
           </View>
         </View>
 
-        <Pressable
+        <GlassButton
           accessibilityRole="button"
           accessibilityLabel={t("Zurück", "Back")}
           onPress={() => {
@@ -47,24 +52,19 @@ export default function PrivacyScreen() {
             if (router.canGoBack()) router.back();
             else router.replace("/settings");
           }}
-          style={({ pressed }) => ({
+          style={{ marginBottom: 16 }}
+          surfaceStyle={{
             minHeight: 50,
-            marginBottom: 16,
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
-            borderWidth: 1,
-            borderColor: colors.border,
-            borderRadius: ZAYMAX_DESIGN.radius.round,
-            backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
-            opacity: pressed ? 0.65 : 1,
-          })}
+          }}
         >
           <IconSymbol name="chevron.left" size={21} color={colors.primary} />
           <Text className="ml-1 font-black text-foreground">
             {t("Zurück", "Back")}
           </Text>
-        </Pressable>
+        </GlassButton>
 
         <PrivacyCard
           eyebrow={t("KURZFASSUNG", "AT A GLANCE")}

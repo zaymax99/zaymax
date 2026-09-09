@@ -1,4 +1,6 @@
-import { Image, type ImageStyle, type StyleProp } from "react-native";
+import { Image, View, type ImageStyle, type StyleProp } from "react-native";
+
+import { GoldAccent } from "@/components/gold-accent";
 
 const wordmark = require("../assets/images/zaymax-wordmark.png");
 
@@ -13,18 +15,21 @@ type ZaymaxWordmarkProps = {
 
 export function ZaymaxWordmark({ style, width = 95 }: ZaymaxWordmarkProps) {
   return (
-    <Image
-      accessibilityLabel="ZAYMAX"
-      resizeMode="contain"
-      source={wordmark}
-      style={[
-        {
-          width,
-          height: (width * WORDMARK_SOURCE_HEIGHT) / WORDMARK_SOURCE_WIDTH,
-          marginLeft: -(width * WORDMARK_LEFT_INSET) / WORDMARK_SOURCE_WIDTH,
-        },
-        style,
-      ]}
-    />
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+      <Image
+        accessibilityLabel="ZAYMAX"
+        resizeMode="contain"
+        source={wordmark}
+        style={[
+          {
+            width,
+            height: (width * WORDMARK_SOURCE_HEIGHT) / WORDMARK_SOURCE_WIDTH,
+            marginLeft: -(width * WORDMARK_LEFT_INSET) / WORDMARK_SOURCE_WIDTH,
+          },
+          style,
+        ]}
+      />
+      <GoldAccent />
+    </View>
   );
 }

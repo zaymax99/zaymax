@@ -15,8 +15,8 @@ struct ZaymaxNoteProvider: TimelineProvider {
     func placeholder(in context: Context) -> ZaymaxNoteEntry {
         ZaymaxNoteEntry(
             date: .now,
-            text: "Nächstes Training: ruhig und sauber ausführen.",
-            emptyLabel: "Notiz in Zaymax auswählen"
+            text: NSLocalizedString("widget.preview.note", comment: "Example note in the widget gallery"),
+            emptyLabel: NSLocalizedString("widget.empty", comment: "No diary note has been selected")
         )
     }
 
@@ -40,7 +40,7 @@ struct ZaymaxNoteProvider: TimelineProvider {
             date: .now,
             text: defaults?.string(forKey: pinnedNoteKey) ?? "",
             emptyLabel: defaults?.string(forKey: emptyNoteLabelKey)
-                ?? "Notiz in Zaymax auswählen"
+                ?? NSLocalizedString("widget.empty", comment: "No diary note has been selected")
         )
     }
 }
@@ -87,8 +87,8 @@ struct ZaymaxPinnedNoteWidget: Widget {
         StaticConfiguration(kind: kind, provider: ZaymaxNoteProvider()) { entry in
             ZaymaxNoteView(entry: entry)
         }
-        .configurationDisplayName("Zaymax Notiz")
-        .description("Zeigt deine ausgewählte Tagebuchnotiz auf dem Sperrbildschirm.")
+        .configurationDisplayName("widget.title")
+        .description("widget.description")
         .supportedFamilies([.accessoryRectangular])
     }
 }

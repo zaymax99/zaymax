@@ -1,5 +1,4 @@
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
 import type { ComponentProps } from "react";
 import {
@@ -13,10 +12,15 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { GoldAccent } from "@/components/gold-accent";
+import { LiquidGlassSurface } from "@/components/liquid-glass-surface";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { useColors } from "@/hooks/use-colors";
+import { useKeyboardState } from "@/hooks/use-keyboard-state";
 import { hapticSelection } from "@/lib/haptics";
 import { useLanguage } from "@/lib/i18n";
+import { useGlassPreferences } from "@/lib/glass-preferences";
+import { getTabBarLayout, TAB_BAR_METRICS } from "@/lib/tab-bar-layout";
 
 const TAB_ICONS: Record<string, ComponentProps<typeof IconSymbol>["name"]> = {
   index: "house.fill",
@@ -25,109 +29,102 @@ const TAB_ICONS: Record<string, ComponentProps<typeof IconSymbol>["name"]> = {
 };
 
 function ZaymaxTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const { reduceMotion, highContrast } = useGlassPreferences();
   const colors = useColors("dark");
   const insets = useSafeAreaInsets();
-  const { width: screenWidth } = useWindowDimensions();
-  const barBottom =
-    Platform.OS === "web" ? 8 : Math.max(Math.min(insets.bottom, 10), 8);
-  const horizontalMargin = screenWidth < 360 ? 20 : 26;
-  const barWidth = Math.min(
-    Math.max(screenWidth - horizontalMargin * 2, 0),
-    500,
-  );
-  const barLeft = Math.max((screenWidth - barWidth) / 2, horizontalMargin);
+  const { width: screenWidth, fontScale } = useWindowDimensions();
+  const { isVisible: keyboardVisible } = useKeyboardState();
+  const layout = getTabBarLayout({
+    screenWidth,
+    bottomInset: Platform.OS === "web" ? 0 : insets.bottom,
+    fontScale,
+  });
+
+  if (keyboardVisible) return null;
 
   return (
-    <View
-      style={[
-        styles.barShell,
-        {
-          bottom: barBottom,
-          height: 56,
-          left: barLeft,
-          width: barWidth,
-        },
-      ]}
-    >
-      <View pointerEvents="none" style={styles.barClip}>
-        <BlurView
-          tint="dark"
-          intensity={Platform.OS === "ios" ? 48 : 34}
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={[StyleSheet.absoluteFill, styles.barSmoke]} />
-        <View style={styles.barReflection} />
-      </View>
+    <View style={[styles.barShell, layout]}>
+      <LiquidGlassSurface radius={layout.height / 2} style={styles.barMaterial}>
+        <View style={styles.tabRow}>
+          {state.routes.map((route, index) => {
+            const { options } = descriptors[route.key];
+            const focused = state.index === index;
+            const label =
+              typeof options.tabBarLabel === "string"
+                ? options.tabBarLabel
+                : typeof options.title === "string"
+                  ? options.title
+                  : route.name;
+            const color = focused ? colors.foreground : colors.muted;
 
-      <View style={styles.tabRow}>
-        {state.routes.map((route, index) => {
-          const { options } = descriptors[route.key];
-          const focused = state.index === index;
-          const label =
-            typeof options.tabBarLabel === "string"
-              ? options.tabBarLabel
-              : typeof options.title === "string"
-                ? options.title
-                : route.name;
-          const color = focused ? colors.foreground : colors.muted;
+            return (
+              <Pressable
+                accessibilityLabel={options.tabBarAccessibilityLabel ?? label}
+                accessibilityRole="tab"
+                accessibilityState={focused ? { selected: true } : {}}
+                testID={options.tabBarButtonTestID}
+                key={route.key}
+                onLongPress={() => {
+                  navigation.emit({
+                    type: "tabLongPress",
+                    target: route.key,
+                  });
+                }}
+                onPress={() => {
+                  hapticSelection();
+                  const event = navigation.emit({
+                    type: "tabPress",
+                    target: route.key,
+                    canPreventDefault: true,
+                  });
 
-          return (
-            <Pressable
-              accessibilityLabel={options.tabBarAccessibilityLabel}
-              accessibilityRole="button"
-              accessibilityState={focused ? { selected: true } : {}}
-              key={route.key}
-              onLongPress={() => {
-                navigation.emit({
-                  type: "tabLongPress",
-                  target: route.key,
-                });
-              }}
-              onPress={() => {
-                hapticSelection();
-                const event = navigation.emit({
-                  type: "tabPress",
-                  target: route.key,
-                  canPreventDefault: true,
-                });
-
-                if (!focused && !event.defaultPrevented) {
-                  navigation.navigate(route.name, route.params);
-                }
-              }}
-              style={({ pressed }) => [
-                styles.tabButton,
-                pressed && styles.tabButtonPressed,
-              ]}
-            >
-              <View
-                style={[styles.iconFrame, focused && styles.iconFrameFocused]}
-              >
-                <IconSymbol
-                  color={color}
-                  name={TAB_ICONS[route.name] ?? "circle.fill"}
-                  size={16}
-                />
-              </View>
-              <Text
-                numberOfLines={1}
-                style={[
-                  styles.tabLabel,
-                  { color },
-                  focused && styles.tabLabelFocused,
+                  if (!focused && !event.defaultPrevented) {
+                    navigation.navigate(route.name, route.params);
+                  }
+                }}
+                style={({ pressed }) => [
+                  styles.tabButton,
+                  focused && styles.tabButtonFocused,
+                  focused &&
+                    highContrast && {
+                      borderColor: colors.foreground,
+                      backgroundColor: "#3A3A3C",
+                    },
+                  pressed && !reduceMotion && styles.tabButtonPressed,
                 ]}
               >
-                {label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+                <View style={styles.iconFrame}>
+                  <IconSymbol
+                    color={color}
+                    name={TAB_ICONS[route.name] ?? "circle.fill"}
+                    size={16}
+                  />
+                  {focused ? (
+                    <GoldAccent variant="dot" style={styles.activeAccent} />
+                  ) : null}
+                </View>
+                <Text
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={TAB_BAR_METRICS.maxFontScale}
+                  style={[
+                    styles.tabLabel,
+                    { color },
+                    focused && styles.tabLabelFocused,
+                  ]}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </LiquidGlassSurface>
     </View>
   );
 }
 
 export default function TabLayout() {
+  const { reduceMotion } = useGlassPreferences();
   const colors = useColors("dark");
   const { t } = useLanguage();
 
@@ -135,7 +132,8 @@ export default function TabLayout() {
     <Tabs
       detachInactiveScreens={false}
       screenOptions={{
-        animation: "fade",
+        // iOS native glass must not sit below a scene animated to opacity zero.
+        animation: Platform.OS === "ios" || reduceMotion ? "none" : "fade",
         headerShown: false,
         lazy: false,
         sceneStyle: { backgroundColor: colors.background },
@@ -160,41 +158,31 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   barShell: {
     position: "absolute",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: ZAYMAX_DESIGN.colors.borderStrong,
-    borderTopColor: ZAYMAX_DESIGN.colors.glassReflection,
-    borderRadius: ZAYMAX_DESIGN.radius.hero,
     backgroundColor: "transparent",
     ...ZAYMAX_DESIGN.shadow,
   },
-  barClip: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: "hidden",
-    borderRadius: ZAYMAX_DESIGN.radius.hero,
-  },
-  barSmoke: {
-    backgroundColor: ZAYMAX_DESIGN.colors.glassNavigation,
-  },
-  barReflection: {
-    position: "absolute",
-    top: 0,
-    right: 24,
-    left: 24,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: ZAYMAX_DESIGN.colors.glassReflection,
+  barMaterial: {
+    flex: 1,
   },
   tabRow: {
     ...StyleSheet.absoluteFillObject,
     flexDirection: "row",
-    paddingTop: 4,
-    paddingBottom: 8,
+    padding: TAB_BAR_METRICS.rowPadding,
   },
   tabButton: {
     flex: 1,
     minWidth: 0,
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
+    gap: TAB_BAR_METRICS.contentGap,
+    borderRadius: ZAYMAX_DESIGN.radius.round,
+    paddingVertical: TAB_BAR_METRICS.buttonPadding,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "transparent",
+  },
+  tabButtonFocused: {
+    borderColor: ZAYMAX_DESIGN.colors.borderStrong,
+    backgroundColor: "rgba(255, 255, 255, 0.09)",
   },
   tabButtonPressed: {
     opacity: 0.7,
@@ -202,23 +190,20 @@ const styles = StyleSheet.create({
   },
   iconFrame: {
     width: 28,
-    height: 21,
-    borderRadius: ZAYMAX_DESIGN.radius.round,
+    height: TAB_BAR_METRICS.iconHeight,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "transparent",
-    backgroundColor: "transparent",
   },
-  iconFrameFocused: {
-    borderColor: ZAYMAX_DESIGN.colors.borderStrong,
-    backgroundColor: "rgba(255, 255, 255, 0.075)",
+  activeAccent: {
+    position: "absolute",
+    top: 1,
+    right: 0,
   },
   tabLabel: {
     width: "100%",
     textAlign: "center",
     fontSize: 10,
-    lineHeight: 12,
+    lineHeight: TAB_BAR_METRICS.labelLineHeight,
     fontWeight: "700",
     letterSpacing: 0.2,
   },

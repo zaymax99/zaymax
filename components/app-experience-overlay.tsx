@@ -390,8 +390,8 @@ function FloatingBalloon({ index }: { index: number }) {
           justifyContent: "center",
           borderRadius: ZAYMAX_DESIGN.radius.round,
           borderWidth: 1,
-          borderColor: `${CONFETTI_COLORS[index % CONFETTI_COLORS.length]}66`,
-          backgroundColor: `${CONFETTI_COLORS[index % CONFETTI_COLORS.length]}18`,
+          borderColor: ZAYMAX_DESIGN.colors.borderStrong,
+          backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
         },
         style,
       ]}
@@ -399,7 +399,7 @@ function FloatingBalloon({ index }: { index: number }) {
       <Text
         style={{
           color: CONFETTI_COLORS[index % CONFETTI_COLORS.length],
-          fontSize: 20,
+          fontSize: 16,
           fontWeight: "900",
         }}
       >
@@ -431,8 +431,8 @@ function FallingConfetti({ index }: { index: number }) {
           position: "absolute",
           top: -18 - (index % 4) * 40,
           left: `${4 + ((index * 17) % 92)}%`,
-          width: index % 3 === 0 ? 10 : 7,
-          height: index % 3 === 0 ? 10 : 7,
+          width: index % 3 === 0 ? 4 : 3,
+          height: index % 3 === 0 ? 4 : 3,
           borderRadius: 999,
           backgroundColor: CONFETTI_COLORS[index % CONFETTI_COLORS.length],
         },
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: ZAYMAX_DESIGN.radius.hero,
     borderWidth: 1,
-    borderColor: ZAYMAX_DESIGN.colors.goldLine,
+    borderColor: ZAYMAX_DESIGN.colors.borderStrong,
     backgroundColor: "transparent",
     paddingHorizontal: 26,
     paddingVertical: 34,
@@ -498,11 +498,11 @@ const styles = StyleSheet.create({
   },
   birthdayEmoji: {
     color: ZAYMAX_DESIGN.colors.gold,
-    fontSize: 58,
+    fontSize: 16,
   },
   birthdayEyebrow: {
     marginTop: 15,
-    color: ZAYMAX_DESIGN.colors.gold,
+    color: ZAYMAX_DESIGN.colors.muted,
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2.4,

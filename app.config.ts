@@ -38,6 +38,12 @@ const config: ExpoConfig = {
       },
     },
     privacyManifests: {
+      NSPrivacyAccessedAPITypes: [
+        {
+          NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryUserDefaults",
+          NSPrivacyAccessedAPITypeReasons: ["1C8F.1"],
+        },
+      ],
       NSPrivacyCollectedDataTypes: [],
       NSPrivacyTracking: false,
       NSPrivacyTrackingDomains: [],

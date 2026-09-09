@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 
+import { GoldAccent } from "@/components/gold-accent";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import type { AppLanguage } from "@/lib/i18n";
 import {
@@ -51,18 +52,12 @@ export const TrainingStory = forwardRef<
       </View>
 
       <View>
-        <View
-          style={[
-            styles.bestCard,
-            hasPersonalBest ? styles.bestCardProgress : null,
-          ]}
-        >
-          <View
-            style={[
-              styles.bestDot,
-              hasPersonalBest ? styles.bestDotProgress : null,
-            ]}
-          />
+        <View style={styles.bestCard}>
+          {hasPersonalBest ? (
+            <GoldAccent variant="dot" style={{ marginRight: 9 }} />
+          ) : (
+            <View style={styles.bestDot} />
+          )}
           <Text style={styles.bestText}>
             {data.personalBestCount} {copy.bestLabel}
           </Text>
@@ -195,19 +190,12 @@ const styles = StyleSheet.create({
     backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
     paddingHorizontal: 16,
   },
-  bestCardProgress: {
-    borderColor: ZAYMAX_DESIGN.colors.goldLine,
-    backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
-  },
   bestDot: {
-    width: 7,
-    height: 7,
+    width: 4,
+    height: 4,
     marginRight: 9,
     borderRadius: 999,
     backgroundColor: ZAYMAX_DESIGN.colors.muted,
-  },
-  bestDotProgress: {
-    backgroundColor: ZAYMAX_DESIGN.colors.gold,
   },
   bestText: {
     color: ZAYMAX_DESIGN.colors.action,

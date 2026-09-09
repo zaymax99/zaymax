@@ -11,6 +11,7 @@ import "react-native-reanimated";
 import "@/lib/_core/nativewind-pressable";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { LanguageProvider } from "@/lib/i18n";
+import { GlassPreferencesProvider } from "@/lib/glass-preferences";
 import { KeyboardDismissButton } from "@/components/keyboard-dismiss-button";
 import { AppExperienceOverlay } from "@/components/app-experience-overlay";
 import { StartupExperience } from "@/components/startup-experience";
@@ -83,9 +84,11 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <LanguageProvider>
-        <SafeAreaProvider initialMetrics={providerInitialMetrics}>
-          {content}
-        </SafeAreaProvider>
+        <GlassPreferencesProvider>
+          <SafeAreaProvider initialMetrics={providerInitialMetrics}>
+            {content}
+          </SafeAreaProvider>
+        </GlassPreferencesProvider>
       </LanguageProvider>
     </ThemeProvider>
   );

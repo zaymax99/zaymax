@@ -1,9 +1,10 @@
 import { useCallback, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useFocusEffect, useRouter, type Href } from "expo-router";
-import Animated, { FadeIn, FadeInDown, Layout } from "react-native-reanimated";
+import Animated, { FadeInDown, Layout } from "react-native-reanimated";
 
 import { GlassMaterial } from "@/components/glass-material";
+import { GlassButton } from "@/components/glass-button";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZaymaxWordmark } from "@/components/zaymax-wordmark";
@@ -228,12 +229,11 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingBottom: 128 }}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View
-          entering={FadeIn.duration(180)}
+        <View
           className="flex-row items-center justify-between pt-3 pb-5"
           style={{ position: "relative" }}
         >
-          <View style={{ paddingRight: 92 }}>
+          <View style={{ paddingRight: 100 }}>
             <ZaymaxWordmark />
             <View>
               <Text className="mt-1 text-[22px] font-black text-foreground">
@@ -263,7 +263,7 @@ export default function HomeScreen() {
               colors={colors}
             />
           </View>
-        </Animated.View>
+        </View>
 
         <Animated.View
           entering={FadeInDown.duration(ZAYMAX_DESIGN.motion.standard)}
@@ -491,29 +491,17 @@ function HeaderButton({
   colors: any;
 }) {
   return (
-    <Pressable
+    <GlassButton
       accessibilityLabel={label}
       onPress={() => {
         hapticTap();
         onPress();
       }}
-      style={({ pressed }) => [
-        {
-          width: 40,
-          height: 40,
-          alignItems: "center",
-          justifyContent: "center",
-          borderWidth: 1,
-          borderColor: colors.border,
-          backgroundColor: ZAYMAX_DESIGN.colors.surfaceRaised,
-          borderRadius: ZAYMAX_DESIGN.radius.round,
-          marginLeft: 6,
-          opacity: pressed ? 0.6 : 1,
-        },
-      ]}
+      style={{ marginLeft: 6 }}
+      surfaceStyle={{ width: 44, height: 44 }}
     >
       <IconSymbol name={icon} size={21} color={colors.primary} />
-    </Pressable>
+    </GlassButton>
   );
 }
 

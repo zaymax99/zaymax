@@ -19,20 +19,37 @@ describe("tab navigation layout", () => {
   });
 
   it("keeps the floating bar centered with equal screen margins", () => {
-    expect(layoutSource).toContain("screenWidth - horizontalMargin * 2");
-    expect(layoutSource).toContain(
-      "const barLeft = Math.max((screenWidth - barWidth) / 2, horizontalMargin)",
-    );
-    expect(layoutSource).toContain("left: barLeft");
-    expect(layoutSource).toContain("width: barWidth");
+    expect(layoutSource).toContain("getTabBarLayout({");
+    expect(layoutSource).toContain("style={[styles.barShell, layout]}");
   });
 
-  it("keeps the tab bar compact and its content clear of the home indicator", () => {
-    expect(layoutSource).toContain("Math.min(insets.bottom, 10)");
-    expect(layoutSource).toContain("height: 56");
-    expect(layoutSource).toContain("paddingBottom: 8");
-    expect(layoutSource).toContain("width: 28");
-    expect(layoutSource).toContain("height: 21");
+  it("uses the native-capable glass surface around the whole control group", () => {
+    expect(layoutSource).toContain("<LiquidGlassSurface");
+    expect(layoutSource).not.toContain("<BlurView");
+    expect(layoutSource).toContain("focused && styles.tabButtonFocused");
+    expect(layoutSource).not.toContain("iconFrameFocused");
+  });
+
+  it("shares native and web keyboard visibility with the dismiss button", () => {
+    const dismissSource = readProjectFile(
+      "components",
+      "keyboard-dismiss-button.tsx",
+    );
+    expect(layoutSource).toContain("useKeyboardState()");
+    expect(dismissSource).toContain("useKeyboardState()");
+    expect(layoutSource).not.toContain("Keyboard.addListener");
+    expect(layoutSource).toContain("if (keyboardVisible) return null");
+  });
+
+  it("keeps translated tabs accessible and respects the navigation events", () => {
+    expect(layoutSource).toContain('accessibilityRole="tab"');
+    expect(layoutSource).toContain("options.tabBarAccessibilityLabel ?? label");
+    expect(layoutSource).toContain(
+      "maxFontSizeMultiplier={TAB_BAR_METRICS.maxFontScale}",
+    );
+    expect(layoutSource).toContain('type: "tabPress"');
+    expect(layoutSource).toContain('type: "tabLongPress"');
+    expect(layoutSource).toContain("!focused && !event.defaultPrevented");
   });
 
   it("uses the shared ZAYMAX wordmark on every main tab", () => {
@@ -50,10 +67,7 @@ describe("tab navigation layout", () => {
   });
 
   it("optically aligns the transparent wordmark asset with page titles", () => {
-    const wordmarkSource = readProjectFile(
-      "components",
-      "zaymax-wordmark.tsx",
-    );
+    const wordmarkSource = readProjectFile("components", "zaymax-wordmark.tsx");
     expect(wordmarkSource).toContain("WORDMARK_LEFT_INSET");
     expect(wordmarkSource).toContain("marginLeft:");
     expect(wordmarkSource).toContain("width = 95");
@@ -68,18 +82,12 @@ describe("tab navigation layout", () => {
       path.join("workout", "[id].tsx"),
       path.join("workout", "active", "[id].tsx"),
     ]) {
-      expect(readProjectFile("app", filename)).not.toContain(
-        "ZaymaxWatermark",
-      );
+      expect(readProjectFile("app", filename)).not.toContain("ZaymaxWatermark");
     }
 
     expect(
       existsSync(
-        path.join(
-          process.cwd(),
-          "components",
-          "zaymax-watermark.tsx",
-        ),
+        path.join(process.cwd(), "components", "zaymax-watermark.tsx"),
       ),
     ).toBe(false);
   });

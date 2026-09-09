@@ -1,9 +1,11 @@
 import { useCallback, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import Svg, { Circle, Line, Polyline } from "react-native-svg";
 
 import { GlassMaterial } from "@/components/glass-material";
+import { GlassButton } from "@/components/glass-button";
+import { GoldAccent } from "@/components/gold-accent";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
@@ -116,20 +118,20 @@ export default function ExerciseHistoryScreen() {
         contentContainerStyle={{ paddingBottom: 38 }}
       >
         <View className="flex-row items-center pt-3 pb-7">
-          <Pressable
+          <GlassButton
+            accessibilityRole="button"
             accessibilityLabel={t("Zurück", "Back")}
             onPress={() => {
               hapticTap();
               router.back();
             }}
-            style={({ pressed }) => [
-              {
-                padding: 8,
-                marginRight: 6,
-                borderRadius: ZAYMAX_DESIGN.radius.round,
-                opacity: pressed ? 0.55 : 1,
-              },
-            ]}
+            style={{ marginRight: 8 }}
+            surfaceStyle={{
+              width: 44,
+              height: 44,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
             <IconSymbol
               name="chevron.right"
@@ -137,11 +139,19 @@ export default function ExerciseHistoryScreen() {
               color={colors.foreground}
               style={{ transform: [{ rotate: "180deg" }] }}
             />
-          </Pressable>
+          </GlassButton>
           <View className="flex-1">
-            <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
-              {t("ÜBUNGSFORTSCHRITT", "EXERCISE PROGRESS")}
-            </Text>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
+              <GoldAccent />
+              <Text
+                className="text-xs font-black uppercase tracking-[2px] text-muted"
+                style={{ flexShrink: 1 }}
+              >
+                {t("ÜBUNGSFORTSCHRITT", "EXERCISE PROGRESS")}
+              </Text>
+            </View>
             <Text className="mt-1 text-3xl font-black text-foreground">
               {name}
             </Text>

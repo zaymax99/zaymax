@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
-import { Keyboard, Platform, Pressable, Text } from "react-native";
-import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import { Keyboard, Platform, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { GlassButton } from "@/components/glass-button";
 import { useColors } from "@/hooks/use-colors";
+import { useKeyboardState } from "@/hooks/use-keyboard-state";
 import { hapticTap } from "@/lib/haptics";
 import { useLanguage } from "@/lib/i18n";
 
@@ -12,55 +12,7 @@ export function KeyboardDismissButton() {
   const colors = useColors("dark");
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    if (Platform.OS === "web" && typeof window !== "undefined") {
-      let blurTimeout: ReturnType<typeof setTimeout> | undefined;
-      const isTextField = (target: EventTarget | null) => {
-        const element = target as HTMLElement | null;
-        return Boolean(
-          element &&
-          (element.tagName === "INPUT" || element.tagName === "TEXTAREA"),
-        );
-      };
-      const handleFocusIn = (event: FocusEvent) => {
-        if (isTextField(event.target)) setIsVisible(true);
-      };
-      const handleFocusOut = () => {
-        blurTimeout = window.setTimeout(() => {
-          if (!isTextField(document.activeElement)) setIsVisible(false);
-        }, 120);
-      };
-      window.addEventListener("focusin", handleFocusIn);
-      window.addEventListener("focusout", handleFocusOut);
-      return () => {
-        if (blurTimeout) clearTimeout(blurTimeout);
-        window.removeEventListener("focusin", handleFocusIn);
-        window.removeEventListener("focusout", handleFocusOut);
-      };
-    }
-
-    const showEvent =
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent =
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-
-    const showSubscription = Keyboard.addListener(showEvent, (event) => {
-      setKeyboardHeight(event.endCoordinates?.height ?? 0);
-      setIsVisible(true);
-    });
-    const hideSubscription = Keyboard.addListener(hideEvent, () => {
-      setIsVisible(false);
-      setKeyboardHeight(0);
-    });
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
+  const { keyboardHeight, isVisible } = useKeyboardState();
 
   if (!isVisible) return null;
 
@@ -70,9 +22,7 @@ export function KeyboardDismissButton() {
       : Math.max(insets.bottom + 10, 14);
 
   return (
-    <Animated.View
-      entering={FadeIn.duration(130)}
-      exiting={FadeOut.duration(100)}
+    <View
       pointerEvents="box-none"
       style={{
         position: "absolute",
@@ -81,7 +31,7 @@ export function KeyboardDismissButton() {
         zIndex: 1000,
       }}
     >
-      <Pressable
+      <GlassButton
         accessibilityRole="button"
         accessibilityLabel={t("Tastatur ausblenden", "Hide keyboard")}
         onPress={() => {
@@ -94,18 +44,13 @@ export function KeyboardDismissButton() {
             document.activeElement.blur();
           }
         }}
-        style={({ pressed }) => ({
-          minHeight: 42,
+        surfaceStyle={{
+          minHeight: 44,
           flexDirection: "row",
           alignItems: "center",
           gap: 7,
-          borderRadius: 999,
-          borderWidth: 1,
-          borderColor: `${colors.primary}70`,
-          backgroundColor: colors.surface,
           paddingHorizontal: 14,
-          opacity: pressed ? 0.72 : 1,
-        })}
+        }}
       >
         <IconSymbol
           name="keyboard.chevron.compact.down"
@@ -121,7 +66,7 @@ export function KeyboardDismissButton() {
         >
           {t("Tastatur schließen", "Hide keyboard")}
         </Text>
-      </Pressable>
-    </Animated.View>
+      </GlassButton>
+    </View>
   );
 }

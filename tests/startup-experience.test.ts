@@ -3,10 +3,12 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const startupSource = fs.readFileSync(
-  path.join(process.cwd(), "components", "startup-experience.tsx"),
-  "utf8",
-);
+const startupSource = fs
+  .readFileSync(
+    path.join(process.cwd(), "components", "startup-experience.tsx"),
+    "utf8",
+  )
+  .replace(/\r\n/g, "\n");
 const activeWorkoutSource = fs.readFileSync(
   path.join(process.cwd(), "app", "workout", "active", "[id].tsx"),
   "utf8",

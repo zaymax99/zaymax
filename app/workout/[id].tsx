@@ -13,6 +13,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import Animated, { FadeIn } from "react-native-reanimated";
 
 import { GlassMaterial } from "@/components/glass-material";
+import { GoldAccent } from "@/components/gold-accent";
+import { GlassButton } from "@/components/glass-button";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
@@ -23,13 +25,18 @@ import {
   resizeRepsPerSet,
   resizeWeightsPerSet,
   saveWorkouts,
-  toKg,
   uid,
   type Exercise,
   type WeightUnit,
   type Workout,
 } from "@/lib/workouts";
 import { useColors } from "@/hooks/use-colors";
+import {
+  applySetCountDraft,
+  normalizeEditorReps,
+  normalizeEditorWeightKg,
+  normalizeExerciseForSave,
+} from "@/lib/workout-editor";
 import { hapticSelection, hapticSuccess, hapticTap } from "@/lib/haptics";
 import { useLanguage, usesDecimalComma, type AppLanguage } from "@/lib/i18n";
 
@@ -41,6 +48,9 @@ export default function WorkoutEditorScreen() {
   const isNew = id === "new";
   const [title, setTitle] = useState(t("Mein Workout", "My Workout"));
   const [exercises, setExercises] = useState<Exercise[]>([emptyExercise()]);
+  const [setCountDrafts, setSetCountDrafts] = useState<Record<string, string>>(
+    {},
+  );
   const [weightUnit, setWeightUnit] = useState<WeightUnit>("kg");
   const [loaded, setLoaded] = useState(false);
   const [loadIssue, setLoadIssue] = useState<"missing" | "failed" | null>(null);
@@ -60,6 +70,7 @@ export default function WorkoutEditorScreen() {
 
   useEffect(() => {
     let mounted = true;
+    setSetCountDrafts({});
     void (async () => {
       try {
         const settings = await loadSettings();
@@ -94,6 +105,19 @@ export default function WorkoutEditorScreen() {
       ),
     );
   }
+  function commitSetCount(exercise: Exercise) {
+    const draft = setCountDrafts[exercise.id];
+    setExercises((current) =>
+      current.map((item) =>
+        item.id === exercise.id ? applySetCountDraft(item, draft) : item,
+      ),
+    );
+    // Retain the normalized draft so a save in the same event cannot lose it.
+    setSetCountDrafts((current) => ({
+      ...current,
+      [exercise.id]: String(applySetCountDraft(exercise, draft).sets),
+    }));
+  }
   function removeExercise(exerciseId: string) {
     setExercises((current) =>
       current.length > 1
@@ -114,7 +138,10 @@ export default function WorkoutEditorScreen() {
   }
   async function save(completed = false) {
     if (savingRef.current || loadIssue) return;
-    const valid = exercises.filter((item) => item.name.trim());
+    const valid = exercises
+      .map((item) => applySetCountDraft(item, setCountDrafts[item.id]))
+      .map(normalizeExerciseForSave)
+      .filter((item) => item.name.trim());
     if (!title.trim() || !valid.length) {
       Alert.alert(
         t("Workout noch leer", "Workout is still empty"),
@@ -154,11 +181,7 @@ export default function WorkoutEditorScreen() {
       const next: Workout = {
         id: isNew ? uid() : id!,
         title: title.trim(),
-        exercises: valid.map((exercise) => ({
-          ...exercise,
-          repsPerSet: resizeRepsPerSet(exercise, exercise.sets),
-          weightsPerSetKg: resizeWeightsPerSet(exercise, exercise.sets),
-        })),
+        exercises: valid,
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,
         completedAt: completed ? now : existing?.completedAt,
@@ -263,16 +286,19 @@ export default function WorkoutEditorScreen() {
           contentContainerStyle={{ paddingBottom: 40 }}
         >
           <View className="flex-row items-center pt-3 pb-6">
-            <Pressable
+            <GlassButton
+              accessibilityRole="button"
               accessibilityLabel={t("Zurück", "Back")}
               onPress={() => {
                 hapticTap();
                 router.back();
               }}
-              style={{
-                padding: 8,
-                marginRight: 8,
-                borderRadius: ZAYMAX_DESIGN.radius.round,
+              style={{ marginRight: 8 }}
+              surfaceStyle={{
+                width: 44,
+                height: 44,
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               <IconSymbol
@@ -281,11 +307,19 @@ export default function WorkoutEditorScreen() {
                 color={colors.foreground}
                 style={{ transform: [{ rotate: "180deg" }] }}
               />
-            </Pressable>
-            <View>
-              <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
-                {t("WORKOUT-EDITOR", "WORKOUT BUILDER")}
-              </Text>
+            </GlassButton>
+            <View className="flex-1">
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+              >
+                <Text
+                  className="text-xs font-black uppercase tracking-[2px] text-muted"
+                  style={{ flexShrink: 1 }}
+                >
+                  {t("WORKOUT-EDITOR", "WORKOUT BUILDER")}
+                </Text>
+                <GoldAccent />
+              </View>
               <Text className="mt-1 text-3xl font-black text-foreground">
                 {isNew
                   ? t("Neues Workout", "New workout")
@@ -359,6 +393,16 @@ export default function WorkoutEditorScreen() {
               total={exercises.length}
               colors={colors}
               unit={weightUnit}
+              setCountText={
+                setCountDrafts[exercise.id] ?? String(exercise.sets)
+              }
+              onSetCountTextChange={(text) =>
+                setSetCountDrafts((current) => ({
+                  ...current,
+                  [exercise.id]: text,
+                }))
+              }
+              onSetCountCommit={() => commitSetCount(exercise)}
               onChange={(patch) => updateExercise(exercise.id, patch)}
               onRemove={() => removeExercise(exercise.id)}
               onMoveUp={() => moveExercise(exercise.id, -1)}
@@ -435,6 +479,9 @@ function ExerciseCard({
   total,
   colors,
   unit,
+  setCountText,
+  onSetCountTextChange,
+  onSetCountCommit,
   onChange,
   onRemove,
   onMoveUp,
@@ -445,6 +492,9 @@ function ExerciseCard({
   total: number;
   colors: any;
   unit: WeightUnit;
+  setCountText: string;
+  onSetCountTextChange: (text: string) => void;
+  onSetCountCommit: () => void;
   onChange: (patch: Partial<Exercise>) => void;
   onRemove: () => void;
   onMoveUp: () => void;
@@ -557,19 +607,9 @@ function ExerciseCard({
       >
         <NumberField
           label={t("Sätze", "Sets")}
-          value={exercise.sets}
-          onChange={(value) => {
-            const sets = Math.min(20, Math.max(1, Math.floor(value)));
-            const repsPerSet = resizeRepsPerSet(exercise, sets);
-            const weightsPerSetKg = resizeWeightsPerSet(exercise, sets);
-            onChange({
-              sets,
-              reps: repsPerSet[0] ?? 0,
-              repsPerSet,
-              weightKg: weightsPerSetKg[0] ?? undefined,
-              weightsPerSetKg,
-            });
-          }}
+          value={setCountText}
+          onChange={onSetCountTextChange}
+          onCommit={onSetCountCommit}
           colors={colors}
         />
       </View>
@@ -594,7 +634,7 @@ function ExerciseCard({
             colors={colors}
             onRepsChange={(value) => {
               const repsPerSet = resizeRepsPerSet(exercise, exercise.sets);
-              repsPerSet[setIndex] = value;
+              repsPerSet[setIndex] = normalizeEditorReps(value);
               onChange({ reps: repsPerSet[0] ?? 0, repsPerSet });
             }}
             onWeightChange={(value) => {
@@ -602,7 +642,8 @@ function ExerciseCard({
                 exercise,
                 exercise.sets,
               );
-              weightsPerSetKg[setIndex] = value ? toKg(value, unit) : null;
+              weightsPerSetKg[setIndex] =
+                normalizeEditorWeightKg(value, unit) || null;
               onChange({
                 weightKg: weightsPerSetKg[0] ?? undefined,
                 weightsPerSetKg,
@@ -663,11 +704,13 @@ function NumberField({
   label,
   value,
   onChange,
+  onCommit,
   colors,
 }: {
   label: string;
-  value: number;
-  onChange: (value: number) => void;
+  value: string;
+  onChange: (value: string) => void;
+  onCommit: () => void;
   colors: any;
 }) {
   return (
@@ -676,12 +719,13 @@ function NumberField({
         {label}
       </Text>
       <TextInput
-        value={value ? String(value) : ""}
+        value={value}
+        accessibilityLabel={label}
         selectTextOnFocus
         maxLength={2}
-        onChangeText={(text) =>
-          onChange(Number(text.replace(/[^0-9]/g, "")) || 1)
-        }
+        onChangeText={(text) => onChange(text.replace(/[^0-9]/g, ""))}
+        onBlur={onCommit}
+        onSubmitEditing={onCommit}
         keyboardType="number-pad"
         placeholder="—"
         placeholderTextColor={colors.muted}

@@ -1,9 +1,11 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useFocusEffect, useRouter, type Href } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { GlassMaterial } from "@/components/glass-material";
+import { GlassButton } from "@/components/glass-button";
+import { GoldAccent } from "@/components/gold-accent";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
@@ -12,7 +14,12 @@ import {
   useLanguage,
   type AppLanguage,
 } from "@/lib/i18n";
-import { loadSettings, saveSettings, type WeightUnit } from "@/lib/workouts";
+import { loadSettings, type WeightUnit } from "@/lib/workouts";
+import {
+  finishPendingSettingsUpdates,
+  runSettingsUpdate,
+  updateSettings,
+} from "@/lib/settings-updates";
 import { useColors } from "@/hooks/use-colors";
 import {
   hapticAction,
@@ -53,6 +60,12 @@ export default function SettingsScreen() {
   const [restSeconds, setRestSeconds] = useState(90);
   const [weightUnit, setWeightUnit] = useState<WeightUnit>("kg");
   const [backupBusy, setBackupBusy] = useState(false);
+  const backupBusyRef = useRef(false);
+
+  function setDataOperationBusy(busy: boolean) {
+    backupBusyRef.current = busy;
+    setBackupBusy(busy);
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -68,9 +81,9 @@ export default function SettingsScreen() {
   );
 
   async function chooseRest(seconds: number) {
+    if (backupBusyRef.current) return;
     try {
-      const current = await loadSettings();
-      await saveSettings({ ...current, restSeconds: seconds });
+      await updateSettings({ restSeconds: seconds });
       setRestSeconds(seconds);
       hapticTap();
     } catch {
@@ -79,9 +92,9 @@ export default function SettingsScreen() {
   }
 
   async function chooseUnit(unit: WeightUnit) {
+    if (backupBusyRef.current) return;
     try {
-      const current = await loadSettings();
-      await saveSettings({ ...current, weightUnit: unit });
+      await updateSettings({ weightUnit: unit });
       setWeightUnit(unit);
       hapticTap();
     } catch {
@@ -90,13 +103,16 @@ export default function SettingsScreen() {
   }
 
   async function chooseLanguage(nextLanguage: AppLanguage) {
+    if (backupBusyRef.current) return;
     try {
-      await setLanguage(nextLanguage);
-      const notes = await loadReminders();
-      await updatePinnedNoteWidget(
-        getPinnedLockScreenReminder(notes)?.text,
-        widgetEmptyLabel(nextLanguage),
-      );
+      await runSettingsUpdate(async () => {
+        await setLanguage(nextLanguage);
+        const notes = await loadReminders();
+        await updatePinnedNoteWidget(
+          getPinnedLockScreenReminder(notes)?.text,
+          widgetEmptyLabel(nextLanguage),
+        );
+      });
       hapticTap();
     } catch {
       showSettingsSaveError();
@@ -120,10 +136,11 @@ export default function SettingsScreen() {
   }
 
   async function exportData() {
-    if (backupBusy) return;
+    if (backupBusyRef.current) return;
     hapticAction();
-    setBackupBusy(true);
+    setDataOperationBusy(true);
     try {
+      await finishPendingSettingsUpdates();
       const fileName = await createBackup();
       hapticSuccess();
       Alert.alert(
@@ -144,20 +161,21 @@ export default function SettingsScreen() {
         ),
       );
     } finally {
-      setBackupBusy(false);
+      setDataOperationBusy(false);
     }
   }
 
   async function importData() {
-    if (backupBusy) return;
+    if (backupBusyRef.current) return;
     hapticAction();
-    setBackupBusy(true);
+    setDataOperationBusy(true);
     try {
       const backup = await pickBackup();
       if (!backup) {
-        setBackupBusy(false);
+        setDataOperationBusy(false);
         return;
       }
+      let restorationStarted = false;
       Alert.alert(
         t("Backup wiederherstellen?", "Restore backup?"),
         t(
@@ -170,15 +188,17 @@ export default function SettingsScreen() {
             style: "cancel",
             onPress: () => {
               hapticTap();
-              setBackupBusy(false);
+              setDataOperationBusy(false);
             },
           },
           {
             text: t("Wiederherstellen", "Restore"),
             onPress: async () => {
+              restorationStarted = true;
               try {
-                await dismissAllLockScreenReminders().catch(() => undefined);
+                await finishPendingSettingsUpdates();
                 await restoreBackup(backup);
+                await dismissAllLockScreenReminders().catch(() => undefined);
                 const restoredNotes = await loadReminders();
                 const savedLanguage = backup.data[LANGUAGE_STORAGE_KEY];
                 const restoredLanguage: AppLanguage =
@@ -209,18 +229,20 @@ export default function SettingsScreen() {
                   ),
                 );
               } finally {
-                setBackupBusy(false);
+                setDataOperationBusy(false);
               }
             },
           },
         ],
         {
           cancelable: true,
-          onDismiss: () => setBackupBusy(false),
+          onDismiss: () => {
+            if (!restorationStarted) setDataOperationBusy(false);
+          },
         },
       );
     } catch {
-      setBackupBusy(false);
+      setDataOperationBusy(false);
       hapticWarning();
       Alert.alert(
         t("Ungültige Backup-Datei", "Invalid backup file"),
@@ -233,6 +255,9 @@ export default function SettingsScreen() {
   }
 
   function clearData() {
+    if (backupBusyRef.current) return;
+    setDataOperationBusy(true);
+    let deletionStarted = false;
     hapticWarning();
     Alert.alert(
       t("Alle Daten löschen?", "Delete all data?"),
@@ -241,12 +266,18 @@ export default function SettingsScreen() {
         "Workouts, history, journal, active session and settings will be removed.",
       ),
       [
-        { text: t("Abbrechen", "Cancel"), style: "cancel" },
+        {
+          text: t("Abbrechen", "Cancel"),
+          style: "cancel",
+          onPress: () => setDataOperationBusy(false),
+        },
         {
           text: t("Löschen", "Delete"),
           style: "destructive",
           onPress: async () => {
+            deletionStarted = true;
             try {
+              await finishPendingSettingsUpdates();
               const allKeys = await AsyncStorage.getAllKeys();
               const zaymaxKeys = allKeys.filter((key) =>
                 key.startsWith("zaymax."),
@@ -278,10 +309,18 @@ export default function SettingsScreen() {
                   "Spróbuj ponownie.",
                 ),
               );
+            } finally {
+              setDataOperationBusy(false);
             }
           },
         },
       ],
+      {
+        cancelable: true,
+        onDismiss: () => {
+          if (!deletionStarted) setDataOperationBusy(false);
+        },
+      },
     );
   }
 
@@ -293,9 +332,12 @@ export default function SettingsScreen() {
       >
         <View className="flex-row items-start pt-3 pb-7">
           <View className="flex-1">
-            <Text className="text-xs font-black uppercase tracking-[3px] text-muted">
-              ZAYMAX / SYSTEM
-            </Text>
+            <View className="flex-row items-center gap-2">
+              <Text className="text-xs font-black uppercase tracking-[3px] text-muted">
+                ZAYMAX / SYSTEM
+              </Text>
+              <GoldAccent />
+            </View>
             <Text className="mt-1 text-3xl font-black text-foreground">
               {t("Einstellungen", "Settings")}
             </Text>
@@ -308,32 +350,26 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        <Pressable
+        <GlassButton
+          accessibilityRole="button"
           accessibilityLabel={t("Zurück zu Heute", "Back to Today")}
           onPress={() => {
             hapticTap();
             router.replace("/");
           }}
-          style={({ pressed }) => [
-            {
-              marginBottom: 16,
-              minHeight: 50,
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: colors.surface,
-              borderRadius: ZAYMAX_DESIGN.radius.round,
-              opacity: pressed ? 0.65 : 1,
-            },
-          ]}
+          style={{ marginBottom: 16 }}
+          surfaceStyle={{
+            minHeight: 50,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
         >
           <IconSymbol name="house.fill" size={18} color={colors.foreground} />
           <Text className="ml-2 font-black tracking-[0.4px] text-foreground">
             {t("Zurück zu Heute", "Back to Today")}
           </Text>
-        </Pressable>
+        </GlassButton>
 
         <SettingsPanel
           eyebrow={t("SPRACHE", "LANGUAGE")}
@@ -351,8 +387,9 @@ export default function SettingsScreen() {
                 <Pressable
                   key={option.value}
                   accessibilityRole="radio"
-                  accessibilityState={{ checked: active }}
+                  accessibilityState={{ checked: active, disabled: backupBusy }}
                   accessibilityLabel={option.accessibilityLabel}
+                  disabled={backupBusy}
                   onPress={() => void chooseLanguage(option.value)}
                   style={({ pressed }) => [
                     {
@@ -413,6 +450,7 @@ export default function SettingsScreen() {
               return (
                 <Pressable
                   key={seconds}
+                  disabled={backupBusy}
                   onPress={() => void chooseRest(seconds)}
                   style={({ pressed }) => [
                     {
@@ -460,6 +498,7 @@ export default function SettingsScreen() {
               return (
                 <Pressable
                   key={unit}
+                  disabled={backupBusy}
                   onPress={() => void chooseUnit(unit)}
                   style={({ pressed }) => [
                     {
@@ -606,6 +645,7 @@ export default function SettingsScreen() {
         </Pressable>
 
         <Pressable
+          disabled={backupBusy}
           onPress={clearData}
           style={({ pressed }) => [
             {

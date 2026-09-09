@@ -6,7 +6,7 @@ import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import { hapticAction, hapticTap, hapticWarning } from "@/lib/haptics";
 import { useLanguage, usesDecimalComma } from "@/lib/i18n";
 import {
-  formatBirthDate,
+  formatBirthDateInput,
   parseBirthDateInput,
   parseDecimalInput,
   type UserProfile,
@@ -26,7 +26,7 @@ export function ProfileForm({
   onCancel?: () => void;
 }) {
   const colors = useColors("dark");
-  const { language, locale, t } = useLanguage();
+  const { language, t } = useLanguage();
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
   const [birthday, setBirthday] = useState("");
@@ -49,12 +49,8 @@ export function ProfileForm({
           )
         : "",
     );
-    setBirthday(
-      initialProfile?.birthDate
-        ? formatBirthDate(initialProfile.birthDate, locale)
-        : "",
-    );
-  }, [initialProfile, language, locale]);
+    setBirthday(formatBirthDateInput(initialProfile?.birthDate));
+  }, [initialProfile, language]);
 
   function submit() {
     const weightKg = parseDecimalInput(weight);

@@ -5,6 +5,7 @@ import * as Sharing from "expo-sharing";
 import { Platform } from "react-native";
 
 import { HEALTHKIT_CONNECTED_KEY } from "./steps";
+import { isValidBackupValue } from "./backup-validation";
 import {
   REMINDERS_STORAGE_KEY,
   stripLockScreenStateFromRemindersValue,
@@ -31,7 +32,8 @@ export function parseBackupContents(contents: string): ZaymaxBackup {
     !Number.isFinite(Date.parse(parsed.exportedAt)) ||
     !isRecord(parsed.data) ||
     Object.entries(parsed.data).some(
-      ([key, value]) => !key.startsWith("zaymax.") || typeof value !== "string",
+      ([key, value]) =>
+        typeof value !== "string" || !isValidBackupValue(key, value),
     )
   ) {
     throw new Error("invalid-backup");
@@ -110,13 +112,15 @@ export async function pickBackup() {
 }
 
 export async function restoreBackup(backup: ZaymaxBackup) {
+  // Validate here too: callers must not be able to bypass the file-picker check.
+  const validated = parseBackupContents(JSON.stringify(backup));
   const currentKeys = (await AsyncStorage.getAllKeys()).filter((key) =>
     key.startsWith("zaymax."),
   );
   const currentEntries = currentKeys.length
     ? await AsyncStorage.multiGet(currentKeys)
     : [];
-  const entries = Object.entries(backup.data)
+  const entries = Object.entries(validated.data)
     .filter(([key]) => key !== HEALTHKIT_CONNECTED_KEY)
     .map(
       ([key, value]) =>
@@ -127,20 +131,25 @@ export async function restoreBackup(backup: ZaymaxBackup) {
             : value,
         ] as [string, string],
     );
-  const touchedKeys = [
-    ...new Set([...currentKeys, ...entries.map(([key]) => key)]),
-  ];
+  const incomingKeys = new Set(entries.map(([key]) => key));
+  const obsoleteKeys = currentKeys.filter((key) => !incomingKeys.has(key));
+  const previousKeys = new Set(currentKeys);
+  const newKeys = entries
+    .map(([key]) => key)
+    .filter((key) => !previousKeys.has(key));
 
   try {
-    if (currentKeys.length) await AsyncStorage.multiRemove(currentKeys);
+    // Never erase the current data before a replacement has been written.
     if (entries.length) await AsyncStorage.multiSet(entries);
+    if (obsoleteKeys.length) await AsyncStorage.multiRemove(obsoleteKeys);
   } catch (error) {
     try {
-      if (touchedKeys.length) await AsyncStorage.multiRemove(touchedKeys);
       const rollbackEntries = currentEntries.filter(
         (entry): entry is [string, string] => entry[1] !== null,
       );
       if (rollbackEntries.length) await AsyncStorage.multiSet(rollbackEntries);
+      // Only remove keys introduced by this attempt, after restoring originals.
+      if (newKeys.length) await AsyncStorage.multiRemove(newKeys);
     } catch {
       // The original storage error remains the useful failure for the UI.
     }

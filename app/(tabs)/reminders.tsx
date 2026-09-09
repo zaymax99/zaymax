@@ -22,6 +22,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { GlassMaterial } from "@/components/glass-material";
+import { GoldAccent } from "@/components/gold-accent";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ProfileBmiCard } from "@/components/profile-bmi-card";
@@ -495,9 +496,15 @@ export default function JournalScreen() {
               <GlassMaterial intensity={26} />
               <View className="flex-row items-start justify-between">
                 <View className="flex-1 pr-3">
-                  <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
-                    {t("TRAININGSWOCHE", "TRAINING WEEK")}
-                  </Text>
+                  <View className="flex-row items-center gap-2">
+                    <Text
+                      className="text-xs font-black uppercase tracking-[2px] text-muted"
+                      style={{ flexShrink: 1 }}
+                    >
+                      {t("TRAININGSWOCHE", "TRAINING WEEK")}
+                    </Text>
+                    <GoldAccent />
+                  </View>
                   <Text className="mt-2 text-xl font-black text-foreground">
                     {t("Deine Trainingstage", "Your training days")}
                   </Text>

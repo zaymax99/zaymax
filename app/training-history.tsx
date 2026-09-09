@@ -5,6 +5,8 @@ import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import Svg, { Circle, Line, Polyline } from "react-native-svg";
 
 import { GlassMaterial } from "@/components/glass-material";
+import { GlassButton } from "@/components/glass-button";
+import { GoldAccent } from "@/components/gold-accent";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
@@ -20,6 +22,7 @@ import { useColors } from "@/hooks/use-colors";
 import { hapticTap } from "@/lib/haptics";
 import { useLanguage, type AppLanguage } from "@/lib/i18n";
 import { formatWorkoutDuration } from "@/lib/workout-duration";
+import { formatHistoryVolume, withHistorySummary } from "@/lib/workout-history";
 
 const PROGRESS_GOLD = ZAYMAX_DESIGN.colors.gold;
 
@@ -35,7 +38,7 @@ export default function TrainingHistoryScreen() {
       loadWorkoutHistory(),
       loadSettings(),
     ]);
-    setHistory(entries);
+    setHistory(entries.map(withHistorySummary));
     setWeightUnit(settings.weightUnit);
   }, []);
 
@@ -71,20 +74,20 @@ export default function TrainingHistoryScreen() {
         ListHeaderComponent={
           <View>
             <View className="flex-row items-center pt-3 pb-7">
-              <Pressable
+              <GlassButton
+                accessibilityRole="button"
                 accessibilityLabel={t("Zurück", "Back")}
                 onPress={() => {
                   hapticTap();
                   router.back();
                 }}
-                style={({ pressed }) => [
-                  {
-                    padding: 8,
-                    marginRight: 6,
-                    borderRadius: ZAYMAX_DESIGN.radius.round,
-                    opacity: pressed ? 0.6 : 1,
-                  },
-                ]}
+                style={{ marginRight: 8 }}
+                surfaceStyle={{
+                  width: 44,
+                  height: 44,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
                 <IconSymbol
                   name="chevron.right"
@@ -92,11 +95,19 @@ export default function TrainingHistoryScreen() {
                   color={colors.foreground}
                   style={{ transform: [{ rotate: "180deg" }] }}
                 />
-              </Pressable>
+              </GlassButton>
               <View className="flex-1">
-                <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
-                  {t("DEINE LEISTUNG", "YOUR PERFORMANCE")}
-                </Text>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+                >
+                  <GoldAccent />
+                  <Text
+                    className="text-xs font-black uppercase tracking-[2px] text-muted"
+                    style={{ flexShrink: 1 }}
+                  >
+                    {t("DEINE LEISTUNG", "YOUR PERFORMANCE")}
+                  </Text>
+                </View>
                 <Text className="mt-1 text-3xl font-black text-foreground">
                   {t("Historie", "History")}
                 </Text>
@@ -190,7 +201,7 @@ function HistoryOverview({
   unit: WeightUnit;
   colors: any;
 }) {
-  const { t } = useLanguage();
+  const { locale, t } = useLanguage();
   const recent = history.slice(0, 7).reverse();
   const values = recent.map((entry) => entry.totalVolumeKg ?? 0);
   const max = Math.max(1, ...values);
@@ -227,7 +238,7 @@ function HistoryOverview({
       <Text className="text-[10px] font-black uppercase tracking-[2.5px] text-muted">
         {t("ÜBERSICHT", "OVERVIEW")}
       </Text>
-      <View className="mt-4 flex-row gap-2">
+      <View className="mt-4 flex-row flex-wrap gap-2">
         <HistoryMetric
           label={t("Trainings", "Workouts")}
           value={String(history.length)}
@@ -235,7 +246,11 @@ function HistoryOverview({
         />
         <HistoryMetric
           label={t("Volumen", "Volume")}
-          value={displayWeight(totalVolumeKg, unit)}
+          value={formatHistoryVolume(
+            unit === "lbs" ? totalVolumeKg * 2.20462 : totalVolumeKg,
+            locale,
+          )}
+          suffix={unit}
           colors={colors}
         />
         <HistoryMetric
@@ -308,11 +323,13 @@ function HistoryOverview({
 function HistoryMetric({
   label,
   value,
+  suffix,
   colors,
   accent = false,
 }: {
   label: string;
   value: string;
+  suffix?: string;
   colors: any;
   accent?: boolean;
 }) {
@@ -320,36 +337,45 @@ function HistoryMetric({
     <View
       style={{
         flex: 1,
-        minWidth: 0,
+        minWidth: 86,
         minHeight: 62,
         justifyContent: "center",
         borderRadius: ZAYMAX_DESIGN.radius.nested,
         borderWidth: 1,
-        borderColor: accent ? ZAYMAX_DESIGN.colors.goldLine : colors.border,
-        backgroundColor: accent
-          ? ZAYMAX_DESIGN.colors.goldSoft
-          : ZAYMAX_DESIGN.colors.surfaceSoft,
+        borderColor: colors.border,
+        backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
         paddingHorizontal: 10,
+        paddingVertical: 10,
       }}
     >
-      <Text
-        numberOfLines={1}
-        style={{ color: colors.muted, fontSize: 9, fontWeight: "800" }}
-      >
+      <Text style={{ color: colors.muted, fontSize: 9, fontWeight: "800" }}>
         {label.toUpperCase()}
       </Text>
-      <Text
-        numberOfLines={1}
-        adjustsFontSizeToFit
+      <View
         style={{
           marginTop: 6,
-          color: accent ? PROGRESS_GOLD : colors.foreground,
-          fontSize: 18,
-          fontWeight: "900",
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 8,
         }}
       >
-        {value}
-      </Text>
+        <Text
+          style={{
+            color: colors.foreground,
+            fontSize: value.length > 8 ? 14 : 18,
+            fontWeight: "900",
+            flexShrink: 1,
+          }}
+        >
+          {value}
+        </Text>
+        {accent ? <GoldAccent variant="dot" /> : null}
+      </View>
+      {suffix ? (
+        <Text style={{ marginTop: 2, color: colors.muted, fontSize: 11 }}>
+          {suffix}
+        </Text>
+      ) : null}
     </View>
   );
 }

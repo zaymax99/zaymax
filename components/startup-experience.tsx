@@ -12,6 +12,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
+import { GoldAccent } from "@/components/gold-accent";
 import {
   clearActiveSession,
   loadActiveSession,
@@ -32,7 +33,7 @@ export function StartupExperience() {
   const [phase, setPhase] = useState<StartupPhase>("checking");
   const logoOpacity = useSharedValue(0);
   const logoScale = useSharedValue(0.96);
-  const glowOpacity = useSharedValue(0);
+  const accentOpacity = useSharedValue(0);
   const overlayOpacity = useSharedValue(1);
 
   useEffect(() => {
@@ -97,10 +98,10 @@ export function StartupExperience() {
 
     logoOpacity.value = withDelay(100, withTiming(1, { duration: 400 }));
     logoScale.value = withDelay(100, withTiming(1, { duration: 400 }));
-    glowOpacity.value = withDelay(
+    accentOpacity.value = withDelay(
       500,
       withSequence(
-        withTiming(0.32, { duration: 130 }),
+        withTiming(0.85, { duration: 130 }),
         withTiming(0, { duration: 170 }),
       ),
     );
@@ -114,18 +115,17 @@ export function StartupExperience() {
     return () => {
       cancelAnimation(logoOpacity);
       cancelAnimation(logoScale);
-      cancelAnimation(glowOpacity);
+      cancelAnimation(accentOpacity);
       cancelAnimation(overlayOpacity);
     };
-  }, [glowOpacity, logoOpacity, logoScale, overlayOpacity, phase]);
+  }, [accentOpacity, logoOpacity, logoScale, overlayOpacity, phase]);
 
   const logoStyle = useAnimatedStyle(() => ({
     opacity: logoOpacity.value,
     transform: [{ scale: logoScale.value }],
   }));
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowOpacity.value,
-    transform: [{ scale: 1.025 }],
+  const accentStyle = useAnimatedStyle(() => ({
+    opacity: accentOpacity.value,
   }));
   const overlayStyle = useAnimatedStyle(() => ({
     opacity: overlayOpacity.value,
@@ -144,13 +144,11 @@ export function StartupExperience() {
           <Animated.Image
             source={wordmark}
             resizeMode="contain"
-            style={[styles.wordmark, styles.glow, glowStyle]}
-          />
-          <Animated.Image
-            source={wordmark}
-            resizeMode="contain"
             style={[styles.wordmark, logoStyle]}
           />
+          <Animated.View style={[styles.accent, accentStyle]}>
+            <GoldAccent />
+          </Animated.View>
         </View>
       ) : null}
     </Animated.View>
@@ -178,7 +176,8 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  glow: {
-    tintColor: ZAYMAX_DESIGN.colors.gold,
+  accent: {
+    position: "absolute",
+    bottom: -10,
   },
 });

@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -14,6 +14,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import Svg, { Line } from "react-native-svg";
 
 import { GlassMaterial } from "@/components/glass-material";
+import { GoldAccent } from "@/components/gold-accent";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZaymaxWordmark } from "@/components/zaymax-wordmark";
@@ -42,6 +43,7 @@ import {
   HEALTHKIT_CONNECTED_KEY,
   type StepWeek,
 } from "@/lib/steps";
+import { subscribeToStepRefresh } from "@/lib/step-refresh";
 const RING_SIZE = 196;
 const RING_TICKS = 49;
 const RING_CENTER = RING_SIZE / 2;
@@ -63,8 +65,15 @@ export default function StepsScreen() {
   const [week, setWeek] = useState<StepWeek>(() => buildStepWeek(new Date()));
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const focusedRef = useRef(false);
+  const refreshRequestRef = useRef(0);
+  const connectingRef = useRef(false);
 
   const refreshSteps = useCallback(async (showLoader = true) => {
+    const requestId = ++refreshRequestRef.current;
+    const isCurrent = () =>
+      focusedRef.current && requestId === refreshRequestRef.current;
+    if (!isCurrent()) return false;
     if (Platform.OS !== "ios") {
       setStatus("unavailable");
       return false;
@@ -73,56 +82,70 @@ export default function StepsScreen() {
     else setRefreshing(true);
 
     try {
-      if (!(await isAppleHealthAvailable())) {
+      const available = await isAppleHealthAvailable();
+      if (!isCurrent()) return false;
+      if (!available) {
         setStatus("unavailable");
         return false;
       }
       const nextWeek = await loadCurrentStepWeek();
+      if (!isCurrent()) return false;
       setWeek(nextWeek);
       setLastUpdated(new Date());
       setStatus("ready");
       return true;
     } catch {
-      setStatus("error");
+      if (isCurrent()) setStatus("error");
       return false;
     } finally {
-      if (!showLoader) setRefreshing(false);
+      if (isCurrent()) setRefreshing(false);
     }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      void AsyncStorage.getItem(HEALTHKIT_CONNECTED_KEY)
-        .then((connected) => {
-          if (!active) return;
-          if (Platform.OS !== "ios") {
-            setStatus("unavailable");
-          } else if (connected === "1") {
-            void refreshSteps();
-          } else {
-            setStatus("disconnected");
-          }
-        })
-        .catch(() => {
+      focusedRef.current = true;
+      const refreshConnection = async (showLoader: boolean) => {
+        if (connectingRef.current) return;
+        try {
+          const connected = await AsyncStorage.getItem(HEALTHKIT_CONNECTED_KEY);
+          if (!active || connectingRef.current) return;
+          if (Platform.OS !== "ios") setStatus("unavailable");
+          else if (connected === "1") await refreshSteps(showLoader);
+          else setStatus("disconnected");
+        } catch {
           if (active) setStatus("error");
-        });
+        }
+      };
+      void refreshConnection(true);
+      const unsubscribe = subscribeToStepRefresh(() => {
+        void refreshConnection(false);
+      });
       return () => {
         active = false;
+        focusedRef.current = false;
+        refreshRequestRef.current += 1;
+        unsubscribe();
       };
     }, [refreshSteps]),
   );
 
   async function connectAppleHealth() {
+    if (connectingRef.current) return;
+    connectingRef.current = true;
     hapticAction();
     setStatus("loading");
     try {
-      if (!(await isAppleHealthAvailable())) {
+      const available = await isAppleHealthAvailable();
+      if (!focusedRef.current) return;
+      if (!available) {
         setStatus("unavailable");
         hapticWarning();
         return;
       }
       const requestCompleted = await requestStepAuthorization();
+      if (!focusedRef.current) return;
       if (!requestCompleted) {
         setStatus("error");
         hapticWarning();
@@ -133,8 +156,12 @@ export default function StepsScreen() {
       if (loaded) hapticSuccess();
       else hapticWarning();
     } catch {
-      setStatus("error");
-      hapticWarning();
+      if (focusedRef.current) {
+        setStatus("error");
+        hapticWarning();
+      }
+    } finally {
+      connectingRef.current = false;
     }
   }
 
@@ -398,6 +425,17 @@ function WeekBars({
         const height = Math.max(8, Math.round((day.steps / maxSteps) * 110));
         return (
           <View key={day.date.toISOString()} className="flex-1 items-center">
+            {day.isToday ? (
+              <GoldAccent
+                variant="dot"
+                style={{
+                  position: "absolute",
+                  top: -8,
+                  left: "50%",
+                  marginLeft: -2,
+                }}
+              />
+            ) : null}
             <Text
               style={{
                 marginBottom: 7,

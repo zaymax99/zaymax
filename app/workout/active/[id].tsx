@@ -23,10 +23,14 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Sharing from "expo-sharing";
 import { captureRef } from "react-native-view-shot";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { GlassMaterial } from "@/components/glass-material";
+import { GlassButton } from "@/components/glass-button";
+import { GoldAccent } from "@/components/gold-accent";
 import { ScreenContainer } from "@/components/screen-container";
 import { TrainingStory } from "@/components/training-story";
+import { WorkoutRestTimer } from "@/components/workout-rest-timer";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ZAYMAX_DESIGN } from "@/constants/zaymax-design";
 import {
@@ -39,10 +43,12 @@ import {
   loadSettings,
   loadWorkoutHistory,
   loadWorkouts,
+  restoreExerciseSetValues,
   saveActiveSession,
   setValuesForExercise,
   toKg,
   uid,
+  weightGainInKg,
   type ActiveSession,
   type ActiveSetValue,
   type SetGains,
@@ -52,6 +58,7 @@ import {
   type WorkoutHistoryEntry,
 } from "@/lib/workouts";
 import { useColors } from "@/hooks/use-colors";
+import { useKeyboardState } from "@/hooks/use-keyboard-state";
 import {
   hapticAction,
   hapticSelection,
@@ -143,6 +150,20 @@ function restSecondsRemaining(
 
 export default function ActiveWorkoutScreen() {
   const colors = useColors("dark");
+  const insets = useSafeAreaInsets();
+  const { keyboardHeight, isVisible: keyboardVisible } = useKeyboardState();
+  const [restDockHeight, setRestDockHeight] = useState(72);
+  // iOS overlays the keyboard; Android resizes the screen itself. Leave room
+  // for the shared keyboard-dismiss button underneath the timer while editing.
+  const keyboardOffset =
+    Platform.OS === "ios" && keyboardVisible ? keyboardHeight : 0;
+  const keyboardButtonBottom =
+    Platform.OS === "ios" ? 10 : Math.max(insets.bottom + 10, 14);
+  const restDockBottom = keyboardVisible
+    ? keyboardOffset + keyboardButtonBottom + 44 + 10
+    : Math.max(insets.bottom, 12);
+  const restDockClearance =
+    restDockHeight + restDockBottom - keyboardOffset + 16;
   const { language, t } = useLanguage();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -248,18 +269,7 @@ export default function ActiveWorkoutScreen() {
           const resumedValues = canResume
             ? existing.setValues?.[exercise.id]
             : undefined;
-          const valueCount =
-            canResume && resumedValues?.length
-              ? Math.min(
-                  20,
-                  Math.max(resumedValues.length, templateValues.length),
-                )
-              : templateValues.length;
-          const values = Array.from({ length: valueCount }, (_, setIndex) => ({
-            ...(resumedValues?.[setIndex] ??
-              templateValues[setIndex] ??
-              resumedValues?.at(-1) ?? { reps: 10, weightKg: null }),
-          }));
+          const values = restoreExerciseSetValues(exercise, resumedValues);
           const resumedBaseline = canResume
             ? existing.baselineSetValues?.[exercise.id]
             : undefined;
@@ -450,7 +460,7 @@ export default function ActiveWorkoutScreen() {
   ) {
     const baseline =
       sessionRef.current?.baselineSetValues[exerciseId]?.[setIndex] ?? value;
-    const gains = gainsForSet(value, baseline);
+    const gains = gainsForSet(value, baseline, weightUnit);
     if (!gains.repsGain && !gains.weightGainKg) return;
     improvementSequence.current += 1;
     setImprovement({
@@ -505,8 +515,8 @@ export default function ActiveWorkoutScreen() {
       currentSession?.baselineSetValues[exerciseId]?.[setIndex]?.weightKg ?? 0;
     updateSetValue(exerciseId, setIndex, { weightKg: nextWeightKg });
     if (
-      (nextWeightKg ?? 0) > previousWeightKg &&
-      (nextWeightKg ?? 0) > baselineWeightKg
+      weightGainInKg(nextWeightKg, previousWeightKg, weightUnit) > 0 &&
+      weightGainInKg(nextWeightKg, baselineWeightKg, weightUnit) > 0
     ) {
       announceImprovement(exerciseId, setIndex, {
         ...currentValue,
@@ -849,7 +859,7 @@ export default function ActiveWorkoutScreen() {
               const baseline =
                 activeSession.baselineSetValues[exercise.id]?.[setIndex] ??
                 value;
-              const gains = gainsForSet(value, baseline);
+              const gains = gainsForSet(value, baseline, weightUnit);
               return [
                 {
                   setNumber: setIndex + 1,
@@ -861,7 +871,11 @@ export default function ActiveWorkoutScreen() {
                     setIndex === repsBestIndex && currentBestReps > bestReps,
                   weightPersonalBest:
                     setIndex === weightBestIndex &&
-                    currentBestWeightKg > bestWeightKg,
+                    weightGainInKg(
+                      currentBestWeightKg,
+                      bestWeightKg,
+                      weightUnit,
+                    ) > 0,
                 },
               ];
             }),
@@ -1103,23 +1117,24 @@ export default function ActiveWorkoutScreen() {
         keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
         automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 38 }}
+        contentContainerStyle={{ paddingBottom: restDockClearance }}
+        scrollIndicatorInsets={{ bottom: restDockClearance }}
       >
         <View className="flex-row items-center pt-3 pb-6">
-          <Pressable
+          <GlassButton
+            accessibilityRole="button"
             accessibilityLabel={t("Zurück", "Back")}
             onPress={() => {
               hapticTap();
               router.back();
             }}
-            style={({ pressed }) => [
-              {
-                padding: 8,
-                marginRight: 8,
-                borderRadius: 999,
-                opacity: pressed ? 0.6 : 1,
-              },
-            ]}
+            style={{ marginRight: 8 }}
+            surfaceStyle={{
+              width: 44,
+              height: 44,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
             <IconSymbol
               name="chevron.right"
@@ -1127,11 +1142,19 @@ export default function ActiveWorkoutScreen() {
               color={colors.foreground}
               style={{ transform: [{ rotate: "180deg" }] }}
             />
-          </Pressable>
+          </GlassButton>
           <View className="flex-1">
-            <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
-              {t("AKTIVES TRAINING", "ACTIVE WORKOUT")}
-            </Text>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
+              <GoldAccent />
+              <Text
+                className="text-xs font-black uppercase tracking-[2px] text-muted"
+                style={{ flexShrink: 1 }}
+              >
+                {t("AKTIVES TRAINING", "ACTIVE WORKOUT")}
+              </Text>
+            </View>
             <Text className="mt-1 text-3xl font-bold text-foreground">
               {workout.title}
             </Text>
@@ -1198,9 +1221,16 @@ export default function ActiveWorkoutScreen() {
           <GlassMaterial intensity={28} />
           <View className="flex-row items-end justify-between">
             <View>
-              <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
-                {t("FORTSCHRITT", "PROGRESS")}
-              </Text>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+              >
+                <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
+                  {t("FORTSCHRITT", "PROGRESS")}
+                </Text>
+                <Animated.View style={emeraldStyle} pointerEvents="none">
+                  <GoldAccent variant="dot" />
+                </Animated.View>
+              </View>
               <Text className="mt-2 text-4xl font-black text-foreground">
                 {completedCount}
                 <Text className="text-base font-medium text-muted">
@@ -1216,8 +1246,8 @@ export default function ActiveWorkoutScreen() {
                   alignItems: "center",
                   gap: 9,
                   borderWidth: 1,
-                  borderColor: ZAYMAX_DESIGN.colors.goldLine,
-                  backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
+                  borderColor: colors.border,
+                  backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
                   borderRadius: ZAYMAX_DESIGN.radius.round,
                   paddingHorizontal: 9,
                   paddingVertical: 6,
@@ -1257,108 +1287,6 @@ export default function ActiveWorkoutScreen() {
                 progressStyle,
               ]}
             />
-            <Animated.View
-              style={[
-                StyleSheet.absoluteFill,
-                {
-                  pointerEvents: "none",
-                  backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
-                },
-                emeraldStyle,
-              ]}
-            />
-          </View>
-        </View>
-
-        <View
-          className="mt-3 bg-surface p-[18px]"
-          style={{
-            position: "relative",
-            overflow: "hidden",
-            borderWidth: 1,
-            borderColor: colors.border,
-            borderRadius: ZAYMAX_DESIGN.radius.card,
-            backgroundColor: "transparent",
-          }}
-        >
-          <GlassMaterial intensity={25} />
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center">
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  borderRadius: ZAYMAX_DESIGN.radius.round,
-                  backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
-                }}
-              >
-                <IconSymbol name="timer" size={18} color={colors.foreground} />
-              </View>
-              <View className="ml-3">
-                <Text className="text-xs font-black uppercase tracking-[2px] text-muted">
-                  {t("PAUSENTIMER", "REST TIMER")}
-                </Text>
-                <Text className="mt-2 text-4xl font-bold text-foreground">
-                  {timerText}
-                </Text>
-              </View>
-            </View>
-            <View className="flex-row gap-2">
-              <Pressable
-                accessibilityLabel={
-                  timerRunning
-                    ? t("Timer pausieren", "Pause timer")
-                    : t("Timer starten", "Start timer")
-                }
-                onPress={() => {
-                  if (timerRunning) pauseRest();
-                  else resumeRest();
-                }}
-                style={({ pressed }) => [
-                  {
-                    width: 46,
-                    height: 46,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: ZAYMAX_DESIGN.radius.round,
-                    backgroundColor: colors.primary,
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
-              >
-                <IconSymbol
-                  name={timerRunning ? "pause.fill" : "play.fill"}
-                  size={21}
-                  color={colors.background}
-                />
-              </Pressable>
-              <Pressable
-                accessibilityLabel={t("Timer zurücksetzen", "Reset timer")}
-                onPress={resetRest}
-                style={({ pressed }) => [
-                  {
-                    width: 46,
-                    height: 46,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: ZAYMAX_DESIGN.radius.round,
-                    borderWidth: 1,
-                    borderColor: `${colors.primary}70`,
-                    opacity: pressed ? 0.65 : 1,
-                  },
-                ]}
-              >
-                <IconSymbol
-                  name="arrow.counterclockwise"
-                  size={20}
-                  color={colors.primary}
-                />
-              </Pressable>
-            </View>
           </View>
         </View>
 
@@ -1541,7 +1469,7 @@ export default function ActiveWorkoutScreen() {
                   const checked = checkedSets[setIndex] ?? false;
                   const baseline =
                     session.baselineSetValues[exercise.id]?.[setIndex] ?? value;
-                  const gains = gainsForSet(value, baseline);
+                  const gains = gainsForSet(value, baseline, weightUnit);
                   const hasGain = gains.repsGain > 0 || gains.weightGainKg > 0;
                   const shownWeight =
                     value.weightKg === null
@@ -1631,8 +1559,8 @@ export default function ActiveWorkoutScreen() {
                               alignItems: "center",
                               gap: 7,
                               borderWidth: 1,
-                              borderColor: ZAYMAX_DESIGN.colors.goldLine,
-                              backgroundColor: ZAYMAX_DESIGN.colors.goldSoft,
+                              borderColor: colors.border,
+                              backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
                               borderRadius: ZAYMAX_DESIGN.radius.round,
                               paddingHorizontal: 7,
                               paddingVertical: 4,
@@ -1775,6 +1703,33 @@ export default function ActiveWorkoutScreen() {
           </Text>
         </Pressable>
       </ScrollView>
+
+      {!effortPromptVisible && !completionSummary && !sharePreviewVisible && (
+        <View
+          pointerEvents="box-none"
+          onLayout={(event) =>
+            setRestDockHeight(event.nativeEvent.layout.height)
+          }
+          style={{
+            position: "absolute",
+            left: ZAYMAX_DESIGN.spacing.screen,
+            right: ZAYMAX_DESIGN.spacing.screen,
+            bottom: restDockBottom,
+            ...ZAYMAX_DESIGN.shadow,
+          }}
+        >
+          <WorkoutRestTimer
+            time={timerText}
+            running={timerRunning}
+            disabled={aborting || finishing}
+            onToggle={() => {
+              if (timerRunning) pauseRest();
+              else resumeRest();
+            }}
+            onReset={resetRest}
+          />
+        </View>
+      )}
 
       <Modal
         visible={effortPromptVisible}
@@ -2202,10 +2157,8 @@ function SummaryMetric({
         width: wide ? "100%" : "48.5%",
         borderRadius: ZAYMAX_DESIGN.radius.nested,
         borderWidth: 1,
-        borderColor: accent ? ZAYMAX_DESIGN.colors.goldLine : colors.border,
-        backgroundColor: accent
-          ? ZAYMAX_DESIGN.colors.goldSoft
-          : ZAYMAX_DESIGN.colors.surfaceSoft,
+        borderColor: colors.border,
+        backgroundColor: ZAYMAX_DESIGN.colors.surfaceSoft,
         padding: 13,
       }}
     >
@@ -2219,16 +2172,26 @@ function SummaryMetric({
       >
         {label.toUpperCase()}
       </Text>
-      <Text
+      <View
         style={{
           marginTop: 6,
-          fontSize: 18,
-          fontWeight: "800",
-          color: accent ? PROGRESS_GOLD : colors.foreground,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 8,
         }}
       >
-        {value}
-      </Text>
+        <Text
+          style={{
+            fontSize: 18,
+            fontWeight: "800",
+            color: colors.foreground,
+            flexShrink: 1,
+          }}
+        >
+          {value}
+        </Text>
+        {accent ? <GoldAccent variant="dot" /> : null}
+      </View>
     </View>
   );
 }
@@ -2314,8 +2277,8 @@ function ConfettiPiece({
           position: "absolute",
           top: 64,
           left: "50%",
-          width: index % 2 ? 8 : 6,
-          height: index % 2 ? 8 : 6,
+          width: index % 2 ? 4 : 3,
+          height: index % 2 ? 4 : 3,
           borderRadius: 999,
           backgroundColor:
             index % 2 ? ZAYMAX_DESIGN.colors.gold : ZAYMAX_DESIGN.colors.action,

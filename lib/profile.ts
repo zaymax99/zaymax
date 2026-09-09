@@ -77,6 +77,13 @@ export function parseBirthDateInput(value: string) {
   return isValidBirthDate(trimmed) ? trimmed : undefined;
 }
 
+export function formatBirthDateInput(value?: string) {
+  if (!isValidBirthDate(value)) return "";
+  const [year, month, day] = value.split("-");
+  // The editable field and its placeholder use DD.MM.YYYY in every language.
+  return `${day}.${month}.${year}`;
+}
+
 export function isValidBirthDate(value?: string): value is string {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const [year, month, day] = value.split("-").map(Number);

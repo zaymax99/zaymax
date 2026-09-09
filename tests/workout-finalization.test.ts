@@ -76,15 +76,60 @@ describe("workout finalization storage", () => {
       "storage-failed",
     );
 
-    expect(storage.multiRemove).toHaveBeenCalledWith([
-      "zaymax.workouts.builder.v1",
-      "zaymax.workout-history.v1",
-      "zaymax.active-session.v1",
-    ]);
+    expect(storage.multiRemove).not.toHaveBeenCalled();
     expect(storage.multiSet).toHaveBeenLastCalledWith([
       ["zaymax.workouts.builder.v1", "old-workouts"],
       ["zaymax.workout-history.v1", "old-history"],
       ["zaymax.active-session.v1", "active-session"],
     ]);
+  });
+
+  it("does not erase existing data when both writing and rollback fail", async () => {
+    const saved = new Map([
+      ["zaymax.workouts.builder.v1", "old-workouts"],
+      ["zaymax.workout-history.v1", "old-history"],
+      ["zaymax.active-session.v1", "active-session"],
+    ]);
+    const original = new Map(saved);
+    storage.multiGet.mockImplementation(async (keys: string[]) =>
+      keys.map((key) => [key, saved.get(key) ?? null]),
+    );
+    storage.multiSet.mockRejectedValue(new Error("persistent-write-failure"));
+    storage.multiRemove.mockImplementation(async (keys: string[]) => {
+      keys.forEach((key) => saved.delete(key));
+    });
+
+    await expect(finalizeWorkoutStorage(workouts, history)).rejects.toThrow(
+      "persistent-write-failure",
+    );
+
+    expect(saved).toEqual(original);
+    expect(storage.multiRemove).not.toHaveBeenCalled();
+    expect(storage.removeItem).not.toHaveBeenCalled();
+  });
+
+  it("removes only keys absent before the failed operation after restoring existing data", async () => {
+    storage.multiGet.mockResolvedValue([
+      ["zaymax.workouts.builder.v1", "old-workouts"],
+      ["zaymax.workout-history.v1", null],
+      ["zaymax.active-session.v1", "active-session"],
+    ]);
+    storage.removeItem.mockRejectedValueOnce(new Error("session-clear-failed"));
+
+    await expect(finalizeWorkoutStorage(workouts, history)).rejects.toThrow(
+      "session-clear-failed",
+    );
+
+    expect(storage.multiSet).toHaveBeenLastCalledWith([
+      ["zaymax.workouts.builder.v1", "old-workouts"],
+      ["zaymax.active-session.v1", "active-session"],
+    ]);
+    expect(storage.multiRemove).toHaveBeenCalledTimes(1);
+    expect(storage.multiRemove).toHaveBeenCalledWith([
+      "zaymax.workout-history.v1",
+    ]);
+    expect(storage.multiRemove.mock.invocationCallOrder[0]).toBeGreaterThan(
+      storage.multiSet.mock.invocationCallOrder.at(-1)!,
+    );
   });
 });

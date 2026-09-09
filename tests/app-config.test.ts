@@ -35,4 +35,17 @@ describe("App Store iOS configuration", () => {
     ).toContain("group.com.app.zaymax");
     expect(config.plugins).toContain("@bacons/apple-targets");
   });
+
+  it("declares the App Group UserDefaults reason without claiming data collection", () => {
+    expect(
+      config.ios?.privacyManifests?.NSPrivacyAccessedAPITypes,
+    ).toContainEqual({
+      NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryUserDefaults",
+      NSPrivacyAccessedAPITypeReasons: ["1C8F.1"],
+    });
+    expect(config.ios?.privacyManifests?.NSPrivacyTracking).toBe(false);
+    expect(config.ios?.privacyManifests?.NSPrivacyCollectedDataTypes).toEqual(
+      [],
+    );
+  });
 });

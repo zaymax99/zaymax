@@ -8,7 +8,7 @@ const testDirectory = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(
   resolve(testDirectory, "../app/workout/[id].tsx"),
   "utf8",
-);
+).replace(/\r\n/g, "\n");
 
 describe("workout editor layout", () => {
   it("keeps exercise cards in normal document flow", () => {
@@ -18,7 +18,9 @@ describe("workout editor layout", () => {
   });
 
   it("does not collapse the set count while the value is edited", () => {
-    expect(source).toContain("Math.min(20, Math.max(1, Math.floor(value)))");
+    expect(source).toContain("value={setCountText}");
+    expect(source).toContain("onBlur={onCommit}");
+    expect(source).not.toContain('Number(text.replace(/[^0-9]/g, "")) || 1');
     expect(source).toContain('<View style={{ width: "100%", flexShrink: 0 }}>');
   });
 

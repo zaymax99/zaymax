@@ -387,13 +387,39 @@ export function setValuesForExercise(exercise: Exercise): ActiveSetValue[] {
   }));
 }
 
+export function restoreExerciseSetValues(
+  exercise: Exercise,
+  resumedValues?: ActiveSetValue[],
+): ActiveSetValue[] {
+  // An active session owns its set count, including sets removed during training.
+  const values = resumedValues?.length
+    ? resumedValues.slice(0, 20)
+    : setValuesForExercise(exercise);
+  return values.map((value) => ({ ...value }));
+}
+
+export function weightGainInKg(
+  valueKg: number | null | undefined,
+  baselineKg: number | null | undefined,
+  unit: WeightUnit = "kg",
+) {
+  // Compare the same two-decimal values the user sees. Converting an unchanged
+  // displayed weight back from kg/lbs must not create a progress badge or record.
+  const factor = unit === "lbs" ? 2.20462 : 1;
+  const value = Number(((valueKg ?? 0) * factor).toFixed(2));
+  const baseline = Number(((baselineKg ?? 0) * factor).toFixed(2));
+  const gain = Math.max(0, Number((value - baseline).toFixed(2)));
+  return toKg(gain, unit);
+}
+
 export function gainsForSet(
   value: ActiveSetValue,
   baseline: ActiveSetValue,
+  unit: WeightUnit = "kg",
 ): SetGains {
   return {
     repsGain: Math.max(0, value.reps - baseline.reps),
-    weightGainKg: Math.max(0, (value.weightKg ?? 0) - (baseline.weightKg ?? 0)),
+    weightGainKg: weightGainInKg(value.weightKg, baseline.weightKg, unit),
   };
 }
 
@@ -403,9 +429,21 @@ export function completedValuesForTemplate(
   completed: boolean[],
 ) {
   const configured = setValuesForExercise(exercise);
-  return values.map((value, setIndex) =>
-    completed[setIndex] ? value : (configured[setIndex] ?? value),
+  const lastCompletedIndex = values.reduce(
+    (last, _, index) => (completed[index] ? index : last),
+    -1,
   );
+  const count = Math.max(
+    Math.min(configured.length, values.length),
+    lastCompletedIndex + 1,
+  );
+  const fallback = configured.at(-1) ?? {
+    reps: exercise.reps,
+    weightKg: exercise.weightKg ?? null,
+  };
+  return values.slice(0, count).map((value, setIndex) => ({
+    ...(completed[setIndex] ? value : (configured[setIndex] ?? fallback)),
+  }));
 }
 
 export async function loadWorkouts(): Promise<Workout[]> {
@@ -511,11 +549,15 @@ export async function finalizeWorkoutStorage(
     await AsyncStorage.removeItem(SESSION_KEY);
   } catch (error) {
     try {
-      await AsyncStorage.multiRemove(keys);
       const rollbackEntries = previousEntries.filter(
         (entry): entry is [string, string] => entry[1] !== null,
       );
       if (rollbackEntries.length) await AsyncStorage.multiSet(rollbackEntries);
+      const previouslyAbsentKeys = previousEntries
+        .filter((entry) => entry[1] === null)
+        .map(([key]) => key);
+      if (previouslyAbsentKeys.length)
+        await AsyncStorage.multiRemove(previouslyAbsentKeys);
     } catch {
       // Keep the original write error so the UI reports the useful failure.
     }
