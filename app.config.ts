@@ -10,7 +10,7 @@ const healthUpdateUsageDescription =
 const config: ExpoConfig = {
   name: "Zaymax",
   slug: "zaymax",
-  version: "1.0.2",
+  version: "1.0.3",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
   scheme: "zaymax",

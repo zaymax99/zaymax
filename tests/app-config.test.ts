@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import config from "../app.config";
+import packageMetadata from "../package.json";
 
 describe("App Store iOS configuration", () => {
   it("uses the next public release version", () => {
-    expect(config.version).toBe("1.0.2");
+    expect(config.version).toBe("1.0.3");
+    expect(config.version).toBe(packageMetadata.version);
   });
 
   it("contains both required HealthKit purpose strings", () => {
