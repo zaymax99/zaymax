@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ZAYMAX werden hier dokumentiert.
 
+## Datenschutz & Support – 2026-09-28 (Dokumentation)
+
+- Datenschutz in Deutsch, Englisch und Polnisch für die Workout-Fassung ohne Health-Tab aktualisiert; ältere Installationen gesondert erläutert.
+- Website-Kontakt statt In-App-Meldedialog, lokale Pausen-Erinnerungen, Klang-/Haptikeinstellungen und Trainingsserien beschrieben.
+- Zugehörige Supportinformationen und Backup-Anleitungen abgeglichen.
+- Reine Dokumentationsveröffentlichung; kein App-Store- oder TestFlight-Build.
+
 ## 1.0.2 – 2026-08-28
 
 ### Neu

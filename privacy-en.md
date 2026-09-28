@@ -4,81 +4,140 @@ title: Privacy Policy – ZAYMAX
 
 # Privacy Policy for ZAYMAX
 
-**Last updated: 28 August 2026**
-**Applies to ZAYMAX 1.0.2 and later**
+**Last updated: 28 September 2026**
 
-[Support](support-en.html) · [Deutsch](privacy.html) · [Polski](privacy-pl.html)
+**Scope: the workout edition with “Today” and “Journal”, without the Health/Steps tab. Information about older versions is provided in section 5.**
 
-ZAYMAX is designed to work without an account and without developer-operated servers. Personal app data is generally processed and stored locally on your iPhone.
+This change will be delivered through an app update. Older App Store or TestFlight versions already installed on your device may still include the previous features.
 
-## 1. Controller and contact
+[Support](support-en.html) · [Website](https://zaymax.net) · [Deutsch](privacy.html) · [Polski](privacy-pl.html)
+
+Protecting your data matters to us. ZAYMAX is designed to work without an account and without developer-operated servers. Personal app data is generally processed locally on your iPhone.
+
+## 1. Controller
+
+The person responsible for ZAYMAX is:
 
 **Blazej Doszczeczko**
+
 Email: [blazej.doszczeczko@gmail.com](mailto:blazej.doszczeczko@gmail.com)
 
-## 2. Local app data
+## 2. Principles of data processing
 
-Depending on how you use ZAYMAX, the app may locally store workouts, exercises, sets, repetitions, weights, active and completed sessions, duration, history, progress, skipped exercises, personal bests, perceived effort, diary entries, notes, selected training days, language, weight unit and rest-time settings.
+Using ZAYMAX does not require registration or an account. ZAYMAX does not operate its own cloud database for user, workout or health data.
 
-Optional weight, height and date-of-birth information is used locally to calculate and display BMI, age and an in-app birthday greeting. These fields can be skipped, changed or deleted. BMI information is a general guide only and is not medical advice, diagnosis or treatment.
+Information entered in the app is processed on your device and kept in local app storage. The developer does not receive this data. Information is shared with a service you choose only when you start an export or share function yourself and select a destination in the iOS share sheet.
 
-The developer does not receive this information. Depending on your own iCloud or device-backup settings, iOS may process local app data as part of an Apple device backup under Apple's terms.
+Depending on your personal iCloud or device-backup settings, iOS may process local app data as part of an Apple device backup. Apple carries out this processing under its own terms; ZAYMAX does not control it.
 
-## 3. Apple Health and step count
+## 3. Locally stored workout and app data
 
-After your explicit permission, the Steps feature reads only **step-count data** from Apple Health through HealthKit to display daily and weekly totals.
+Depending on how you use the app, the following information in particular may be stored locally:
 
-- ZAYMAX does not read other health data.
-- ZAYMAX does not write data to Apple Health.
-- Step counts are not sent to the developer or external servers.
-- Step counts are never used for advertising, marketing, profiling or data trading.
-- HealthKit step values are not included in ZAYMAX JSON backups.
+- workouts and exercises you create;
+- sets, repetitions and weights;
+- active and completed workout sessions, workout duration, history and progress;
+- skipped exercises, personal bests and the perceived effort you select after a workout;
+- journal entries, notes, selected training days and the information used to determine your current and best training streaks;
+- app settings, such as language, weight unit, rest timer, sound theme, individual sound events and haptics.
 
-Health access is optional and can be changed or revoked in the Health app or iOS privacy settings. Core workout, history and diary features remain available without Health access. Apple processes Health data as part of its own system services and under its own privacy terms.
+This data is used only to provide the functions you choose within ZAYMAX.
 
-## 4. Lock Screen widget and local notifications
+## 4. Optional body and birthday information
 
-When you select a note for the Lock Screen, the necessary note text and identifier are stored locally in a shared iOS App Group so that the ZAYMAX app and its widget extension can display the same selected note. ZAYMAX does not upload this content.
+You can voluntarily enter your weight, height and date of birth. Onboarding can be skipped; these details are not required for basic use and can be changed or deleted later.
 
-If you enable an optional local reminder notification, the selected note may be visible on the Lock Screen or in Notification Center according to your iOS preview settings. Notifications are scheduled locally through iOS; ZAYMAX does not send remote pushes. You can change or disable them under **iOS Settings → Notifications → ZAYMAX** and remove the Lock Screen selection in ZAYMAX. Anyone with access to your Lock Screen may be able to read visible text.
+Weight and height are used only on your device to calculate and display the body mass index (BMI). Your date of birth is used locally to calculate your age and display an in-app greeting on your birthday.
 
-## 5. Backup, restore and sharing
+BMI and its presentation are general guides only. They do not constitute medical advice, diagnosis or treatment.
 
-ZAYMAX creates a JSON backup only when you explicitly request one in Settings and then opens the iOS share sheet. You choose whether and where to save or share it. ZAYMAX does not upload the backup automatically, and the developer does not receive a copy.
+## 5. Workout focus and older Health versions
 
-The JSON backup is not encrypted and may contain personal workout, diary, profile and settings data. Keep it secure and share it only with trusted destinations.
+The revised workout edition has no Apple Health/HealthKit integration. It does not request Health permission or read or write data in Apple Health. Manually entered profile values and the local BMI remain available independently of this change.
 
-Restoring data requires you to select a ZAYMAX JSON file. The file is read locally and restoring may replace current local ZAYMAX data.
+**Older installations:** If your installed version still has a Steps or Health tab, it may continue to read and display locally the Health categories requested by that version after you voluntarily grant access. You can see which categories are permitted in the Health app under ZAYMAX's access permissions. This data is not sent to the developer or used for advertising; ZAYMAX does not write workout or measurement data to Apple Health.
 
-After a workout, ZAYMAX can generate a summary image locally. It leaves the device only when you use the share function and choose a destination in the iOS share sheet. Services such as Instagram, WhatsApp, iCloud Drive or other selected destinations process the shared content under their own privacy terms.
+You can revoke previous access permissions at any time in the Health app or the iOS privacy settings for ZAYMAX. Removing the integration from ZAYMAX does not delete any data in Apple Health. When older backups are imported, retired local Health-connection markers are not reactivated.
 
-## 6. Analytics, tracking, advertising and purchases
+Apple processes Health data as part of its own system services and under its own privacy terms.
 
-ZAYMAX uses no analytics, tracking, advertising networks or advertising profiles. Health and fitness data is never used for advertising or marketing. The app currently offers no in-app purchases or paid subscriptions.
+## 6. Lock Screen widget and local notifications
 
-## 7. Permissions
+When you select a note for the Lock Screen, ZAYMAX stores the selected note text and a localized message for the empty state locally in a shared iOS App Group. This App Group is used only to allow the ZAYMAX app and its widget extension to display the same selected note. The information is not sent to the developer or a ZAYMAX server.
 
-Depending on the features you choose, ZAYMAX may request optional read access to Apple Health step counts, notification permission for local reminders, or system file/share access after your action. ZAYMAX does not require location, contacts, camera or microphone access and does not independently access your photo library.
+If you enable rest-end sounds while the screen is locked and allow notifications, ZAYMAX schedules the rest reminder locally through iOS. It uses the end time and a local session identifier, which are not sent to a ZAYMAX server. ZAYMAX does not send remote push notifications. Sounds, individual sound events, the rest timer and haptics can be adjusted or turned off in the app settings. Device volume, Silent Mode, Focus and notification permissions may affect playback.
 
-## 8. Recipients, support email and retention
+Older versions may also include local note notifications; the selected note text may appear on the Lock Screen or in Notification Center. You can change or disable notifications and their previews at any time under **iOS Settings → Notifications → ZAYMAX**. Remove the Lock Screen selection in ZAYMAX if you no longer want the note to appear in the widget.
 
-The developer does not receive locally processed app or Health data and therefore does not disclose it to third parties. No analytics, advertising or tracking providers are integrated. A destination you explicitly select in the iOS share sheet processes the shared file or image under its own terms.
+Please be aware that anyone with access to your Lock Screen may be able to read the text shown there.
 
-If you contact support by email, the information you voluntarily provide and technical email data are processed by the email provider and used only to handle your request. They are deleted when no longer required unless legal retention obligations apply. Please do not send sensitive health data or complete backup files unless strictly necessary.
+## 7. Local backup, export and restore
 
-Local data remains until you delete individual content, use **Settings → Delete all local data**, or uninstall the app. Files or images already saved outside ZAYMAX are not removed automatically. Because there is no account or ZAYMAX server copy, the developer cannot restore or remotely delete local data. Create a backup before deleting or reinstalling ZAYMAX if you want to keep your data.
+You can request a local backup yourself in Settings. Only after this deliberate action does ZAYMAX create a JSON file containing the local app data intended for backup and open the iOS share sheet.
 
-## 9. Your choices
+The JSON file is not encrypted and may contain personal workout, journal, profile and settings data. Keep it secure and share it only with trusted destinations.
 
-You can revoke optional permissions in iOS and delete local content in the app. As the developer does not maintain accounts or server copies of the described data, there is generally no corresponding server-held app data to access, correct or delete.
+You decide whether the file is shared and which destination you select, such as the Files app, iCloud Drive or another service. ZAYMAX does not transfer the backup automatically, and the developer does not receive a copy. Any processing by the selected destination is governed by that provider's privacy terms.
 
-## 10. Website hosting
+To restore a backup, you select a previously created JSON file yourself. Its contents are read locally into ZAYMAX. Restoring a backup may replace the local data currently stored in ZAYMAX.
 
-This public privacy and support website is hosted through **GitHub Pages**, a service of GitHub, Inc. When you visit it, GitHub may process technical access information such as IP address, time, browser and device information in server logs. This website itself uses no analytics or advertising scripts. See the [GitHub Privacy Statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement).
+## 8. Sharing a workout summary
 
-## 11. Changes and contact
+After a workout, ZAYMAX can generate a summary image on your device containing information about the session. The app opens the iOS share sheet only when you use the share function. You then decide whether the image is shared and with which app or person. ZAYMAX does not upload it automatically, and the developer does not receive a copy.
 
-This policy may be updated when ZAYMAX features or data practices change. The current version will be published on this page.
+Services such as Instagram, WhatsApp, iCloud Drive or other destinations you choose apply their own privacy terms.
+
+## 9. Analytics, tracking, advertising and purchases
+
+ZAYMAX uses no analytics or tracking services, creates no advertising profiles and contains no advertising or advertising networks. Health or fitness data is never used for advertising or marketing.
+
+ZAYMAX currently offers no in-app purchases or paid subscriptions.
+
+## 10. Device permissions and system functions
+
+Depending on the function you use, ZAYMAX uses the following system functions or optional permissions:
+
+- **Notifications:** optional, for local rest reminders;
+- **Sharing or file selection:** only after your action, for a backup, restore or workout image.
+
+ZAYMAX does not require access to your location, contacts, camera or microphone. The app does not independently access your photo library to generate a workout image.
+
+The workout edition does not request Apple Health access. Section 5 applies to older installed versions. Selecting an alternative app icon changes only the appearance on your device and does not require personal data to be sent to the developer.
+
+## 11. Website contact, recipients and third parties
+
+The developer does not receive locally processed app data and therefore does not disclose it to third parties. ZAYMAX does not integrate analytics, advertising or tracking providers. The workout edition has no in-app reporting dialog and does not create or send automatic error reports.
+
+When you select an external service yourself in the iOS share sheet, you initiate the sharing. The selected provider processes the file or image under its own terms.
+
+Contact information and help are available through [zaymax.net](https://zaymax.net) and the [support page](support-en.html). A connection to a website's provider is established only when you open that website. ZAYMAX does not attach local workout, journal or profile data to the website link. Visits to zaymax.net and the contact methods offered there are governed by [that website's privacy notice](https://zaymax.net/datenschutz); section 14 also applies to this GitHub Pages site.
+
+If you contact support yourself, only the information you send and the technically necessary contact or email data are processed to handle your request. This information is deleted when it is no longer needed, unless legal obligations require otherwise. You decide which information to provide. Please do not send confidential profile or health data or complete backup files.
+
+## 12. Retention, deletion and data loss
+
+Local data generally remains stored until you delete individual content, all local data or the app. **Settings → Delete all local data** lets you remove the workout, profile, journal and settings data managed by ZAYMAX, as well as the selected widget note.
+
+Backup files already created and workout images already shared are not deleted by this function. A backup copy created in the app's local file area during export may also remain, even if you cancel sharing. The local file area is removed when you delete the app. Files stored outside the app, as well as device or cloud backups, must be managed and deleted separately at their respective locations or through the relevant provider. As there is no account or server-side ZAYMAX storage, the developer cannot restore a local copy for you or delete it on a server.
+
+Create a backup before deleting or reinstalling the app if you want to keep your data.
+
+## 13. Privacy rights and withdrawal of permission
+
+You can revoke optional permissions in iOS at any time and delete local content in the app. As the developer does not maintain user accounts or store the described content on its own servers, the developer generally does not hold corresponding personal app data that could be provided, corrected or deleted.
+
+If you have questions about your rights or this policy, you can contact the controller using the email address above.
+
+## 14. Hosting of this website
+
+This public privacy and support website is hosted through **GitHub Pages**, a service of GitHub, Inc. When you visit it, GitHub may process technical access information such as your IP address, the time, and browser and device information in server logs. This website itself uses no analytics or advertising scripts. Further information is available in the [GitHub Privacy Statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement).
+
+## 15. Changes to this privacy policy
+
+This policy may be updated when functions or data processing change. The current version is made available on this publicly accessible page.
+
+## 16. Contact
 
 **Blazej Doszczeczko**
+
 Email: [blazej.doszczeczko@gmail.com](mailto:blazej.doszczeczko@gmail.com)

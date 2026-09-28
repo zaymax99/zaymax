@@ -13,7 +13,9 @@ ZAYMAX hilft dabei, eigene Workouts zu planen, Satzwerte während des Trainings 
 
 ## Datenschutz in Kürze
 
-ZAYMAX benötigt kein Konto, enthält keine Werbung und verwendet keine Analyse- oder Trackingdienste. Trainings-, Tagebuch- und Profildaten werden lokal auf dem Gerät verarbeitet. Apple-Health-Schritte werden nur nach ausdrücklicher Freigabe gelesen und weder an den Entwickler übertragen noch für Werbung verwendet. Exporte verlassen das Gerät nur, wenn der Nutzer selbst das iOS-Teilen-Menü öffnet und ein Ziel auswählt.
+ZAYMAX benötigt kein Konto, enthält keine Werbung und verwendet keine Analyse- oder Trackingdienste. Trainings-, Tagebuch-, Profil- und Einstellungsdaten werden lokal verarbeitet. Die überarbeitete Workout-Fassung mit „Heute“ und „Tagebuch“ enthält weder Apple-Health-Anbindung noch In-App-Meldedialog; sie erstellt keine automatischen Fehlerberichte. Kontakt und Hilfe laufen über [zaymax.net](https://zaymax.net) und die Supportseite. Exporte werden nur auf Wunsch erstellt und über ein selbst gewähltes Ziel geteilt.
+
+Die Umstellung erfolgt mit einem App-Update. Für noch installierte ältere Health-/Schritte-Versionen enthält die Datenschutzerklärung einen eigenen Hinweis. Diese Dokumentationsaktualisierung veröffentlicht keinen neuen App-Build.
 
 ## Kontakt
 
