@@ -43,11 +43,19 @@ Select a note in **Journal** with **Show in Lock Screen widget**. Then press and
 
 Choose **Settings → Save backup** and save the JSON file outside ZAYMAX through the iOS share sheet. Verify the file before deleting or reinstalling the app. To restore, choose **Settings → Load backup**, select your ZAYMAX JSON file and confirm the replacement of your current local data. The backup is not encrypted and may contain personal workout, journal, profile and settings data. Without a backup, the developer cannot recover locally deleted data.
 
+**Cleanup in the app update that has not yet been released:** The internal export file is created temporarily in the app's cache, with the internal documents area used as a fallback. That exact file is removed after the sharing operation, including when sharing is cancelled or fails. If cleanup fails, the app does not report a successful export. Copies you save or share outside the app remain available.
+
+When you use **Load backup**, the file picker creates a temporary copy in the app's internal `DocumentPicker` cache subfolder. In the same unreleased update, that exact copy is removed immediately after reading and checking its contents, including if an error occurs. If this file cleanup fails, loading is not treated as successful. The original backup file you selected remains unchanged.
+
 ## Delete local data
 
 You can delete individual items in the app. **Settings → Delete all local data** removes the workout, profile, journal and settings data managed by ZAYMAX, along with the selected widget note.
 
-This does not delete backup files already created or shared workout images. A backup copy created in the app's local file area during export can remain even if you cancel sharing. Deleting the app removes that local file area. Files saved outside the app and device or cloud backups must be managed and deleted separately at their storage location or through the relevant provider.
+In the app update that has not yet been released, this function also removes internal backup files whose names exactly match ZAYMAX's backup naming pattern, including older exports. It also removes old import copies or copies left after a crash directly in the `DocumentPicker` cache subfolder whose names exactly match the file picker's UUID naming pattern. It does not descend into further subfolders or clear the entire cache. If this file cleanup fails, no successful deletion is shown; internal backup files may still remain.
+
+**On older versions without this cleanup,** internal export and import copies can remain after sharing, loading or using **Delete all local data**, including after a cancelled or failed operation. Cleanup requires the corresponding app update. Deleting the app removes its local file area.
+
+Backup copies you save or share outside the app and shared workout images are not deleted by internal cleanup. Those files and device or cloud backups must be managed and deleted separately at their storage location or through the relevant provider.
 
 ## First troubleshooting steps
 

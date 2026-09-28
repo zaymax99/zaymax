@@ -60,6 +60,10 @@ ZAYMAX speichert Daten lokal. Vor einer Neuinstallation, einem Gerätewechsel od
 
 Zur Wiederherstellung wählen Sie **Einstellungen → Backup laden** und anschließend Ihre ZAYMAX-JSON-Datei. Nach Ihrer Bestätigung ersetzen die Daten der Datei die aktuellen lokalen Daten. Das Backup ist nicht verschlüsselt und kann persönliche Trainings-, Tagebuch-, Profil- und Einstellungsdaten enthalten.
 
+**Bereinigung im noch nicht veröffentlichten App-Update:** Die interne Exportdatei wird vorübergehend im App-Cache angelegt, ersatzweise im internen Dokumentenbereich. Genau diese Datei wird nach dem Teilen-Vorgang entfernt, auch bei Abbruch oder Fehler. Falls die Bereinigung fehlschlägt, meldet die App keinen erfolgreichen Export. Ihre selbst extern gespeicherten oder geteilten Kopien bleiben erhalten.
+
+Beim **Backup laden** erzeugt die Dateiauswahl eine temporäre Kopie im appinternen Cache-Unterordner `DocumentPicker`. Im selben noch nicht veröffentlichten Update wird genau diese Kopie unmittelbar nach dem Einlesen und Prüfen des Inhalts entfernt, auch bei einem Fehler. Schlägt diese Dateibereinigung fehl, wird das Laden nicht als erfolgreich behandelt. Die ursprünglich ausgewählte Backup-Datei bleibt unverändert.
+
 **Wichtig:** Deinstallieren Sie ZAYMAX erst, nachdem Sie geprüft haben, dass die Backup-Datei außerhalb der App gespeichert wurde. Ohne Backup kann der Entwickler lokal gelöschte Daten nicht wiederherstellen.
 
 ## Häufige Fragen
@@ -72,7 +76,11 @@ Ja. ZAYMAX berechnet die Dauer anhand der Start- und Endzeit, sodass das Sperren
 
 Einzelne Inhalte können direkt in der App gelöscht werden. Unter **Einstellungen → Alle lokalen Daten löschen** entfernen Sie die von ZAYMAX verwalteten Trainings-, Profil-, Tagebuch- und Einstellungsdaten sowie die ausgewählte Widget-Notiz.
 
-Bereits erzeugte Backup-Dateien und geteilte Trainingsbilder werden dadurch nicht gelöscht. Eine beim Export im lokalen Dateibereich der App erzeugte Backup-Kopie kann auch nach dem Abbrechen des Teilens erhalten bleiben. Dieser Dateibereich wird beim Löschen der App entfernt. Außerhalb der App gespeicherte Dateien sowie Geräte- oder Cloud-Backups müssen Sie am jeweiligen Speicherort beziehungsweise beim jeweiligen Anbieter separat verwalten und löschen.
+Im noch nicht veröffentlichten App-Update entfernt diese Funktion zusätzlich interne Backup-Dateien, deren Namen genau dem ZAYMAX-Backup-Namensschema entsprechen, einschließlich älterer Exporte. Dazu kommen ältere oder nach einem Absturz verbliebene Importkopien direkt im Cache-Unterordner `DocumentPicker`, deren Namen genau dem UUID-Muster der Dateiauswahl entsprechen. Weitere Unterordner werden nicht durchsucht, und der Cache wird nicht insgesamt geleert. Schlägt diese Dateibereinigung fehl, wird keine erfolgreiche Löschung angezeigt; interne Backup-Reste können dann noch vorhanden sein.
+
+**Bei älteren Versionen ohne diese Bereinigung** können interne Export- und Importkopien nach dem Teilen, Laden oder nach **Alle lokalen Daten löschen** erhalten bleiben, auch nach einem Abbruch oder Fehler. Die Bereinigung setzt das entsprechende App-Update voraus. Beim Löschen der App wird ihr lokaler Dateibereich entfernt.
+
+Selbst extern gespeicherte oder geteilte Backup-Kopien und geteilte Trainingsbilder werden durch die interne Bereinigung nicht gelöscht. Diese Dateien sowie Geräte- oder Cloud-Backups müssen Sie am jeweiligen Speicherort beziehungsweise beim jeweiligen Anbieter separat verwalten und löschen.
 
 ### Gibt es ein Konto, Werbung oder ein Abonnement?
 

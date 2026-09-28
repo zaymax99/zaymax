@@ -75,11 +75,15 @@ Pamiętaj, że osoby mające dostęp do Twojego ekranu blokady mogą przeczytać
 
 W Ustawieniach możesz samodzielnie utworzyć lokalną kopię zapasową. Dopiero po tym świadomym działaniu ZAYMAX tworzy plik JSON z lokalnymi danymi aplikacji przeznaczonymi do kopii i otwiera menu udostępniania iOS.
 
+W aktualizacji aplikacji, która nie została jeszcze opublikowana, plik eksportu jest tworzony tymczasowo w pamięci podręcznej aplikacji, a jeśli jest ona niedostępna — w wewnętrznym obszarze dokumentów. Po zakończeniu udostępniania usuwany jest dokładnie ten wewnętrzny plik eksportu, także po anulowaniu lub błędzie. Jeśli usunięcie pliku się nie powiedzie, aplikacja nie zgłasza powodzenia operacji. Nie usuwa to kopii, które samodzielnie zapiszesz lub udostępnisz poza aplikacją. Działanie starszych instalacji opisano w sekcji 12.
+
 Plik JSON nie jest szyfrowany i może zawierać osobiste dane treningowe, wpisy dziennika, dane profilu i ustawienia. Przechowuj go bezpiecznie i udostępniaj wyłącznie zaufanym odbiorcom lub usługom.
 
 Samodzielnie decydujesz, czy plik zostanie udostępniony i jakie miejsce docelowe wybierzesz, na przykład aplikację Pliki, iCloud Drive lub inną usługę. ZAYMAX nie przesyła kopii automatycznie, a deweloper nie otrzymuje jej egzemplarza. Przetwarzanie przez wybraną usługę odbywa się zgodnie z jej zasadami prywatności.
 
 Podczas przywracania samodzielnie wybierasz wcześniej utworzony plik JSON. Zawarte w nim dane są wczytywane lokalnie do ZAYMAX. Przywrócenie kopii może zastąpić lokalne dane aktualnie zapisane w ZAYMAX.
+
+Podczas wczytywania mechanizm wyboru pliku tworzy tymczasową wewnętrzną kopię w podfolderze `DocumentPicker` pamięci podręcznej aplikacji. W aktualizacji, która nie została jeszcze opublikowana, dokładnie ta kopia jest usuwana bezpośrednio po odczytaniu i sprawdzeniu zawartości, także gdy wystąpi błąd. Jeśli usunięcie tej kopii się nie powiedzie, wczytanie nie jest uznawane za pomyślne. Oryginalny wybrany plik kopii zapasowej pozostaje bez zmian.
 
 ## 8. Udostępnianie podsumowania treningu
 
@@ -118,7 +122,11 @@ Jeśli samodzielnie skontaktujesz się z pomocą, w celu obsługi zapytania prze
 
 Dane lokalne co do zasady pozostają zapisane, dopóki nie usuniesz poszczególnych treści, wszystkich danych lokalnych lub aplikacji. Opcja **Ustawienia → Usuń wszystkie dane lokalne** pozwala usunąć zarządzane przez ZAYMAX dane treningowe, dane profilu, wpisy dziennika i ustawienia, a także wybraną notatkę widżetu.
 
-Ta funkcja nie usuwa wcześniej utworzonych plików kopii zapasowych ani udostępnionych obrazów treningów. Kopia zapasowa utworzona podczas eksportu w lokalnym obszarze plików aplikacji również może zostać zachowana, nawet jeśli anulujesz udostępnianie. Lokalny obszar plików jest usuwany wraz z usunięciem aplikacji. Plikami zapisanymi poza aplikacją, a także kopiami urządzenia lub kopiami w chmurze, trzeba zarządzać i usuwać je osobno w odpowiednim miejscu lub za pośrednictwem danego dostawcy. Ponieważ nie istnieje konto użytkownika ani przechowywanie danych na serwerze ZAYMAX, deweloper nie może odtworzyć dla Ciebie lokalnej kopii ani usunąć jej na serwerze.
+W aktualizacji aplikacji, która nie została jeszcze opublikowana, **Usuń wszystkie dane lokalne** usuwa również wewnętrzne pliki kopii zapasowych, których nazwy dokładnie odpowiadają schematowi nazw kopii ZAYMAX, w tym starsze eksporty. Obejmuje to także starsze kopie importu lub kopie pozostałe po awarii, znajdujące się bezpośrednio w podfolderze `DocumentPicker` pamięci podręcznej, o nazwach dokładnie zgodnych ze schematem UUID mechanizmu wyboru pliku. Usuwanie nie obejmuje dalszych podfolderów ani całej pamięci podręcznej. Jeśli usuwanie tych plików się nie powiedzie, aplikacja nie wyświetla potwierdzenia pomyślnego usunięcia; wewnętrzne pliki kopii mogą nadal pozostać.
+
+**Starsze wersje bez tej funkcji usuwania:** Wewnętrzne kopie eksportu i importu mogą pozostać po udostępnieniu, wczytaniu lub użyciu **Usuń wszystkie dane lokalne**, także po anulowaniu operacji lub jej niepowodzeniu. Opisana zmiana wymaga odpowiedniej aktualizacji aplikacji. Usunięcie aplikacji usuwa jej lokalny obszar plików.
+
+Wewnętrzne usuwanie nie obejmuje kopii zapasowych, które samodzielnie zapiszesz lub udostępnisz poza aplikacją, ani udostępnionych obrazów treningów. Tymi plikami, a także kopiami urządzenia lub kopiami w chmurze, trzeba zarządzać i usuwać je osobno w odpowiednim miejscu lub za pośrednictwem danego dostawcy. Ponieważ nie istnieje konto użytkownika ani przechowywanie danych na serwerze ZAYMAX, deweloper nie może odtworzyć dla Ciebie lokalnej kopii ani usunąć jej na serwerze.
 
 Przed usunięciem lub ponowną instalacją aplikacji utwórz kopię zapasową, jeśli chcesz zachować dane.
 

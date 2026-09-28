@@ -75,11 +75,15 @@ Please be aware that anyone with access to your Lock Screen may be able to read 
 
 You can request a local backup yourself in Settings. Only after this deliberate action does ZAYMAX create a JSON file containing the local app data intended for backup and open the iOS share sheet.
 
+With the app update that has not yet been released, the export file is created temporarily in the app's cache; if the cache is unavailable, the internal documents area is used. After the sharing operation, that exact internal export file is removed, including when sharing is cancelled or fails. If cleanup fails, the app does not report the operation as successful. Copies you save or share outside the app are not deleted by this cleanup. Section 12 explains the behavior of older installations.
+
 The JSON file is not encrypted and may contain personal workout, journal, profile and settings data. Keep it secure and share it only with trusted destinations.
 
 You decide whether the file is shared and which destination you select, such as the Files app, iCloud Drive or another service. ZAYMAX does not transfer the backup automatically, and the developer does not receive a copy. Any processing by the selected destination is governed by that provider's privacy terms.
 
 To restore a backup, you select a previously created JSON file yourself. Its contents are read locally into ZAYMAX. Restoring a backup may replace the local data currently stored in ZAYMAX.
+
+When loading a backup, the file picker creates a temporary internal copy in the app's `DocumentPicker` cache subfolder. In the app update that has not yet been released, that exact copy is removed immediately after reading and checking its contents, including if an error occurs. If this file cleanup fails, loading is not treated as successful. The original backup file you selected remains unchanged.
 
 ## 8. Sharing a workout summary
 
@@ -118,7 +122,11 @@ If you contact support yourself, only the information you send and the technical
 
 Local data generally remains stored until you delete individual content, all local data or the app. **Settings → Delete all local data** lets you remove the workout, profile, journal and settings data managed by ZAYMAX, as well as the selected widget note.
 
-Backup files already created and workout images already shared are not deleted by this function. A backup copy created in the app's local file area during export may also remain, even if you cancel sharing. The local file area is removed when you delete the app. Files stored outside the app, as well as device or cloud backups, must be managed and deleted separately at their respective locations or through the relevant provider. As there is no account or server-side ZAYMAX storage, the developer cannot restore a local copy for you or delete it on a server.
+With the app update that has not yet been released, **Delete all local data** also cleans up internal backup files whose names exactly match ZAYMAX's backup naming pattern, including older exports. It also covers old import copies or copies left after a crash directly in the `DocumentPicker` cache subfolder whose names exactly match the file picker's UUID naming pattern. Cleanup does not descend into further subfolders or clear the entire cache. If this file cleanup fails, the app does not show a successful deletion; internal backup files may still remain.
+
+**Older versions without this cleanup:** Internal export and import copies may remain after sharing, loading or using **Delete all local data**, including after a cancelled or failed operation. The change described here requires the corresponding app update. Deleting the app removes its local file area.
+
+Backup copies you save or share outside the app and shared workout images are not deleted by internal cleanup. Those files, as well as device or cloud backups, must be managed and deleted separately at their respective locations or through the relevant provider. As there is no account or server-side ZAYMAX storage, the developer cannot restore a local copy for you or delete it on a server.
 
 Create a backup before deleting or reinstalling the app if you want to keep your data.
 
